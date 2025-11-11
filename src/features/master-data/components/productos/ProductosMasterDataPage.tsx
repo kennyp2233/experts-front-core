@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Box,
   Button,
@@ -23,6 +23,15 @@ interface ProductosMasterDataPageProps {
 
 export function ProductosMasterDataPage({ config }: ProductosMasterDataPageProps) {
   const [searchValue, setSearchValue] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchValue);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchValue]);
   const [formOpen, setFormOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Producto | undefined>();
   const [viewMode, setViewMode] = useState(false);
@@ -41,12 +50,16 @@ export function ProductosMasterDataPage({ config }: ProductosMasterDataPageProps
     total,
     page,
     setPage,
+    pageSize,
+    setPageSize,
     loading,
     create,
     update,
     remove,
     transformDataForForm,
-  } = useProductosMasterData<Producto>(config.apiEndpoint);
+  } = useProductosMasterData<Producto>(config.apiEndpoint, {
+    search: debouncedSearch,
+  });
 
   // Custom field renderers for productos-specific fields
   const customFieldRenderers: Record<string, (field: MasterDataFormField, value: unknown, onChange: (value: unknown) => void) => React.ReactElement> = {
@@ -179,8 +192,9 @@ export function ProductosMasterDataPage({ config }: ProductosMasterDataPageProps
         data={data}
         total={total}
         page={page}
-        pageSize={10}
+        pageSize={pageSize}
         onPageChange={setPage}
+        onPageSizeChange={setPageSize}
         onView={handleView}
         onEdit={handleEdit}
         onDelete={handleDelete}

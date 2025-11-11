@@ -47,8 +47,9 @@ export function useMasterData<T extends MasterDataEntity>(
   endpoint: string,
   options: UseMasterDataOptions = {}
 ) {
-  const { pageSize = 10, search = '', sortField, sortOrder = 'desc' } = options;
+  const { pageSize: initialPageSize = 10, search = '', sortField, sortOrder = 'desc' } = options;
   const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(initialPageSize);
   const [loading, setLoading] = useState(false);
 
   const queryParams = new URLSearchParams({
@@ -128,6 +129,8 @@ export function useMasterData<T extends MasterDataEntity>(
     total: data?.total || 0,
     page,
     setPage,
+    pageSize,
+    setPageSize,
     loading: isLoading || loading,
     error,
     create,

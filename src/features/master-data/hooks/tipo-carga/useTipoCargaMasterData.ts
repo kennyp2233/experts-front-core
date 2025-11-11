@@ -1,6 +1,12 @@
 import { useMasterData } from '../common/useMasterData';
 import { TipoCarga } from '../../types/tipo-carga.types';
 
-export function useTipoCargaMasterData(endpoint: string) {
-  return useMasterData<TipoCarga>(endpoint);
+interface UseTipoCargaMasterDataOptions {
+  search?: string;
+  sortField?: string;
+  sortOrder?: 'asc' | 'desc';
+}
+
+export function useTipoCargaMasterData(endpoint: string, options: UseTipoCargaMasterDataOptions = {}) {
+  return useMasterData<TipoCarga>(endpoint, options);
 }

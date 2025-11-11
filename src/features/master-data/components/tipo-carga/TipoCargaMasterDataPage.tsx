@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Box,
     Button,
@@ -21,6 +21,15 @@ interface TipoCargaMasterDataPageProps {
 
 export function TipoCargaMasterDataPage({ config }: TipoCargaMasterDataPageProps) {
     const [searchValue, setSearchValue] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearch(searchValue);
+        }, 500);
+
+        return () => clearTimeout(timer);
+    }, [searchValue]);
     const [formOpen, setFormOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<TipoCarga | undefined>();
     const [viewMode, setViewMode] = useState(false);
@@ -39,11 +48,15 @@ export function TipoCargaMasterDataPage({ config }: TipoCargaMasterDataPageProps
         total,
         page,
         setPage,
+        pageSize,
+        setPageSize,
         loading,
         create,
         update,
         remove,
-    } = useTipoCargaMasterData(config.apiEndpoint);
+    } = useTipoCargaMasterData(config.apiEndpoint, {
+        search: debouncedSearch,
+    });
 
     const handleCreate = () => {
         setEditingItem(undefined);
@@ -142,8 +155,9 @@ export function TipoCargaMasterDataPage({ config }: TipoCargaMasterDataPageProps
                 data={data}
                 total={total}
                 page={page}
-                pageSize={10}
+                pageSize={pageSize}
                 onPageChange={setPage}
+                onPageSizeChange={setPageSize}
                 onView={handleView}
                 onEdit={handleEdit}
                 onDelete={handleDelete}

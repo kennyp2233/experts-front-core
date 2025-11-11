@@ -1,6 +1,12 @@
 import { useState } from 'react';
 import { useMasterData } from '../common/useMasterData';
 
+interface UseAerolineasMasterDataOptions {
+  search?: string;
+  sortField?: string;
+  sortOrder?: 'asc' | 'desc';
+}
+
 // Transform data for aerolineas endpoint
 function transformAerolineaData(data: any): any {
   const transformed = { ...data };
@@ -50,8 +56,8 @@ function transformAerolineaDataFromAPI(data: any): any {
   return transformed;
 }
 
-export function useAerolineasMasterData(endpoint: string) {
-  const baseHook = useMasterData(endpoint);
+export function useAerolineasMasterData(endpoint: string, options: UseAerolineasMasterDataOptions = {}) {
+  const baseHook = useMasterData(endpoint, options);
   const [transforming, setTransforming] = useState(false);
 
   const create = async (data: any) => {

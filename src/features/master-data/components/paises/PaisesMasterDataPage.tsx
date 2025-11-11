@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Box,
     Button,
@@ -20,6 +20,15 @@ interface PaisesMasterDataPageProps {
 
 export function PaisesMasterDataPage({ config }: PaisesMasterDataPageProps) {
     const [searchValue, setSearchValue] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearch(searchValue);
+        }, 500);
+
+        return () => clearTimeout(timer);
+    }, [searchValue]);
     const [formOpen, setFormOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<Pais | undefined>();
     const [viewMode, setViewMode] = useState(false);
@@ -38,13 +47,17 @@ export function PaisesMasterDataPage({ config }: PaisesMasterDataPageProps) {
         total,
         page,
         setPage,
+        pageSize,
+        setPageSize,
         loading,
         create,
         update,
         remove,
         paisesPadre,
         acuerdos,
-    } = usePaisesMasterData(config.apiEndpoint);
+    } = usePaisesMasterData(config.apiEndpoint, {
+        search: debouncedSearch,
+    });
 
     // Create dynamic config with FK options
     const dynamicConfig = {
@@ -155,8 +168,9 @@ export function PaisesMasterDataPage({ config }: PaisesMasterDataPageProps) {
                 data={data}
                 total={total}
                 page={page}
-                pageSize={10}
+                pageSize={pageSize}
                 onPageChange={setPage}
+                onPageSizeChange={setPageSize}
                 onView={handleView}
                 onEdit={handleEdit}
                 onDelete={handleDelete}

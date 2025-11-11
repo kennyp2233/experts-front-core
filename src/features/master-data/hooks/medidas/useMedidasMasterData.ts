@@ -1,5 +1,11 @@
 import { useMasterData } from '../common/useMasterData';
 
-export function useMedidasMasterData(endpoint: string) {
-  return useMasterData<any>(endpoint);
+interface UseMedidasMasterDataOptions {
+  search?: string;
+  sortField?: string;
+  sortOrder?: 'asc' | 'desc';
+}
+
+export function useMedidasMasterData(endpoint: string, options: UseMedidasMasterDataOptions = {}) {
+  return useMasterData<any>(endpoint, options);
 }

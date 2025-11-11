@@ -1,6 +1,12 @@
 import { useState } from 'react';
 import { useMasterData } from '../common/useMasterData';
 
+interface UseProductosMasterDataOptions {
+  search?: string;
+  sortField?: string;
+  sortOrder?: 'asc' | 'desc';
+}
+
 // Transform data for productos endpoint
 function transformProductoData(data: Record<string, unknown>): Record<string, unknown> {
   const transformed = { ...data };
@@ -46,8 +52,8 @@ function transformProductoDataFromAPI(data: Record<string, unknown>): Record<str
   return transformed;
 }
 
-export function useProductosMasterData<T extends { id: number }>(endpoint: string) {
-  const baseHook = useMasterData<T>(endpoint);
+export function useProductosMasterData<T extends { id: number }>(endpoint: string, options: UseProductosMasterDataOptions = {}) {
+  const baseHook = useMasterData<T>(endpoint, options);
   const [transforming, setTransforming] = useState(false);
 
   const create = async (data: Partial<T>) => {

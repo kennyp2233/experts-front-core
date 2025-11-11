@@ -17,6 +17,7 @@ import {
   InputAdornment,
   alpha,
   Tooltip,
+  Skeleton,
 } from '@mui/material';
 import { Edit as EditIcon, Delete as DeleteIcon, Search as SearchIcon, Visibility as ViewIcon } from '@mui/icons-material';
 import { MasterDataEntity, MasterDataConfig } from '../../types/master-data.types';
@@ -28,6 +29,7 @@ interface MasterDataTableProps<T extends MasterDataEntity> {
   page: number;
   pageSize: number;
   onPageChange: (page: number) => void;
+  onPageSizeChange: (size: number) => void;
   onView?: (item: T) => void;
   onEdit: (item: T) => void;
   onDelete: (id: number) => void;
@@ -43,6 +45,7 @@ export function MasterDataTable<T extends MasterDataEntity>({
   page,
   pageSize,
   onPageChange,
+  onPageSizeChange,
   onView,
   onEdit,
   onDelete,
@@ -55,8 +58,8 @@ export function MasterDataTable<T extends MasterDataEntity>({
   };
 
   const handleRowsPerPageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    // For simplicity, keeping pageSize fixed, but this could be made configurable
-    console.log('Rows per page changed:', event.target.value);
+    const newSize = parseInt(event.target.value, 10);
+    onPageSizeChange(newSize);
   };
 
   // Check if items have estado field
@@ -156,15 +159,27 @@ export function MasterDataTable<T extends MasterDataEntity>({
           </TableHead>
           <TableBody>
             {loading ? (
-              <TableRow>
-                <TableCell 
-                  colSpan={config.tableColumns.length + (hasEstadoField ? 2 : 1)} 
-                  align="center"
-                  sx={{ py: 8, color: 'text.secondary' }}
-                >
-                  Cargando...
-                </TableCell>
-              </TableRow>
+              Array.from({ length: 5 }).map((_, index) => (
+                <TableRow key={`skeleton-${index}`}>
+                  {config.tableColumns.map((column) => (
+                    <TableCell key={column.key} sx={{ py: 2 }}>
+                      <Skeleton variant="text" width="80%" height={24} />
+                    </TableCell>
+                  ))}
+                  {hasEstadoField && (
+                    <TableCell sx={{ py: 2 }}>
+                      <Skeleton variant="rectangular" width={60} height={24} />
+                    </TableCell>
+                  )}
+                  <TableCell sx={{ py: 2 }}>
+                    <Box sx={{ display: 'flex', gap: 0.5 }}>
+                      <Skeleton variant="circular" width={32} height={32} />
+                      <Skeleton variant="circular" width={32} height={32} />
+                      <Skeleton variant="circular" width={32} height={32} />
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              ))
             ) : data.length === 0 ? (
               <TableRow>
                 <TableCell 
@@ -278,7 +293,7 @@ export function MasterDataTable<T extends MasterDataEntity>({
         onPageChange={handlePageChange}
         rowsPerPage={pageSize}
         onRowsPerPageChange={handleRowsPerPageChange}
-        rowsPerPageOptions={[pageSize]}
+        rowsPerPageOptions={[10, 20, 50, 100]}
         labelDisplayedRows={({ from, to, count }) =>
           `${from}-${to} de ${count}`
         }

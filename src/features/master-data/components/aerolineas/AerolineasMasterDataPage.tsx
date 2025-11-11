@@ -22,6 +22,15 @@ interface AerolineasMasterDataPageProps {
 
 export function AerolineasMasterDataPage({ config }: AerolineasMasterDataPageProps) {
   const [searchValue, setSearchValue] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchValue);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchValue]);
   const [formOpen, setFormOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any | undefined>();
   const [transformedInitialData, setTransformedInitialData] = useState<any | undefined>();
@@ -41,12 +50,16 @@ export function AerolineasMasterDataPage({ config }: AerolineasMasterDataPagePro
     total,
     page,
     setPage,
+    pageSize,
+    setPageSize,
     loading,
     create,
     update,
     remove,
     transformDataForForm,
-  } = useAerolineasMasterData(config.apiEndpoint);
+  } = useAerolineasMasterData(config.apiEndpoint, {
+    search: debouncedSearch,
+  });
 
   // Custom field renderers for aerolineas-specific fields
   const customFieldRenderers = {
@@ -173,8 +186,9 @@ export function AerolineasMasterDataPage({ config }: AerolineasMasterDataPagePro
         data={data}
         total={total}
         page={page}
-        pageSize={10}
+        pageSize={pageSize}
         onPageChange={setPage}
+        onPageSizeChange={setPageSize}
         onView={handleView}
         onEdit={handleEdit}
         onDelete={handleDelete}

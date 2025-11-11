@@ -2,8 +2,14 @@ import { useState, useEffect } from 'react';
 import { useMasterData } from '../common/useMasterData';
 import api from '../../../../shared/services/api';
 
-export function usePaisesMasterData(endpoint: string) {
-  const baseHook = useMasterData<any>(endpoint);
+interface UsePaisesMasterDataOptions {
+  search?: string;
+  sortField?: string;
+  sortOrder?: 'asc' | 'desc';
+}
+
+export function usePaisesMasterData(endpoint: string, options: UsePaisesMasterDataOptions = {}) {
+  const baseHook = useMasterData<any>(endpoint, options);
   const [paisesPadre, setPaisesPadre] = useState<{ value: number; label: string }[]>([]);
   const [acuerdos, setAcuerdos] = useState<{ value: number; label: string }[]>([]);
   const [loadingOptions, setLoadingOptions] = useState(true);

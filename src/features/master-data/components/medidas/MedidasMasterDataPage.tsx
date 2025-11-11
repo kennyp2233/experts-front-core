@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Button,
@@ -26,6 +26,15 @@ interface MedidasMasterDataPageProps {
 
 export function MedidasMasterDataPage({ config }: MedidasMasterDataPageProps) {
   const [searchValue, setSearchValue] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchValue);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchValue]);
   const [formOpen, setFormOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Medida | undefined>();
   const [viewMode, setViewMode] = useState(false);
@@ -44,11 +53,15 @@ export function MedidasMasterDataPage({ config }: MedidasMasterDataPageProps) {
     total,
     page,
     setPage,
+    pageSize,
+    setPageSize,
     loading,
     create,
     update,
     remove,
-  } = useMedidasMasterData(config.apiEndpoint);
+  } = useMedidasMasterData(config.apiEndpoint, {
+    search: debouncedSearch,
+  });
 
   const handleCreate = () => {
     setEditingItem(undefined);
@@ -145,8 +158,9 @@ export function MedidasMasterDataPage({ config }: MedidasMasterDataPageProps) {
         data={data}
         total={total}
         page={page}
-        pageSize={10}
+        pageSize={pageSize}
         onPageChange={setPage}
+        onPageSizeChange={setPageSize}
         onView={handleView}
         onEdit={handleEdit}
         onDelete={handleDelete}

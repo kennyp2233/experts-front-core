@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Button,
@@ -21,6 +21,15 @@ interface TipoEmbarqueMasterDataPageProps {
 
 export function TipoEmbarqueMasterDataPage({ config }: TipoEmbarqueMasterDataPageProps) {
   const [searchValue, setSearchValue] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchValue);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchValue]);
   const [formOpen, setFormOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<TipoEmbarque | undefined>();
   const [viewMode, setViewMode] = useState(false);
@@ -39,13 +48,17 @@ export function TipoEmbarqueMasterDataPage({ config }: TipoEmbarqueMasterDataPag
     total,
     page,
     setPage,
+    pageSize,
+    setPageSize,
     loading,
     create,
     update,
     remove,
     tiposCarga,
     tiposEmbalaje,
-  } = useTipoEmbarqueMasterData(config.apiEndpoint);
+  } = useTipoEmbarqueMasterData(config.apiEndpoint, {
+    search: debouncedSearch,
+  });
 
   // Create dynamic config with FK options
   const dynamicConfig = {
@@ -158,8 +171,9 @@ export function TipoEmbarqueMasterDataPage({ config }: TipoEmbarqueMasterDataPag
         data={data}
         total={total}
         page={page}
-        pageSize={10}
+        pageSize={pageSize}
         onPageChange={setPage}
+        onPageSizeChange={setPageSize}
         onView={handleView}
         onEdit={handleEdit}
         onDelete={handleDelete}

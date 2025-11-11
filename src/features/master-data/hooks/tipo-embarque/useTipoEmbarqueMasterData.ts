@@ -3,8 +3,14 @@ import { useMasterData } from '../common/useMasterData';
 import api from '../../../../shared/services/api';
 import { TipoEmbarque } from '../../types/tipo-embarque.types';
 
-export function useTipoEmbarqueMasterData(endpoint: string) {
-  const baseHook = useMasterData<TipoEmbarque>(endpoint);
+interface UseTipoEmbarqueMasterDataOptions {
+  search?: string;
+  sortField?: string;
+  sortOrder?: 'asc' | 'desc';
+}
+
+export function useTipoEmbarqueMasterData(endpoint: string, options: UseTipoEmbarqueMasterDataOptions = {}) {
+  const baseHook = useMasterData<TipoEmbarque>(endpoint, options);
   const [tiposCarga, setTiposCarga] = useState<{ value: number; label: string }[]>([]);
   const [tiposEmbalaje, setTiposEmbalaje] = useState<{ value: number; label: string }[]>([]);
   const [loadingOptions, setLoadingOptions] = useState(true);
