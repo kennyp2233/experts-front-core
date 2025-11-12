@@ -18,7 +18,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         component="main"
         sx={{
           flex: 1,
-          p: 3,
+         
           overflow: 'auto',
         }}
       >

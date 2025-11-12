@@ -9,6 +9,7 @@ interface UseMasterDataOptions {
   search?: string;
   sortField?: string;
   sortOrder?: 'asc' | 'desc';
+  idField?: string; // The field name for the ID, defaults to 'id'
 }
 
 // Helper function to extract error message from axios error
@@ -47,7 +48,7 @@ export function useMasterData<T extends MasterDataEntity>(
   endpoint: string,
   options: UseMasterDataOptions = {}
 ) {
-  const { pageSize: initialPageSize = 10, search = '', sortField, sortOrder = 'desc' } = options;
+  const { pageSize: initialPageSize = 10, search = '', sortField, sortOrder = 'desc', idField = 'id' } = options;
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(initialPageSize);
   const [loading, setLoading] = useState(false);

@@ -3,3 +3,4 @@ export * from './common.types';
 export * from './paises.types';
 export * from './productos.types';
 export * from './aerolineas.types';
+export * from './acuerdos-arancelarios.types';

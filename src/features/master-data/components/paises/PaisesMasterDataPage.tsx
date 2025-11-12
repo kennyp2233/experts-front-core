@@ -29,6 +29,12 @@ export function PaisesMasterDataPage({ config }: PaisesMasterDataPageProps) {
 
         return () => clearTimeout(timer);
     }, [searchValue]);
+
+    // Reset page when search changes
+    useEffect(() => {
+        setPage(0);
+    }, [debouncedSearch]);
+
     const [formOpen, setFormOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<Pais | undefined>();
     const [viewMode, setViewMode] = useState(false);
@@ -63,9 +69,6 @@ export function PaisesMasterDataPage({ config }: PaisesMasterDataPageProps) {
     const dynamicConfig = {
         ...config,
         fields: config.fields.map(field => {
-            if (field.name === 'paisId') {
-                return { ...field, type: 'select' as const, options: paisesPadre };
-            }
             if (field.name === 'idAcuerdo') {
                 return { ...field, type: 'select' as const, options: acuerdos };
             }
@@ -112,15 +115,23 @@ export function PaisesMasterDataPage({ config }: PaisesMasterDataPageProps) {
 
     const handleFormSubmit = async (formData: Partial<Pais>) => {
         try {
+            // Filter formData to only include fields defined in config, excluding the ID field
+            const filteredData = dynamicConfig.fields.reduce((acc, field) => {
+                if (field.name in formData && field.name !== 'idPais') {
+                    (acc as any)[field.name] = (formData as any)[field.name];
+                }
+                return acc;
+            }, {} as Partial<Pais>);
+
             if (editingItem) {
-                await update(editingItem.idPais!, formData);
+                await update(editingItem.idPais!, filteredData);
                 setSnackbar({
                     open: true,
                     message: 'País actualizado exitosamente',
                     severity: 'success',
                 });
             } else {
-                await create(formData as Omit<Pais, 'idPais'>);
+                await create(filteredData as Omit<Pais, 'idPais'>);
                 setPage(0); // Reset to first page when creating new item
                 setSnackbar({
                     open: true,
@@ -189,8 +200,8 @@ export function PaisesMasterDataPage({ config }: PaisesMasterDataPageProps) {
                     viewMode
                         ? `Ver ${config.entityName}`
                         : editingItem
-                        ? `Editar ${config.entityName}`
-                        : `Crear ${config.entityName}`
+                            ? `Editar ${config.entityName}`
+                            : `Crear ${config.entityName}`
                 }
                 loading={loading}
                 readOnly={viewMode}

@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useMasterData } from '../common/useMasterData';
+import api from '../../../../shared/services/api';
 
 interface UseProductosMasterDataOptions {
   search?: string;
@@ -55,6 +56,28 @@ function transformProductoDataFromAPI(data: Record<string, unknown>): Record<str
 export function useProductosMasterData<T extends { id: number }>(endpoint: string, options: UseProductosMasterDataOptions = {}) {
   const baseHook = useMasterData<T>(endpoint, options);
   const [transforming, setTransforming] = useState(false);
+  const [medidas, setMedidas] = useState<{ value: number; label: string }[]>([]);
+  const [loadingOptions, setLoadingOptions] = useState(true);
+
+  // Load FK options
+  useEffect(() => {
+    const loadOptions = async () => {
+      try {
+        const medidasRes = await api.get('/master-data/medidas/simple');
+        setMedidas(medidasRes.data?.map((m: any) => ({
+          value: m.id,
+          label: m.nombre
+        })) || []);
+      } catch (error) {
+        console.error('Error loading medidas for productos:', error);
+        setMedidas([]);
+      } finally {
+        setLoadingOptions(false);
+      }
+    };
+
+    loadOptions();
+  }, []);
 
   const create = async (data: Partial<T>) => {
     setTransforming(true);
@@ -82,9 +105,10 @@ export function useProductosMasterData<T extends { id: number }>(endpoint: strin
 
   return {
     ...baseHook,
-    loading: baseHook.loading || transforming,
+    loading: baseHook.loading || transforming || loadingOptions,
     create,
     update,
     transformDataForForm,
+    medidas,
   };
 }

@@ -15,7 +15,6 @@ import {
   Box,
   TextField,
   InputAdornment,
-  alpha,
   Tooltip,
   Skeleton,
 } from '@mui/material';
@@ -62,9 +61,6 @@ export function MasterDataTable<T extends MasterDataEntity>({
     onPageSizeChange(newSize);
   };
 
-  // Check if items have estado field
-  const hasEstadoField = data.length > 0 && 'estado' in data[0];
-
   return (
     <Box>
       {/* Search */}
@@ -75,17 +71,6 @@ export function MasterDataTable<T extends MasterDataEntity>({
           placeholder={`Buscar ${config.entityNamePlural.toLowerCase()}...`}
           value={searchValue}
           onChange={(e) => onSearchChange(e.target.value)}
-          sx={{
-            '& .MuiOutlinedInput-root': {
-              bgcolor: 'background.paper',
-              '&:hover': {
-                bgcolor: (theme) => alpha(theme.palette.primary.main, 0.02),
-              },
-              '&.Mui-focused': {
-                bgcolor: 'background.paper',
-              },
-            },
-          }}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
@@ -97,60 +82,23 @@ export function MasterDataTable<T extends MasterDataEntity>({
       </Box>
 
       {/* Table */}
-      <TableContainer 
-        component={Paper} 
-        elevation={0}
-        sx={{ 
-          border: 1, 
-          borderColor: 'divider',
-          borderRadius: 3,
-          overflow: 'hidden',
-        }}
-      >
-        <Table>
-          <TableHead>
-            <TableRow 
-              sx={{ 
-                bgcolor: (theme) => alpha(theme.palette.primary.main, 0.05),
-              }}
-            >
+      <TableContainer component={Paper} sx={{ maxHeight: 600, overflow: 'auto' }}>
+        <Table stickyHeader>
+          <TableHead sx={{ zIndex: 100 }}>
+            <TableRow>
               {config.tableColumns.map((column) => (
-                <TableCell 
-                  key={column.key} 
-                  sx={{ 
-                    fontWeight: 600,
-                    fontSize: '0.875rem',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
-                    color: 'text.secondary',
-                    py: 2,
-                  }}
-                >
+                <TableCell key={column.key} sx={{ minWidth: column.width || 120 }}>
                   {column.label}
                 </TableCell>
               ))}
-              {hasEstadoField && (
-                <TableCell 
-                  sx={{ 
-                    fontWeight: 600,
-                    fontSize: '0.875rem',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
-                    color: 'text.secondary',
-                    py: 2,
-                  }}
-                >
-                  Estado
-                </TableCell>
-              )}
-              <TableCell 
-                sx={{ 
-                  fontWeight: 600,
-                  fontSize: '0.875rem',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em',
-                  color: 'text.secondary',
-                  py: 2,
+              <TableCell
+                sx={{
+                  minWidth: 120,
+                  position: 'sticky',
+                  right: 0,
+                  bgcolor: 'background.paper',
+                  boxShadow: '-4px 0 8px -4px rgba(0,0,0,0.1)',
+                  zIndex: 101,
                 }}
               >
                 Acciones
@@ -162,16 +110,19 @@ export function MasterDataTable<T extends MasterDataEntity>({
               Array.from({ length: 5 }).map((_, index) => (
                 <TableRow key={`skeleton-${index}`}>
                   {config.tableColumns.map((column) => (
-                    <TableCell key={column.key} sx={{ py: 2 }}>
+                    <TableCell key={column.key}>
                       <Skeleton variant="text" width="80%" height={24} />
                     </TableCell>
                   ))}
-                  {hasEstadoField && (
-                    <TableCell sx={{ py: 2 }}>
-                      <Skeleton variant="rectangular" width={60} height={24} />
-                    </TableCell>
-                  )}
-                  <TableCell sx={{ py: 2 }}>
+                  <TableCell
+                    sx={{
+                      position: 'sticky',
+                      right: 0,
+                      bgcolor: 'background.paper',
+                      boxShadow: '-4px 0 8px -4px rgba(0,0,0,0.1)',
+                      zIndex: 101,
+                    }}
+                  >
                     <Box sx={{ display: 'flex', gap: 0.5 }}>
                       <Skeleton variant="circular" width={32} height={32} />
                       <Skeleton variant="circular" width={32} height={32} />
@@ -182,67 +133,49 @@ export function MasterDataTable<T extends MasterDataEntity>({
               ))
             ) : data.length === 0 ? (
               <TableRow>
-                <TableCell 
-                  colSpan={config.tableColumns.length + (hasEstadoField ? 2 : 1)} 
+                <TableCell
+                  colSpan={config.tableColumns.length + 1}
                   align="center"
-                  sx={{ py: 8, color: 'text.secondary' }}
                 >
                   No hay {config.entityNamePlural.toLowerCase()} disponibles
                 </TableCell>
               </TableRow>
             ) : (
               data.map((item, index) => (
-                <TableRow 
-                  key={item.id} 
-                  hover
-                  sx={{
-                    '&:hover': {
-                      bgcolor: (theme) => alpha(theme.palette.primary.main, 0.03),
-                    },
-                    '&:last-child td': {
-                      borderBottom: 0,
-                    },
-                  }}
+                <TableRow
+                  key={item.id}
                 >
                   {config.tableColumns.map((column) => (
-                    <TableCell 
+                    <TableCell
                       key={column.key}
-                      sx={{ py: 2 }}
                     >
-                      {column.render
+                      {column.key === 'estado' ? (
+                        <Chip
+                          label={(item[column.key as keyof T] as boolean) ? 'Activo' : 'Inactivo'}
+                          color={(item[column.key as keyof T] as boolean) ? 'success' : 'error'}
+                          size="small"
+                        />
+                      ) : column.render
                         ? column.render(item[column.key as keyof T], item)
                         : String(item[column.key as keyof T] || '')
                       }
                     </TableCell>
                   ))}
-                  {hasEstadoField && (
-                    <TableCell sx={{ py: 2 }}>
-                      <Chip
-                        label={item.estado ? 'Activo' : 'Inactivo'}
-                        color={item.estado ? 'success' : 'error'}
-                        size="small"
-                        sx={{
-                          fontWeight: 500,
-                          fontSize: '0.75rem',
-                          height: 24,
-                          borderRadius: 2,
-                        }}
-                      />
-                    </TableCell>
-                  )}
-                  <TableCell sx={{ py: 2 }}>
+                  <TableCell
+                    sx={{
+                      position: 'sticky',
+                      right: 0,
+                      bgcolor: 'background.paper',
+                      boxShadow: '-4px 0 8px -4px rgba(0,0,0,0.1)',
+                      zIndex: 100,
+                    }}
+                  >
                     <Box sx={{ display: 'flex', gap: 0.5 }}>
                       {onView && (
                         <Tooltip title="Ver detalles" arrow>
                           <IconButton
                             size="small"
                             onClick={() => onView(item)}
-                            sx={{
-                              color: 'info.main',
-                              '&:hover': {
-                                bgcolor: (theme) => alpha(theme.palette.info.main, 0.1),
-                              },
-                            }}
                           >
                             <ViewIcon fontSize="small" />
                           </IconButton>
@@ -252,12 +185,6 @@ export function MasterDataTable<T extends MasterDataEntity>({
                         <IconButton
                           size="small"
                           onClick={() => onEdit(item)}
-                          sx={{
-                            color: 'primary.main',
-                            '&:hover': {
-                              bgcolor: (theme) => alpha(theme.palette.primary.main, 0.1),
-                            },
-                          }}
                         >
                           <EditIcon fontSize="small" />
                         </IconButton>
@@ -265,13 +192,7 @@ export function MasterDataTable<T extends MasterDataEntity>({
                       <Tooltip title="Eliminar" arrow>
                         <IconButton
                           size="small"
-                          onClick={() => onDelete(item.id)}
-                          sx={{
-                            color: 'error.main',
-                            '&:hover': {
-                              bgcolor: (theme) => alpha(theme.palette.error.main, 0.1),
-                            },
-                          }}
+                          onClick={() => onDelete(item[config.idField || 'id'])}
                         >
                           <DeleteIcon fontSize="small" />
                         </IconButton>
@@ -298,12 +219,6 @@ export function MasterDataTable<T extends MasterDataEntity>({
           `${from}-${to} de ${count}`
         }
         labelRowsPerPage="Filas por página"
-        sx={{
-          mt: 2,
-          '.MuiTablePagination-toolbar': {
-            px: 2,
-          },
-        }}
       />
     </Box>
   );

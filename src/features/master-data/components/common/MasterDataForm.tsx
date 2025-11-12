@@ -130,31 +130,45 @@ export function MasterDataForm<T extends MasterDataEntity>({
     <Dialog 
       open={open} 
       onClose={handleClose} 
-      maxWidth="md" 
+      maxWidth="lg" // Changed from md to lg for complex forms like aerolineas
       fullWidth
       PaperProps={{
         sx: {
           borderRadius: 3,
           boxShadow: 24,
+          maxHeight: '95vh', // Increased from 90vh for complex forms like aerolineas
+          display: 'flex',
+          flexDirection: 'column',
         },
       }}
     >
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
         {/* Header slot - use provided header if available, otherwise default title */}
         {header ? (
-          <Box sx={{ borderBottom: 1, borderColor: 'divider', px: 2, py: 1 }}>{header}</Box>
+          <Box sx={{ borderBottom: 1, borderColor: 'divider', px: 2, py: 1, flexShrink: 0 }}>{header}</Box>
         ) : (
           <DialogTitle 
             sx={{ 
               fontWeight: 600, 
               fontSize: '1.5rem',
               pb: 2,
+              flexShrink: 0,
             }}
           >
             {title}
           </DialogTitle>
         )}
-        <DialogContent sx={{ px: 3, py: 2 }}>
+        
+        {/* Body - scrollable */}
+        <DialogContent 
+          sx={{ 
+            px: 2, // Reduced from 3 to 2 for more space
+            py: 1, // Reduced from 2 to 1 for more space
+            flex: 1,
+            overflow: 'auto',
+            minHeight: 0, // Allow flex shrinking
+          }}
+        >
           {hasTabs ? (
             <>
               <Tabs
@@ -185,36 +199,25 @@ export function MasterDataForm<T extends MasterDataEntity>({
             renderTabContent(config.fields)
           )}
         </DialogContent>
+        
         {/* Footer slot - use provided footer if available, otherwise default actions */}
         {footer ? (
-          <Box sx={{ px: 2, py: 1 }}>{footer}</Box>
+          <Box sx={{ px: 2, py: 1, flexShrink: 0 }}>{footer}</Box>
         ) : (
-          <DialogActions sx={{ px: 3, pb: 2, pt: 1.5, gap: 1 }}>
-            <Button 
-              onClick={handleClose} 
+          <DialogActions sx={{ flexShrink: 0 }}>
+            <Button
+              onClick={handleClose}
               disabled={loading}
               variant="outlined"
-              size="small"
-              sx={{
-                borderRadius: 2,
-                px: 2.5,
-                py: 1,
-              }}
+              color="inherit"
             >
               {readOnly ? 'Cerrar' : 'Cancelar'}
             </Button>
             {!readOnly && (
-              <Button 
-                type="submit" 
-                variant="contained" 
+              <Button
+                type="submit"
+                variant="contained"
                 disabled={loading}
-                size="small"
-                sx={{
-                  borderRadius: 2,
-                  px: 2.5,
-                  py: 1,
-                  boxShadow: 2,
-                }}
               >
                 {loading ? 'Guardando...' : 'Guardar'}
               </Button>

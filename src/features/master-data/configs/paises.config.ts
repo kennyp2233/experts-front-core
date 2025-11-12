@@ -4,6 +4,7 @@ export const paisesConfig: MasterDataConfig = {
   entityName: 'País',
   entityNamePlural: 'Países',
   apiEndpoint: '/master-data/paises',
+  idField: 'idPais',
   fields: [
     {
       name: 'siglasPais',
@@ -42,7 +43,7 @@ export const paisesConfig: MasterDataConfig = {
     },
     {
       name: 'paisId',
-      label: 'País Padre',
+      label: 'País ID SESA',
       type: 'number',
       required: false,
       validation: {
@@ -52,8 +53,9 @@ export const paisesConfig: MasterDataConfig = {
     {
       name: 'idAcuerdo',
       label: 'Acuerdo Arancelario',
-      type: 'number',
+      type: 'select',
       required: false,
+      options: [], // Will be populated dynamically
       validation: {
         min: 1,
       },
@@ -63,8 +65,12 @@ export const paisesConfig: MasterDataConfig = {
     { key: 'idPais', label: 'ID' },
     { key: 'siglasPais', label: 'Siglas' },
     { key: 'nombre', label: 'Nombre' },
-    { key: 'paisId', label: 'País Padre' },
-    { key: 'idAcuerdo', label: 'Acuerdo' },
+    { key: 'paisId', label: 'País ID SESA' },
+    { 
+      key: 'acuerdo', 
+      label: 'Acuerdo',
+      render: (value) => value?.nombre || (value?.idAcuerdo ? `ID: ${value.idAcuerdo}` : 'Sin acuerdo')
+    },
     { key: 'estado', label: 'Estado' },
   ],
   defaultSort: {

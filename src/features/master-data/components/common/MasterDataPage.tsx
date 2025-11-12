@@ -57,6 +57,7 @@ export function MasterDataPage<T extends MasterDataEntity>({ config }: MasterDat
     search: debouncedSearch,
     sortField: config.defaultSort?.field,
     sortOrder: config.defaultSort?.order,
+    idField: config.idField,
   });
 
   const handleCreate = () => {
@@ -97,15 +98,24 @@ export function MasterDataPage<T extends MasterDataEntity>({ config }: MasterDat
 
   const handleFormSubmit = async (formData: Partial<T>) => {
     try {
+      // Filter formData to only include fields defined in config, excluding the ID field
+      const idField = config.idField || 'id';
+      const filteredData = config.fields.reduce((acc, field) => {
+        if (field.name in formData && field.name !== idField) {
+          (acc as any)[field.name] = (formData as any)[field.name];
+        }
+        return acc;
+      }, {} as Partial<T>);
+
       if (editingItem) {
-        await update(editingItem.id, formData);
+        await update((editingItem as any)[idField], filteredData);
         setSnackbar({
           open: true,
           message: `${config.entityName} actualizado exitosamente`,
           severity: 'success',
         });
       } else {
-        await create(formData);
+        await create(filteredData);
         setPage(0); // Reset to first page to show newly created item
         setSnackbar({
           open: true,

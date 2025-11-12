@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { MasterDataEntity, MasterDataFormField } from '../types/master-data.types';
+import { MasterDataEntity, MasterDataFormField } from '../../types/master-data.types';
 
 /**
  * Hook personalizado para manejar el estado del formulario

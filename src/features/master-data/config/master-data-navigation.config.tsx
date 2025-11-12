@@ -6,6 +6,7 @@ import {
   Inventory as PackageIcon,
   Business as BusinessIcon,
   Scale as ScaleIcon,
+  Gavel as GavelIcon,
 } from '@mui/icons-material';
 import type { MenuItem } from '../../dashboard/components/sidebar/types';
 
@@ -33,6 +34,16 @@ export interface MasterDataEntity {
  */
 export const MASTER_DATA_ENTITIES: MasterDataEntity[] = [
   // Geográfico
+  {
+    id: 'acuerdos-arancelarios',
+    label: 'Acuerdos Arancelarios',
+    href: '/admin/master-data/acuerdos-arancelarios',
+    icon: <GavelIcon />,
+    color: '#e91e63',
+    description: 'Administrar acuerdos arancelarios y tratados comerciales',
+    category: 'geográfico',
+    available: true,
+  },
   {
     id: 'paises',
     label: 'Países',

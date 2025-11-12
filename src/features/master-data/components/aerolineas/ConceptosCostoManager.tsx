@@ -5,8 +5,6 @@ import React, { useEffect } from 'react';
 import {
   Box,
   Button,
-  Card,
-  CardContent,
   Typography,
   TextField,
   Select,
@@ -97,98 +95,94 @@ export function ConceptosCostoManager({ conceptos, onChange }: ConceptosCostoMan
         Conceptos de Costo
       </Typography>
 
-      <Card variant="outlined" sx={{ mb: 2 }}>
-        <CardContent sx={{ p: 0 }}>
-          <TableContainer>
-            <Table size="small">
-              <TableHead sx={{ bgcolor: theme.palette.action.hover }}>
-                <TableRow>
-                  <TableCell sx={{ fontWeight: 600, width: '30%' }}>Concepto</TableCell>
-                  <TableCell sx={{ fontWeight: 600, width: '20%' }}>Abreviatura</TableCell>
-                  <TableCell sx={{ fontWeight: 600, width: '15%', textAlign: 'center' }}>
-                    Valor
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: 600, width: '25%' }}>Multiplicador</TableCell>
-                  <TableCell sx={{ fontWeight: 600, width: '10%', textAlign: 'center' }}>
-                    Acción
-                  </TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {conceptos.map((concepto, index) => (
-                  <TableRow key={index} hover>
-                    {/* Concepto */}
-                    <TableCell>
-                      <Typography variant="body2">{getTipoConceptoLabel(concepto.tipo)}</Typography>
-                    </TableCell>
+      <TableContainer>
+        <Table size="small">
+          <TableHead sx={{ bgcolor: theme.palette.action.hover }}>
+            <TableRow>
+              <TableCell sx={{ fontWeight: 600, width: '30%' }}>Concepto</TableCell>
+              <TableCell sx={{ fontWeight: 600, width: '20%' }}>Abreviatura</TableCell>
+              <TableCell sx={{ fontWeight: 600, width: '15%', textAlign: 'center' }}>
+                Valor
+              </TableCell>
+              <TableCell sx={{ fontWeight: 600, width: '25%' }}>Multiplicador</TableCell>
+              <TableCell sx={{ fontWeight: 600, width: '10%', textAlign: 'center' }}>
+                Acción
+              </TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {conceptos.map((concepto, index) => (
+              <TableRow key={index} hover>
+                {/* Concepto */}
+                <TableCell>
+                  <Typography variant="body2">{getTipoConceptoLabel(concepto.tipo)}</Typography>
+                </TableCell>
 
-                    {/* Abreviatura */}
-                    <TableCell>
-                      <TextField
-                        size="small"
-                        variant="outlined"
-                        value={concepto.abreviatura ?? ''}
-                        onChange={(e) => handleUpdate(index, { abreviatura: e.target.value })}
-                        placeholder="ej: CG"
-                        fullWidth
-                        inputProps={{ maxLength: 10 }}
-                      />
-                    </TableCell>
+                {/* Abreviatura */}
+                <TableCell>
+                  <TextField
+                    size="small"
+                    variant="outlined"
+                    value={concepto.abreviatura ?? ''}
+                    onChange={(e) => handleUpdate(index, { abreviatura: e.target.value })}
+                    placeholder="ej: CG"
+                    fullWidth
+                    inputProps={{ maxLength: 10 }}
+                  />
+                </TableCell>
 
-                    {/* Valor */}
-                    <TableCell>
-                      <TextField
-                        size="small"
-                        variant="outlined"
-                        type="number"
-                        inputProps={{ step: '0.01', min: 0 }}
-                        value={typeof concepto.valor === 'number' ? concepto.valor : 0}
-                        onChange={(e) =>
-                          handleUpdate(index, { valor: parseFloat(e.target.value) || 0 })
-                        }
-                        fullWidth
-                      />
-                    </TableCell>
+                {/* Valor */}
+                <TableCell>
+                  <TextField
+                    size="small"
+                    variant="outlined"
+                    type="number"
+                    inputProps={{ step: '0.01', min: 0 }}
+                    value={typeof concepto.valor === 'number' ? concepto.valor : 0}
+                    onChange={(e) =>
+                      handleUpdate(index, { valor: parseFloat(e.target.value) || 0 })
+                    }
+                    fullWidth
+                  />
+                </TableCell>
 
-                    {/* Multiplicador */}
-                    <TableCell>
-                      <FormControl fullWidth size="small" variant="outlined">
-                        <InputLabel>Multiplicador</InputLabel>
-                        <Select
-                          value={concepto.multiplicador ?? ''}
-                          label="Multiplicador"
-                          onChange={(e) => {
-                            const v = e.target.value as string;
-                            handleUpdate(index, {
-                              multiplicador: v === '' ? null : (v as 'GROSS_WEIGHT' | 'CHARGEABLE_WEIGHT'),
-                            });
-                          }}
-                        >
-                          <MenuItem value="">Ninguno</MenuItem>
-                          <MenuItem value="GROSS_WEIGHT">Gross Weight</MenuItem>
-                          <MenuItem value="CHARGEABLE_WEIGHT">Chargeable Weight</MenuItem>
-                        </Select>
-                      </FormControl>
-                    </TableCell>
+                {/* Multiplicador */}
+                <TableCell>
+                  <FormControl fullWidth size="small" variant="outlined">
+                    <InputLabel>Multiplicador</InputLabel>
+                    <Select
+                      value={concepto.multiplicador ?? ''}
+                      label="Multiplicador"
+                      onChange={(e) => {
+                        const v = e.target.value as string;
+                        handleUpdate(index, {
+                          multiplicador: v === '' ? null : (v as 'GROSS_WEIGHT' | 'CHARGEABLE_WEIGHT'),
+                        });
+                      }}
+                    >
+                      <MenuItem value="">Ninguno</MenuItem>
+                      <MenuItem value="GROSS_WEIGHT">Gross Weight</MenuItem>
+                      <MenuItem value="CHARGEABLE_WEIGHT">Chargeable Weight</MenuItem>
+                    </Select>
+                  </FormControl>
+                </TableCell>
 
-                    {/* Eliminar */}
-                    <TableCell align="center">
-                      <IconButton
-                        size="small"
-                        color="error"
-                        onClick={() => handleDelete(index)}
-                        title="Eliminar concepto"
-                      >
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </CardContent>
-      </Card>
+                {/* Eliminar */}
+                <TableCell align="center">
+                  <IconButton
+                    size="small"
+                    color="error"
+                    onClick={() => handleDelete(index)}
+                    title="Eliminar concepto"
+                  >
+                    <DeleteIcon fontSize="small" />
+                  </IconButton>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
 
       <Typography variant="caption" color="text.secondary">
         ℹ️ Los conceptos se pre-generan con todos los tipos disponibles. Edita valores y

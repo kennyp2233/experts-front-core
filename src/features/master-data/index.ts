@@ -7,7 +7,6 @@ export { PaisesMasterDataPage } from './components/paises/PaisesMasterDataPage';
 export { ProductosMasterDataPage } from './components/productos/ProductosMasterDataPage';
 export { RutasManager } from './components/aerolineas/RutasManager';
 export { ConceptosCostoManager } from './components/aerolineas/ConceptosCostoManager';
-export { AerolineasFormLayout } from './components/aerolineas/AerolineasFormLayout';
 
 // Hooks
 export { useMasterData, useMasterDataList } from './hooks/common/useMasterData';
@@ -20,5 +19,18 @@ export { useAerolineasMasterData } from './hooks/aerolineas/useAerolineasMasterD
 export type * from './types/master-data.types';
 
 // Configs and Utils (consolidated in configs/index.ts)
-export * from './configs';
+export {
+  productosConfig,
+  paisesConfig,
+  aerolineasConfig,
+  tipoEmbalajeConfig,
+  tipoEmbarqueConfig,
+  tipoCargaConfig,
+  medidasConfig,
+  clientesConfig,
+  MASTER_DATA_CONFIGS,
+  getMasterDataConfig,
+  ALL_MASTER_DATA_CONFIGS,
+  MASTER_DATA_ROUTES,
+} from './configs';
 export { getMasterDataComponent, getConfigKeyFromEndpoint } from './configs/components';

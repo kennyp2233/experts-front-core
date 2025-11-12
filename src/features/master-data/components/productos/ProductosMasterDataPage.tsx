@@ -57,9 +57,41 @@ export function ProductosMasterDataPage({ config }: ProductosMasterDataPageProps
     update,
     remove,
     transformDataForForm,
+    medidas,
   } = useProductosMasterData<Producto>(config.apiEndpoint, {
     search: debouncedSearch,
   });
+
+  // Create dynamic config with FK options
+  const dynamicConfig = useMemo(() => ({
+    ...config,
+    fields: config.fields.map(field => {
+      if (field.name === 'medidaId') {
+        return { ...field, type: 'select' as const, options: medidas };
+      }
+      return field;
+    }),
+    tableColumns: config.tableColumns.map(column => {
+      if (column.key === 'medidaId') {
+        return {
+          ...column,
+          render: (value: any, row: any) => {
+            const medida = medidas.find(m => m.value === value);
+            return medida ? medida.label : 'Sin medida';
+          }
+        };
+      }
+      if (column.key === 'opcionId') {
+        return {
+          ...column,
+          render: (value: any, row: any) => {
+            return value === 'simple' ? 'Simple' : value === 'compuesto' ? 'Compuesto' : value || 'Sin opción';
+          }
+        };
+      }
+      return column;
+    }),
+  }), [config, medidas]);
 
   // Custom field renderers for productos-specific fields
   const customFieldRenderers: Record<string, (field: MasterDataFormField, value: unknown, onChange: (value: unknown) => void) => React.ReactElement> = {
@@ -136,15 +168,18 @@ export function ProductosMasterDataPage({ config }: ProductosMasterDataPageProps
 
   const handleFormSubmit = async (formData: Record<string, unknown>) => {
     try {
+      // Filter out system fields that shouldn't be sent to the API
+      const { id, createdAt, updatedAt, ...filteredData } = formData;
+
       if (editingItem) {
-        await update(editingItem.id, formData);
+        await update(editingItem.id, filteredData);
         setSnackbar({
           open: true,
           message: 'Producto actualizado exitosamente',
           severity: 'success',
         });
       } else {
-        await create(formData as Omit<Producto, 'id'>);
+        await create(filteredData as Omit<Producto, 'id'>);
         setPage(0); // Reset to first page when creating new item
         setSnackbar({
           open: true,
@@ -188,7 +223,7 @@ export function ProductosMasterDataPage({ config }: ProductosMasterDataPageProps
       </Box>
 
       <MasterDataTable
-        config={config}
+        config={dynamicConfig}
         data={data}
         total={total}
         page={page}
@@ -207,7 +242,7 @@ export function ProductosMasterDataPage({ config }: ProductosMasterDataPageProps
         open={formOpen}
         onClose={handleFormClose}
         onSubmit={handleFormSubmit}
-        config={config}
+        config={dynamicConfig}
         initialData={transformedInitialData}
         title={
           viewMode

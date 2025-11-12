@@ -20,6 +20,7 @@ interface ClientesMasterDataPageProps {
 
 export function ClientesMasterDataPage({ config }: ClientesMasterDataPageProps) {
     const [searchValue, setSearchValue] = useState('');
+    const [pageSize, setPageSize] = useState(10);
     const [formOpen, setFormOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<MasterDataEntity | undefined>();
     const [viewMode, setViewMode] = useState(false);
@@ -147,8 +148,9 @@ export function ClientesMasterDataPage({ config }: ClientesMasterDataPageProps) 
                 data={data}
                 total={total}
                 page={page}
-                pageSize={10}
+                pageSize={pageSize}
                 onPageChange={setPage}
+                onPageSizeChange={setPageSize}
                 onView={handleView}
                 onEdit={handleEdit}
                 onDelete={handleDelete}

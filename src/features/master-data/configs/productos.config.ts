@@ -52,9 +52,10 @@ export const productosConfig: MasterDataConfig = {
     {
       name: 'medidaId',
       label: 'Medida',
-      type: 'number',
+      type: 'select',
       required: true,
       tab: 'Información General',
+      options: [], // Will be populated dynamically
       validation: {
         min: 1,
       },
@@ -91,12 +92,13 @@ export const productosConfig: MasterDataConfig = {
     {
       name: 'opcionId',
       label: 'Opción',
-      type: 'number',
+      type: 'select',
       required: false,
       tab: 'Configuración',
-      validation: {
-        min: 1,
-      },
+      options: [
+        { value: 'simple', label: 'Simple' },
+        { value: 'compuesto', label: 'Compuesto' },
+      ],
     },
     {
       name: 'sesaId',

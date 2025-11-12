@@ -28,8 +28,8 @@ export function usePaisesMasterData(endpoint: string, options: UsePaisesMasterDa
           label: `${p.siglasPais} - ${p.nombre}`
         })) || []);
         setAcuerdos(acuerdosRes.data.data?.map((a: any) => ({
-          value: a.id,
-          label: a.nombre || `Acuerdo ${a.id}`
+          value: a.idAcuerdo,
+          label: a.nombre || `Acuerdo ${a.idAcuerdo}`
         })) || []);
       } catch (error) {
         console.error('Error loading FK options for paises:', error);

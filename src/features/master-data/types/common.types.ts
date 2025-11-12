@@ -52,6 +52,7 @@ export interface MasterDataConfig {
   entityName: string;
   entityNamePlural: string;
   apiEndpoint: string;
+  idField?: string; // The field name for the ID, defaults to 'id'
   fields: MasterDataFormField[];
   tableColumns: MasterDataTableColumn[];
   searchFields?: string[];

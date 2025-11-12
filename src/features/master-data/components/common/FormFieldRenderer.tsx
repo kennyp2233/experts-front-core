@@ -65,17 +65,6 @@ export function FormFieldRenderer({
           margin="dense"
           size="small"
           disabled={readOnly}
-          sx={{
-            '& .MuiOutlinedInput-root': {
-              borderRadius: 2,
-              '&:hover .MuiOutlinedInput-notchedOutline': {
-                borderColor: 'primary.main',
-              },
-            },
-            '& .MuiInputLabel-root': {
-              fontWeight: 500,
-            },
-          }}
         />
       );
 
@@ -94,17 +83,6 @@ export function FormFieldRenderer({
           margin="dense"
           size="small"
           disabled={readOnly}
-          sx={{
-            '& .MuiOutlinedInput-root': {
-              borderRadius: 2,
-              '&:hover .MuiOutlinedInput-notchedOutline': {
-                borderColor: 'primary.main',
-              },
-            },
-            '& .MuiInputLabel-root': {
-              fontWeight: 500,
-            },
-          }}
         />
       );
 
@@ -126,24 +104,19 @@ export function FormFieldRenderer({
                 checked={Boolean(value)}
                 onChange={(e) => onChange(e.target.checked)}
                 disabled={readOnly}
-                size="small"
               />
             }
             label={field.label}
-            sx={{
-              margin: 0,
-              alignItems: 'center',
-              '& .MuiFormControlLabel-label': {
-                fontWeight: 500,
-                fontSize: '0.95rem',
-                marginLeft: 1.5,
-              },
-            }}
           />
         </Box>
       );
 
     case 'select':
+      // Ensure the value is valid for the available options
+      const stringValue = value ? String(value) : '';
+      const hasOptions = field.options && field.options.length > 0;
+      const validValue = hasOptions ? (field.options?.some((option: any) => String(option.value) === stringValue) ? stringValue : '') : stringValue;
+      
       return (
         <FormControl
           key={field.name}
@@ -152,46 +125,19 @@ export function FormFieldRenderer({
           size="small"
           error={!!error}
           required={field.required}
-          sx={{
-            '& .MuiOutlinedInput-root': {
-              borderRadius: 2,
-              '&:hover .MuiOutlinedInput-notchedOutline': {
-                borderColor: 'primary.main',
-              },
-            },
-            '& .MuiInputLabel-root': {
-              fontWeight: 500,
-            },
-          }}
         >
           <InputLabel>{field.label}</InputLabel>
           <Select
-            value={value ?? ''}
-            onChange={(e) => onChange((e.target as HTMLInputElement).value)}
+            value={validValue}
+            onChange={(e) => {
+              const val = e.target.value;
+              onChange(val === '' ? null : (isNaN(Number(val)) ? val : Number(val)));
+            }}
             label={field.label}
             disabled={readOnly}
-            MenuProps={{
-              PaperProps: {
-                sx: {
-                  borderRadius: 2,
-                  mt: 1,
-                  boxShadow: 4,
-                  '& .MuiMenuItem-root': {
-                    borderRadius: 1,
-                    mx: 1,
-                    my: 0.5,
-                    '&:hover': {
-                      bgcolor: (theme) => theme.palette.mode === 'dark' 
-                        ? 'rgba(255, 255, 255, 0.08)' 
-                        : 'rgba(0, 0, 0, 0.04)',
-                    },
-                  },
-                },
-              },
-            }}
           >
             {field.options?.map((option: any) => (
-              <MenuItem key={option.value} value={option.value}>
+              <MenuItem key={option.value} value={String(option.value)}>
                 {option.label}
               </MenuItem>
             ))}
@@ -216,14 +162,6 @@ export function FormFieldRenderer({
           margin="dense"
           size="small"
           disabled={readOnly}
-          sx={{
-            '& .MuiOutlinedInput-root': {
-              borderRadius: 2,
-            },
-            '& .MuiInputLabel-root': {
-              fontWeight: 500,
-            },
-          }}
         />
       );
 
