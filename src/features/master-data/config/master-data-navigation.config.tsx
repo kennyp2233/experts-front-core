@@ -7,6 +7,10 @@ import {
   Business as BusinessIcon,
   Scale as ScaleIcon,
   Gavel as GavelIcon,
+  AirportShuttle as AirportShuttleIcon,
+  Warehouse as WarehouseIcon,
+  AccountCircle as AccountCircleIcon,
+  DriveEta as DriveEtaIcon,
 } from '@mui/icons-material';
 import type { MenuItem } from '../../dashboard/components/sidebar/types';
 
@@ -54,6 +58,36 @@ export const MASTER_DATA_ENTITIES: MasterDataEntity[] = [
     category: 'geográfico',
     available: true,
   },
+  {
+    id: 'cae-aduana',
+    label: 'CAE Aduana',
+    href: '/admin/master-data/cae-aduana',
+    icon: <WarehouseIcon />,
+    color: '#4caf50',
+    description: 'Gestionar códigos de aduanas',
+    category: 'geográfico',
+    available: true,
+  },
+  {
+    id: 'destino',
+    label: 'Destino',
+    href: '/admin/master-data/destino',
+    icon: <PublicIcon />,
+    color: '#8bc34a',
+    description: 'Administrar destinos disponibles',
+    category: 'geográfico',
+    available: true,
+  },
+  {
+    id: 'origen',
+    label: 'Origen',
+    href: '/admin/master-data/origen',
+    icon: <PublicIcon />,
+    color: '#cddc39',
+    description: 'Gestionar orígenes de productos',
+    category: 'geográfico',
+    available: true,
+  },
 
   // Transporte
   {
@@ -63,6 +97,16 @@ export const MASTER_DATA_ENTITIES: MasterDataEntity[] = [
     icon: <FlightIcon />,
     color: '#388e3c',
     description: 'Administrar aerolíneas y sus configuraciones',
+    category: 'transporte',
+    available: true,
+  },
+  {
+    id: 'agencia-iata',
+    label: 'Agencias IATA',
+    href: '/admin/master-data/agencia-iata',
+    icon: <AirportShuttleIcon />,
+    color: '#2196f3',
+    description: 'Gestionar agencias IATA y sus configuraciones',
     category: 'transporte',
     available: true,
   },
@@ -110,6 +154,26 @@ export const MASTER_DATA_ENTITIES: MasterDataEntity[] = [
     category: 'operativo',
     available: true,
   },
+  {
+    id: 'bodeguero',
+    label: 'Bodegueros',
+    href: '/admin/master-data/bodeguero',
+    icon: <AccountCircleIcon />,
+    color: '#795548',
+    description: 'Gestionar bodegueros del sistema',
+    category: 'operativo',
+    available: true,
+  },
+  {
+    id: 'choferes',
+    label: 'Choferes',
+    href: '/admin/master-data/choferes',
+    icon: <DriveEtaIcon />,
+    color: '#607d8b',
+    description: 'Administrar información de choferes',
+    category: 'operativo',
+    available: true,
+  },
 
   // Comercial (futuro)
   {
@@ -119,6 +183,16 @@ export const MASTER_DATA_ENTITIES: MasterDataEntity[] = [
     icon: <BusinessIcon />,
     color: '#7b1fa2',
     description: 'Gestionar información de clientes',
+    category: 'comercial',
+    available: true,
+  },
+  {
+    id: 'sub-agencia',
+    label: 'Sub-Agencia',
+    href: '/admin/master-data/sub-agencia',
+    icon: <BusinessIcon />,
+    color: '#ba68c8',
+    description: 'Administrar sub-agencias y sucursales',
     category: 'comercial',
     available: true,
   },

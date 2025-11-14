@@ -5,6 +5,8 @@ export { MasterDataPage } from './components/common/MasterDataPage';
 export { AerolineasMasterDataPage } from './components/aerolineas/AerolineasMasterDataPage';
 export { PaisesMasterDataPage } from './components/paises/PaisesMasterDataPage';
 export { ProductosMasterDataPage } from './components/productos/ProductosMasterDataPage';
+export { DestinoMasterDataPage } from './components/destino/DestinoMasterDataPage';
+export { OrigenMasterDataPage } from './components/origen/OrigenMasterDataPage';
 export { RutasManager } from './components/aerolineas/RutasManager';
 export { ConceptosCostoManager } from './components/aerolineas/ConceptosCostoManager';
 

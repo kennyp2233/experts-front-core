@@ -53,6 +53,7 @@ export interface MasterDataConfig {
   entityNamePlural: string;
   apiEndpoint: string;
   idField?: string; // The field name for the ID, defaults to 'id'
+  customComponent?: React.ComponentType<{ config: MasterDataConfig }>;
   fields: MasterDataFormField[];
   tableColumns: MasterDataTableColumn[];
   searchFields?: string[];
