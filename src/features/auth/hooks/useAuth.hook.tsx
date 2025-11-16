@@ -7,10 +7,8 @@ import {
   User,
   LoginRequest,
   RegisterRequest,
-  Enable2FARequest,
   Enable2FAResponse,
   Verify2FARequest,
-  TrustedDevice
 } from '../types/auth.types';
 import { logger, retryProfileFetch } from '../../../shared/utils';
 
@@ -29,9 +27,7 @@ interface AuthContextType {
   verify2FA: (token: string, trustDevice?: boolean) => Promise<void>;
   enable2FA: () => Promise<Enable2FAResponse>;
   confirm2FA: (token: string) => Promise<void>;
-  disable2FA: (token: string) => Promise<void>;
-  getTrustedDevices: () => Promise<TrustedDevice[]>;
-  revokeTrustedDevice: (deviceId: string) => Promise<void>;
+  disable2FA: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -229,10 +225,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const disable2FA = async (token: string) => {
+  const disable2FA = async () => {
     try {
       authLogger.debug('Disabling 2FA...');
-      await authService.disable2FA(token);
+      await authService.disable2FA();
 
       // Refresh user profile to get updated twoFactorEnabled status
       const profile = await authService.getProfile();
@@ -241,29 +237,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       authLogger.info('2FA disabled successfully');
     } catch (error: unknown) {
       authLogger.error('Disable 2FA error', error);
-      throw error;
-    }
-  };
-
-  const getTrustedDevices = async (): Promise<TrustedDevice[]> => {
-    try {
-      authLogger.debug('Fetching trusted devices...');
-      const devices = await authService.getTrustedDevices();
-      authLogger.debug('Trusted devices fetched', { count: devices.length });
-      return devices;
-    } catch (error: unknown) {
-      authLogger.error('Get trusted devices error', error);
-      throw error;
-    }
-  };
-
-  const revokeTrustedDevice = async (deviceId: string) => {
-    try {
-      authLogger.debug('Revoking trusted device...', { deviceId });
-      await authService.revokeTrustedDevice(deviceId);
-      authLogger.info('Trusted device revoked');
-    } catch (error: unknown) {
-      authLogger.error('Revoke device error', error);
       throw error;
     }
   };
@@ -281,8 +254,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     enable2FA,
     confirm2FA,
     disable2FA,
-    getTrustedDevices,
-    revokeTrustedDevice,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

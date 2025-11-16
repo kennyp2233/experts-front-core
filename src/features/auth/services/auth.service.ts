@@ -3,11 +3,12 @@ import {
   LoginRequest,
   RegisterRequest,
   AuthResponse,
-  Enable2FARequest,
+  Confirm2FARequest,
+  Confirm2FAResponse,
   Enable2FAResponse,
   Verify2FARequest,
   Verify2FAResponse,
-  TrustedDevice,
+  Disable2FAResponse,
   User
 } from '../types/auth.types';
 
@@ -50,11 +51,13 @@ class AuthService {
     }
   }
 
-  // ========== 2FA Methods (Backend implementation pending) ==========
+  // ========== 2FA Methods (IMPLEMENTED ✓) ==========
 
   /**
-   * Enable 2FA for the current user
-   * Backend endpoint: POST /auth/2fa/enable (NOT IMPLEMENTED YET)
+   * Step 1: Enable 2FA - Generates QR code and secret
+   * Backend endpoint: POST /auth/2fa/enable ✓
+   * Requires: JWT token (authenticated user)
+   * Returns: { secret, qrCode, message }
    */
   async enable2FA(): Promise<Enable2FAResponse> {
     const response = await api.post('/auth/2fa/enable');
@@ -63,28 +66,22 @@ class AuthService {
   }
 
   /**
-   * Confirm 2FA setup with TOTP code
-   * Backend endpoint: POST /auth/2fa/confirm (NOT IMPLEMENTED YET)
+   * Step 2: Confirm 2FA setup with TOTP code from authenticator app
+   * Backend endpoint: POST /auth/2fa/confirm ✓
+   * Requires: JWT token + 6-digit TOTP code
+   * Returns: { success: boolean, message: string }
    */
-  async confirm2FA(data: Enable2FARequest): Promise<{ success: boolean }> {
+  async confirm2FA(data: Confirm2FARequest): Promise<Confirm2FAResponse> {
     const response = await api.post('/auth/2fa/confirm', data);
     console.log('Confirm 2FA response:', response.data);
     return response.data;
   }
 
   /**
-   * Disable 2FA for the current user
-   * Backend endpoint: POST /auth/2fa/disable (NOT IMPLEMENTED YET)
-   */
-  async disable2FA(token: string): Promise<{ success: boolean }> {
-    const response = await api.post('/auth/2fa/disable', { token });
-    console.log('Disable 2FA response:', response.data);
-    return response.data;
-  }
-
-  /**
-   * Verify 2FA code during login
-   * Backend endpoint: POST /auth/2fa/verify (NOT IMPLEMENTED YET)
+   * Verify 2FA code during login (when requires2FA = true)
+   * Backend endpoint: POST /auth/2fa/verify ✓
+   * Public endpoint (no JWT required)
+   * Returns: { user } + sets auth cookies
    */
   async verify2FA(data: Verify2FARequest): Promise<Verify2FAResponse> {
     const response = await api.post('/auth/2fa/verify', data);
@@ -93,22 +90,15 @@ class AuthService {
   }
 
   /**
-   * Get list of trusted devices
-   * Backend endpoint: GET /auth/2fa/trusted-devices (NOT IMPLEMENTED YET)
+   * Disable 2FA for the current user
+   * Backend endpoint: POST /auth/2fa/disable ✓
+   * Requires: JWT token
+   * Returns: { success: boolean, message: string }
+   * Note: Also removes all trusted devices
    */
-  async getTrustedDevices(): Promise<TrustedDevice[]> {
-    const response = await api.get('/auth/2fa/trusted-devices');
-    console.log('Trusted devices response:', response.data);
-    return response.data;
-  }
-
-  /**
-   * Revoke a trusted device
-   * Backend endpoint: DELETE /auth/2fa/trusted-devices/:id (NOT IMPLEMENTED YET)
-   */
-  async revokeTrustedDevice(deviceId: string): Promise<{ success: boolean }> {
-    const response = await api.delete(`/auth/2fa/trusted-devices/${deviceId}`);
-    console.log('Revoke device response:', response.data);
+  async disable2FA(): Promise<Disable2FAResponse> {
+    const response = await api.post('/auth/2fa/disable');
+    console.log('Disable 2FA response:', response.data);
     return response.data;
   }
 }

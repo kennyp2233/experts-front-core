@@ -36,14 +36,19 @@ export interface User {
 }
 
 // 2FA specific types
-export interface Enable2FARequest {
-  token: string; // 6-digit TOTP code
+export interface Enable2FAResponse {
+  secret: string; // Base32 encoded secret
+  qrCode: string; // Data URL for QR code image
+  message: string;
 }
 
-export interface Enable2FAResponse {
-  secret: string; // Base32 encoded secret for QR code
-  qrCodeUrl: string; // Data URL for QR code image
-  backupCodes?: string[]; // Optional backup codes
+export interface Confirm2FARequest {
+  token: string; // 6-digit TOTP code to confirm setup
+}
+
+export interface Confirm2FAResponse {
+  success: boolean;
+  message: string;
 }
 
 export interface Verify2FARequest {
@@ -56,14 +61,7 @@ export interface Verify2FAResponse {
   user: User;
 }
 
-export interface TrustedDevice {
-  id: string;
-  deviceName: string;
-  browser: string;
-  os: string;
-  deviceType: string;
-  lastUsedAt: string;
-  lastIpAddress?: string;
-  expiresAt: string;
-  createdAt: string;
+export interface Disable2FAResponse {
+  success: boolean;
+  message: string;
 }
