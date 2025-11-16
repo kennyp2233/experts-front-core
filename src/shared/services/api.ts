@@ -1,10 +1,27 @@
 import axios from 'axios';
+import { logger } from '../utils/logger';
+
+const apiLogger = logger.createChild('API');
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 const API_VERSION = 'v1';
 
-// Flag to prevent multiple logout calls
-let isLoggingOut = false;
+// Use sessionStorage to prevent multiple logout calls (SSR-safe)
+const LOGOUT_FLAG_KEY = '__is_logging_out__';
+
+const isLoggingOut = () => {
+  if (typeof window === 'undefined') return false;
+  return sessionStorage.getItem(LOGOUT_FLAG_KEY) === 'true';
+};
+
+const setLoggingOut = (value: boolean) => {
+  if (typeof window === 'undefined') return;
+  if (value) {
+    sessionStorage.setItem(LOGOUT_FLAG_KEY, 'true');
+  } else {
+    sessionStorage.removeItem(LOGOUT_FLAG_KEY);
+  }
+};
 
 const api = axios.create({
   baseURL: `${API_BASE_URL}/api/${API_VERSION}`,
@@ -38,32 +55,32 @@ api.interceptors.response.use(
     // Check if we're already on the auth page
     const isOnAuthPage = typeof window !== 'undefined' && window.location.pathname.startsWith('/auth');
     
-    // Only handle 401 errors that are NOT from logout/profile endpoints, 
+    // Only handle 401 errors that are NOT from logout/profile endpoints,
     // NOT already on auth page, and if not already logging out
-    if (is401 && !isLogoutEndpoint && !isProfileEndpoint && !isOnAuthPage && !isLoggingOut) {
-      console.warn('[API] 401 Unauthorized - initiating logout:', error.config?.url);
-      isLoggingOut = true;
-      
+    if (is401 && !isLogoutEndpoint && !isProfileEndpoint && !isOnAuthPage && !isLoggingOut()) {
+      apiLogger.warn('401 Unauthorized - initiating logout', { url: error.config?.url });
+      setLoggingOut(true);
+
       try {
         // Call logout API to clear server-side session
         // Use a direct axios instance to avoid triggering this interceptor
         await axios.post(`${API_BASE_URL}/api/${API_VERSION}/auth/logout`, {}, {
           withCredentials: true,
         });
-        console.log('[API] Logout API called successfully');
+        apiLogger.debug('Logout API called successfully');
       } catch (logoutError) {
         // Ignore logout errors - cookie might already be invalid
-        console.warn('[API] Logout API call failed (expected if cookie invalid):', logoutError);
+        apiLogger.debug('Logout API call failed (expected if cookie invalid)', logoutError);
       }
       
       // Redirect to login page
       if (typeof window !== 'undefined') {
         window.location.href = '/auth';
       }
-      
+
       // Reset flag after a delay in case redirect doesn't happen immediately
       setTimeout(() => {
-        isLoggingOut = false;
+        setLoggingOut(false);
       }, 1000);
     }
     

@@ -1,0 +1,26 @@
+# Dependencies
+node_modules
+.pnp
+.pnp.*
+
+# Build outputs
+.next
+out
+build
+dist
+
+# Logs
+*.log
+
+# Environment
+.env*
+!.env.example
+
+# Cache
+.cache
+*.tsbuildinfo
+
+# Other
+coverage
+.vercel
+public

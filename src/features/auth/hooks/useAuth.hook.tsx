@@ -3,6 +3,9 @@
 import { useState, useEffect, createContext, useContext } from 'react';
 import { authService } from '../services/auth.service';
 import { AuthResponse, User, LoginRequest, RegisterRequest } from '../types/auth.types';
+import { logger, retryProfileFetch } from '../../../shared/utils';
+
+const authLogger = logger.createChild('AUTH');
 
 interface AuthContextType {
   user: User | null;
@@ -24,18 +27,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const initAuth = async () => {
       try {
-        console.log('[AUTH] Initializing auth...');
+        authLogger.debug('Initializing auth...');
         // Try to fetch profile - if cookie exists, it will be sent automatically
         const profile = await authService.getProfile();
-        console.log('[AUTH] Init: Profile found:', profile);
+        authLogger.debug('Profile found', profile);
         setUser(profile);
         setIsAuthenticated(true);
-        console.log('[AUTH] Init: User already authenticated');
-      } catch (error: any) {
+        authLogger.info('User authenticated');
+      } catch (error: unknown) {
         // If 401 or any error, user is not authenticated
-        console.log('[AUTH] Init: Not authenticated', {
-          status: error?.response?.status,
-          message: error?.message,
+        const err = error as { response?: { status?: number }; message?: string };
+        authLogger.debug('Not authenticated', {
+          status: err?.response?.status,
+          message: err?.message,
         });
         setIsAuthenticated(false);
         setUser(null);
@@ -49,28 +53,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (credentials: LoginRequest) => {
     try {
-      console.log('[AUTH] Starting login...');
+      authLogger.debug('Starting login...');
       const response: AuthResponse = await authService.login(credentials);
-      console.log('[AUTH] Login response received:', response);
-      
+      authLogger.debug('Login response received', response);
+
       // Token is set in httpOnly cookie by backend
-      // Wait a bit for cookie to be set, then fetch profile
-      console.log('[AUTH] Waiting 100ms for cookie to be set...');
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // Fetch profile to verify cookie is working
-      console.log('[AUTH] Fetching profile...');
-      const profile = await authService.getProfile();
-      console.log('[AUTH] Profile received:', profile);
-      
+      // Retry fetching profile to verify cookie is working
+      authLogger.debug('Fetching profile with retry...');
+      const profile = await retryProfileFetch(
+        () => authService.getProfile(),
+        3 // max 3 retries
+      );
+      authLogger.debug('Profile received', profile);
+
       setUser(profile);
       setIsAuthenticated(true);
-      console.log('[AUTH] Login successful - authenticated!');
-    } catch (error: any) {
-      console.error('[AUTH] Login error:', {
-        message: error.message,
-        status: error.response?.status,
-        data: error.response?.data,
+      authLogger.info('Login successful - authenticated!');
+    } catch (error: unknown) {
+      const err = error as { message?: string; response?: { status?: number; data?: unknown } };
+      authLogger.error('Login error', error, {
+        message: err.message,
+        status: err.response?.status,
+        data: err.response?.data,
       });
       setIsAuthenticated(false);
       setUser(null);
@@ -80,28 +84,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const register = async (userData: RegisterRequest) => {
     try {
-      console.log('[AUTH] Starting register...');
+      authLogger.debug('Starting register...');
       const response: AuthResponse = await authService.register(userData);
-      console.log('[AUTH] Register response received:', response);
-      
+      authLogger.debug('Register response received', response);
+
       // Token is set in httpOnly cookie by backend
-      // Wait a bit for cookie to be set, then fetch profile
-      console.log('[AUTH] Waiting 100ms for cookie to be set...');
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // Fetch profile to verify cookie is working
-      console.log('[AUTH] Fetching profile...');
-      const profile = await authService.getProfile();
-      console.log('[AUTH] Profile received:', profile);
-      
+      // Retry fetching profile to verify cookie is working
+      authLogger.debug('Fetching profile with retry...');
+      const profile = await retryProfileFetch(
+        () => authService.getProfile(),
+        3 // max 3 retries
+      );
+      authLogger.debug('Profile received', profile);
+
       setUser(profile);
       setIsAuthenticated(true);
-      console.log('[AUTH] Register successful - authenticated!');
-    } catch (error: any) {
-      console.error('[AUTH] Register error:', {
-        message: error.message,
-        status: error.response?.status,
-        data: error.response?.data,
+      authLogger.info('Register successful - authenticated!');
+    } catch (error: unknown) {
+      const err = error as { message?: string; response?: { status?: number; data?: unknown } };
+      authLogger.error('Register error', error, {
+        message: err.message,
+        status: err.response?.status,
+        data: err.response?.data,
       });
       setIsAuthenticated(false);
       setUser(null);
@@ -112,9 +116,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = async () => {
     try {
       await authService.logout();
+      authLogger.info('Logout successful');
     } catch (error) {
       // Even if logout fails, clear state and cookie
-      console.warn('Logout failed:', error);
+      authLogger.warn('Logout failed', error);
     } finally {
       setUser(null);
       setIsAuthenticated(false);

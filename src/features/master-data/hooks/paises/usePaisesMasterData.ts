@@ -1,6 +1,5 @@
-import { useState, useEffect } from 'react';
 import { useMasterData } from '../common/useMasterData';
-import api from '../../../../shared/services/api';
+import { useForeignKeyOptions } from '../../../../shared/hooks';
 
 interface UsePaisesMasterDataOptions {
   search?: string;
@@ -8,46 +7,44 @@ interface UsePaisesMasterDataOptions {
   sortOrder?: 'asc' | 'desc';
 }
 
+interface Pais {
+  idPais: number;
+  siglasPais: string;
+  nombre: string;
+}
+
+interface Acuerdo {
+  idAcuerdo: number;
+  nombre: string;
+}
+
 export function usePaisesMasterData(endpoint: string, options: UsePaisesMasterDataOptions = {}) {
-  const baseHook = useMasterData<any>(endpoint, options);
-  const [paisesPadre, setPaisesPadre] = useState<{ value: number; label: string }[]>([]);
-  const [acuerdos, setAcuerdos] = useState<{ value: number; label: string }[]>([]);
-  const [loadingOptions, setLoadingOptions] = useState(true);
+  const baseHook = useMasterData<Pais>(endpoint, options);
 
-  // Load FK options
-  useEffect(() => {
-    const loadOptions = async () => {
-      try {
-        const [paisesRes, acuerdosRes] = await Promise.all([
-          api.get('/master-data/paises'),
-          api.get('/master-data/acuerdos-arancelarios'),
-        ]);
-
-        setPaisesPadre(paisesRes.data.data?.map((p: any) => ({
-          value: p.idPais,
-          label: `${p.siglasPais} - ${p.nombre}`
-        })) || []);
-        setAcuerdos(acuerdosRes.data.data?.map((a: any) => ({
-          value: a.idAcuerdo,
-          label: a.nombre || `Acuerdo ${a.idAcuerdo}`
-        })) || []);
-      } catch (error) {
-        console.error('Error loading FK options for paises:', error);
-        // Set empty arrays as fallback
-        setPaisesPadre([]);
-        setAcuerdos([]);
-      } finally {
-        setLoadingOptions(false);
-      }
-    };
-
-    loadOptions();
-  }, []);
+  // Load FK options using the generic hook
+  const { options: fkOptions, loading: loadingOptions } = useForeignKeyOptions([
+    {
+      key: 'paisesPadre',
+      endpoint: '/master-data/paises',
+      mapper: (p: Pais) => ({
+        value: p.idPais,
+        label: `${p.siglasPais} - ${p.nombre}`,
+      }),
+    },
+    {
+      key: 'acuerdos',
+      endpoint: '/master-data/acuerdos-arancelarios',
+      mapper: (a: Acuerdo) => ({
+        value: a.idAcuerdo,
+        label: a.nombre || `Acuerdo ${a.idAcuerdo}`,
+      }),
+    },
+  ]);
 
   return {
     ...baseHook,
     loading: baseHook.loading || loadingOptions,
-    paisesPadre,
-    acuerdos,
+    paisesPadre: fkOptions.paisesPadre || [],
+    acuerdos: fkOptions.acuerdos || [],
   };
 }
