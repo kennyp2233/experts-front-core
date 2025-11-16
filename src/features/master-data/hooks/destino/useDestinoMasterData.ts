@@ -19,7 +19,7 @@ export function useDestinoMasterData(endpoint: string, options: UseDestinoMaster
   // Load FK options using the generic hook
   const { options: fkOptions, loading: loadingOptions } = useForeignKeyOptions([
     {
-      key: 'paises',
+      key: 'idPais',
       endpoint: '/master-data/paises',
       mapper: (p: PaisResponse) => ({
         value: p.idPais,
@@ -31,6 +31,9 @@ export function useDestinoMasterData(endpoint: string, options: UseDestinoMaster
   return {
     ...baseHook,
     loading: baseHook.loading || loadingOptions,
-    paises: fkOptions.paises || [],
+    // Return foreignKeyOptions for dynamic config application
+    foreignKeyOptions: {
+      idPais: fkOptions.idPais || [],
+    },
   };
 }

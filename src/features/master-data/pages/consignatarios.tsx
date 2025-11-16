@@ -1,9 +1,9 @@
 'use client';
 
 import React from 'react';
-import { ConsignatariosMasterDataPage } from '../components/consignatarios/ConsignatariosMasterDataPage';
+import { MasterDataPage } from '../components/common/MasterDataPage';
 import { consignatariosConfig } from '../configs/consignatarios.config';
 
 export default function ConsignatariosPage() {
-  return <ConsignatariosMasterDataPage config={consignatariosConfig} />;
+  return <MasterDataPage config={consignatariosConfig} />;
 }

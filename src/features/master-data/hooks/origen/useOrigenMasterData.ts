@@ -25,7 +25,7 @@ export function useOrigenMasterData(endpoint: string, options: UseOrigenMasterDa
   // Load FK options using the generic hook
   const { options: fkOptions, loading: loadingOptions } = useForeignKeyOptions([
     {
-      key: 'paises',
+      key: 'idPais',
       endpoint: '/master-data/paises',
       mapper: (p: PaisResponse) => ({
         value: p.idPais,
@@ -33,7 +33,7 @@ export function useOrigenMasterData(endpoint: string, options: UseOrigenMasterDa
       }),
     },
     {
-      key: 'caeAduanas',
+      key: 'idCaeAduana',
       endpoint: '/master-data/cae-aduana',
       mapper: (c: CaeAduanaResponse) => ({
         value: c.idCaeAduana,
@@ -45,7 +45,10 @@ export function useOrigenMasterData(endpoint: string, options: UseOrigenMasterDa
   return {
     ...baseHook,
     loading: baseHook.loading || loadingOptions,
-    paises: fkOptions.paises || [],
-    caeAduanas: fkOptions.caeAduanas || [],
+    // Return foreignKeyOptions for dynamic config application
+    foreignKeyOptions: {
+      idPais: fkOptions.idPais || [],
+      idCaeAduana: fkOptions.idCaeAduana || [],
+    },
   };
 }

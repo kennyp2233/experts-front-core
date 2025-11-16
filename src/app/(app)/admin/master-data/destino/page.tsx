@@ -1,8 +1,8 @@
 'use client';
 
-import { DestinoMasterDataPage } from '@/features/master-data/components/destino/DestinoMasterDataPage';
+import { MasterDataPage } from '@/features/master-data/components/common/MasterDataPage';
 import { destinoConfig } from '@/features/master-data/configs';
 
 export default function Page() {
-  return <DestinoMasterDataPage config={destinoConfig} />;
+  return <MasterDataPage config={destinoConfig} />;
 }

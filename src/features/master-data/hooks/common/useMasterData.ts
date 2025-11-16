@@ -139,5 +139,7 @@ export function useMasterData<T extends MasterDataEntity>(
     remove,
     searchByName,
     refresh: () => mutate((key) => typeof key === 'string' && key.startsWith(endpoint)),
+    // Generic hook doesn't provide foreignKeyOptions, but custom hooks can
+    foreignKeyOptions: undefined,
   };
 }

@@ -23,7 +23,7 @@ export function useConsignatariosMasterData(endpoint: string, options: UseConsig
   // Load FK options using the generic hook
   const { options: fkOptions, loading: loadingOptions } = useForeignKeyOptions([
     {
-      key: 'embarcadores',
+      key: 'idEmbarcador',
       endpoint: '/master-data/embarcadores',
       mapper: (e: EmbarcadorResponse) => ({
         value: e.id,
@@ -31,7 +31,7 @@ export function useConsignatariosMasterData(endpoint: string, options: UseConsig
       }),
     },
     {
-      key: 'clientes',
+      key: 'idCliente',
       endpoint: '/master-data/clientes',
       mapper: (c: ClienteResponse) => ({
         value: c.id,
@@ -43,7 +43,10 @@ export function useConsignatariosMasterData(endpoint: string, options: UseConsig
   return {
     ...baseHook,
     loading: baseHook.loading || loadingOptions,
-    embarcadores: fkOptions.embarcadores || [],
-    clientes: fkOptions.clientes || [],
+    // Return foreignKeyOptions for dynamic config application
+    foreignKeyOptions: {
+      idEmbarcador: fkOptions.idEmbarcador || [],
+      idCliente: fkOptions.idCliente || [],
+    },
   };
 }

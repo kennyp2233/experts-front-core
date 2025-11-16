@@ -1,12 +1,12 @@
 import { MasterDataConfig } from '../types/master-data.types';
-import { DestinoMasterDataPage } from '../components/destino/DestinoMasterDataPage';
+import { useDestinoMasterData } from '../hooks/destino/useDestinoMasterData';
 
 export const destinoConfig: MasterDataConfig = {
   entityName: 'Destino',
   entityNamePlural: 'Destinos',
   apiEndpoint: '/master-data/destino',
   idField: 'id',
-  customComponent: DestinoMasterDataPage,
+  useCustomHook: useDestinoMasterData,
   fields: [
     {
       name: 'nombre',

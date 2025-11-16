@@ -1,9 +1,9 @@
 'use client';
 
 import React from 'react';
-import { DestinoMasterDataPage } from '../components/destino/DestinoMasterDataPage';
+import { MasterDataPage } from '../components/common/MasterDataPage';
 import { destinoConfig } from '../configs/destino.config';
 
 export default function DestinoPage() {
-  return <DestinoMasterDataPage config={destinoConfig} />;
+  return <MasterDataPage config={destinoConfig} />;
 }

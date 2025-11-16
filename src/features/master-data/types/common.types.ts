@@ -48,12 +48,45 @@ export interface MasterDataTab {
   order?: number;
 }
 
+export interface SelectOption {
+  value: any;
+  label: string;
+}
+
+export interface UseMasterDataOptions {
+  search?: string;
+  sortField?: string;
+  sortOrder?: 'asc' | 'desc';
+  idField?: string;
+}
+
+export interface UseMasterDataReturn<T> {
+  data: T[];
+  total: number;
+  page: number;
+  setPage: (page: number) => void;
+  pageSize: number;
+  setPageSize: (size: number) => void;
+  loading: boolean;
+  create: (data: Partial<T>) => Promise<void>;
+  update: (id: number, data: Partial<T>) => Promise<void>;
+  remove: (id: number) => Promise<void>;
+  // Optional: Foreign key options para poblar selects dinámicamente
+  foreignKeyOptions?: Record<string, SelectOption[]>;
+}
+
 export interface MasterDataConfig {
   entityName: string;
   entityNamePlural: string;
   apiEndpoint: string;
   idField?: string; // The field name for the ID, defaults to 'id'
   customComponent?: React.ComponentType<{ config: MasterDataConfig }>;
+  /**
+   * Hook personalizado para casos con foreign keys o lógica especial.
+   * Si se provee, se usará en lugar de useMasterData genérico.
+   * Debe retornar la misma estructura que useMasterData más foreignKeyOptions opcional.
+   */
+  useCustomHook?: (endpoint: string, options: UseMasterDataOptions) => UseMasterDataReturn<any>;
   fields: MasterDataFormField[];
   tableColumns: MasterDataTableColumn[];
   searchFields?: string[];

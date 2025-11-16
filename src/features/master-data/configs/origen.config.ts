@@ -1,12 +1,12 @@
 import { MasterDataConfig } from '../types/master-data.types';
-import { OrigenMasterDataPage } from '../components/origen/OrigenMasterDataPage';
+import { useOrigenMasterData } from '../hooks/origen/useOrigenMasterData';
 
 export const origenConfig: MasterDataConfig = {
   entityName: 'Origen',
   entityNamePlural: 'Orígenes',
   apiEndpoint: '/master-data/origen',
   idField: 'id',
-  customComponent: OrigenMasterDataPage,
+  useCustomHook: useOrigenMasterData,
   fields: [
     {
       name: 'nombre',

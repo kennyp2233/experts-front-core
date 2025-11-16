@@ -8,6 +8,7 @@ import { MasterDataTable } from './MasterDataTable';
 import { MasterDataForm } from './MasterDataForm';
 import { MasterDataEntity, MasterDataConfig } from '../../types/master-data.types';
 import { PageHeader } from '@/shared/components/ui';
+import { applyForeignKeyOptions } from '../../utils/foreignKeyHelpers';
 
 interface MasterDataPageProps<T extends MasterDataEntity> {
   config: MasterDataConfig;
@@ -42,6 +43,9 @@ export function MasterDataPage<T extends MasterDataEntity>({ config }: MasterDat
     severity: 'success',
   });
 
+  // Use custom hook if provided, otherwise use generic hook
+  const hookToUse = config.useCustomHook || useMasterData<T>;
+
   const {
     data,
     total,
@@ -53,12 +57,18 @@ export function MasterDataPage<T extends MasterDataEntity>({ config }: MasterDat
     create,
     update,
     remove,
-  } = useMasterData<T>(config.apiEndpoint, {
+    foreignKeyOptions,
+  } = hookToUse(config.apiEndpoint, {
     search: debouncedSearch,
     sortField: config.defaultSort?.field,
     sortOrder: config.defaultSort?.order,
     idField: config.idField,
   });
+
+  // Apply foreign key options to config if they exist
+  const dynamicConfig = foreignKeyOptions
+    ? applyForeignKeyOptions(config, foreignKeyOptions)
+    : config;
 
   const handleCreate = () => {
     setEditingItem(undefined);
@@ -156,7 +166,7 @@ export function MasterDataPage<T extends MasterDataEntity>({ config }: MasterDat
       />
 
       <MasterDataTable
-        config={config}
+        config={dynamicConfig}
         data={data}
         total={total}
         page={page}
@@ -175,7 +185,7 @@ export function MasterDataPage<T extends MasterDataEntity>({ config }: MasterDat
         open={formOpen}
         onClose={handleFormClose}
         onSubmit={handleFormSubmit}
-        config={config}
+        config={dynamicConfig}
         initialData={editingItem}
         title={
           viewMode

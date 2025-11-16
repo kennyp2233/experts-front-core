@@ -1,8 +1,8 @@
 'use client';
 
-import { OrigenMasterDataPage } from '@/features/master-data/components/origen/OrigenMasterDataPage';
+import { MasterDataPage } from '@/features/master-data/components/common/MasterDataPage';
 import { origenConfig } from '@/features/master-data/configs';
 
 export default function Page() {
-  return <OrigenMasterDataPage config={origenConfig} />;
+  return <MasterDataPage config={origenConfig} />;
 }
