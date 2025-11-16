@@ -1,25 +1,27 @@
 "use client";
 
 import { useState } from 'react';
-import { TextField, Button, Box, Alert, Stack, CircularProgress } from '@mui/material';
+import { TextField, Button, Box, Stack, CircularProgress } from '@mui/material';
 import { useAuth } from '../hooks/useAuth.hook';
+import { useErrorHandler } from '@/shared/hooks';
+import { useToast } from '@/shared/providers';
 import { LoginRequest } from '../types/auth.types';
 
 export default function LoginForm() {
   const { login } = useAuth();
+  const toast = useToast();
+  const { getErrorMessage } = useErrorHandler();
   const [formData, setFormData] = useState<LoginRequest>({ username: '', password: '' });
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
     setLoading(true);
 
     try {
       await login(formData);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Error al iniciar sesión');
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Error al iniciar sesión'));
     } finally {
       setLoading(false);
     }
@@ -35,8 +37,6 @@ export default function LoginForm() {
   return (
     <Box component="form" onSubmit={handleSubmit} sx={{ width: '100%' }}>
       <Stack spacing={2}>
-        {error && <Alert severity="error">{error}</Alert>}
-
         <TextField
           fullWidth
           label="Usuario"

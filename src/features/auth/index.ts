@@ -18,6 +18,3 @@ export {
   useVerify2FA,
   useDisable2FA,
 } from './hooks';
-
-// Legacy service (deprecated - use hooks instead)
-export { authService } from './services/auth.service';

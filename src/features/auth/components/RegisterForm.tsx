@@ -1,12 +1,16 @@
 "use client";
 
 import { useState } from 'react';
-import { TextField, Button, Box, Alert, Stack, CircularProgress } from '@mui/material';
+import { TextField, Button, Box, Stack, CircularProgress } from '@mui/material';
 import { useAuth } from '../hooks/useAuth.hook';
+import { useErrorHandler } from '@/shared/hooks';
+import { useToast } from '@/shared/providers';
 import { RegisterRequest } from '../types/auth.types';
 
 export default function RegisterForm() {
   const { register } = useAuth();
+  const toast = useToast();
+  const { getErrorMessage } = useErrorHandler();
   const [formData, setFormData] = useState<RegisterRequest>({
     email: '',
     username: '',
@@ -14,18 +18,16 @@ export default function RegisterForm() {
     firstName: '',
     lastName: '',
   });
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
     setLoading(true);
 
     try {
       await register(formData);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Error en el registro');
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Error en el registro'));
     } finally {
       setLoading(false);
     }
@@ -41,8 +43,6 @@ export default function RegisterForm() {
   return (
     <Box component="form" onSubmit={handleSubmit} sx={{ width: '100%' }}>
       <Stack spacing={2}>
-        {error && <Alert severity="error">{error}</Alert>}
-
         <TextField
           fullWidth
           label="Nombre"
