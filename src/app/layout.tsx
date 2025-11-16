@@ -1,20 +1,21 @@
 import type { Metadata } from "next";
-import { Poppins, JetBrains_Mono } from "next/font/google";
+// Temporarily disabled Google Fonts due to network restrictions
+// import { Poppins, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProviderWrapper, ThemeProvider, SWRProvider, AuthProviderWrapper } from '../shared/providers';
 
-const poppins = Poppins({
-  weight: ['300', '400', '500', '600', '700', '800'],
-  variable: "--font-poppins",
-  subsets: ["latin"],
-  display: "swap",
-});
+// const poppins = Poppins({
+//   weight: ['300', '400', '500', '600', '700', '800'],
+//   variable: "--font-poppins",
+//   subsets: ["latin"],
+//   display: "swap",
+// });
 
-const jetbrainsMono = JetBrains_Mono({
-  variable: "--font-jetbrains-mono",
-  subsets: ["latin"],
-  display: "swap",
-});
+// const jetbrainsMono = JetBrains_Mono({
+//   variable: "--font-jetbrains-mono",
+//   subsets: ["latin"],
+//   display: "swap",
+// });
 
 export const metadata: Metadata = {
   title: "Experts Front Core",
@@ -35,7 +36,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       </head>
       <body
-        className={`${poppins.variable} ${jetbrainsMono.variable} antialiased`}
+        className="antialiased"
       >
         <ThemeProvider>
           <ThemeProviderWrapper>

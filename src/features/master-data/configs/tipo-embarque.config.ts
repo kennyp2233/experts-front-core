@@ -1,9 +1,11 @@
 import { MasterDataConfig } from '../types/master-data.types';
+import { useTipoEmbarqueMasterData } from '../hooks/tipo-embarque/useTipoEmbarqueMasterData';
 
 export const tipoEmbarqueConfig: MasterDataConfig = {
   entityName: 'Tipo de Embarque',
   entityNamePlural: 'Tipos de Embarque',
   apiEndpoint: '/master-data/tipo-embarque',
+  useCustomHook: useTipoEmbarqueMasterData,
   fields: [
     {
       name: 'nombre',
@@ -18,14 +20,16 @@ export const tipoEmbarqueConfig: MasterDataConfig = {
     {
       name: 'idTipoCarga',
       label: 'Tipo de Carga',
-      type: 'number',
+      type: 'select',
       required: false,
+      options: [], // Will be populated dynamically by hook
     },
     {
       name: 'idTipoEmbalaje',
       label: 'Tipo de Embalaje',
-      type: 'number',
+      type: 'select',
       required: false,
+      options: [], // Will be populated dynamically by hook
     },
     {
       name: 'regimen',

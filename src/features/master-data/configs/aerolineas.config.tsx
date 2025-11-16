@@ -1,9 +1,35 @@
-import { MasterDataConfig } from '../types/master-data.types';
+import React from 'react';
+import { Box } from '@mui/material';
+import { MasterDataConfig, MasterDataFormField } from '../types/master-data.types';
+import { useAerolineasMasterData } from '../hooks/aerolineas/useAerolineasMasterData';
+import { RutasManager } from '../components/aerolineas/RutasManager';
+import { ConceptosCostoManager } from '../components/aerolineas/ConceptosCostoManager';
 
 export const aerolineasConfig: MasterDataConfig = {
   entityName: 'Aerolínea',
   entityNamePlural: 'Aerolíneas',
   apiEndpoint: '/master-data/aerolinea',
+  useCustomHook: useAerolineasMasterData,
+  customFieldRenderers: {
+    rutas: (field: MasterDataFormField, value: any, onChange: (value: any) => void, error?: string, formData?: Record<string, unknown>) => (
+      <Box key={field.name} sx={{ mt: 2, mb: 2 }}>
+        <RutasManager
+          rutas={value || []}
+          onChange={onChange}
+          isCreating={!formData?.id}
+          currentAerolineaId={formData?.id as number | undefined}
+        />
+      </Box>
+    ),
+    conceptos: (field: MasterDataFormField, value: any, onChange: (value: any) => void, error?: string) => (
+      <Box key={field.name} sx={{ mt: 2, mb: 2 }}>
+        <ConceptosCostoManager
+          conceptos={value || []}
+          onChange={onChange}
+        />
+      </Box>
+    ),
+  },
   tabs: [
     { key: 'Información General', label: 'Información General', order: 1 },
     { key: 'Operación', label: 'Operación', order: 2 },

@@ -1,8 +1,8 @@
 'use client';
 
-import { MedidasMasterDataPage } from '@/features/master-data/components/medidas/MedidasMasterDataPage';
+import { MasterDataPage } from '@/features/master-data/components/common/MasterDataPage';
 import { medidasConfig } from '@/features/master-data/configs';
 
 export default function Page() {
-  return <MedidasMasterDataPage config={medidasConfig} />;
+  return <MasterDataPage config={medidasConfig} />;
 }

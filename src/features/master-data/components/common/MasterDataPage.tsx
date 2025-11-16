@@ -1,18 +1,14 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import {
-  Box,
-  Button,
-  Typography,
-  Alert,
-  Snackbar,
-} from '@mui/material';
+import { Box, Button, Alert, Snackbar } from '@mui/material';
 import { Add as AddIcon } from '@mui/icons-material';
 import { useMasterData } from '../../hooks/common/useMasterData';
 import { MasterDataTable } from './MasterDataTable';
 import { MasterDataForm } from './MasterDataForm';
 import { MasterDataEntity, MasterDataConfig } from '../../types/master-data.types';
+import { PageHeader } from '@/shared/components/ui';
+import { applyForeignKeyOptions } from '../../utils/foreignKeyHelpers';
 
 interface MasterDataPageProps<T extends MasterDataEntity> {
   config: MasterDataConfig;
@@ -47,6 +43,9 @@ export function MasterDataPage<T extends MasterDataEntity>({ config }: MasterDat
     severity: 'success',
   });
 
+  // Use custom hook if provided, otherwise use generic hook
+  const hookToUse = config.useCustomHook || useMasterData<T>;
+
   const {
     data,
     total,
@@ -58,12 +57,27 @@ export function MasterDataPage<T extends MasterDataEntity>({ config }: MasterDat
     create,
     update,
     remove,
-  } = useMasterData<T>(config.apiEndpoint, {
+    foreignKeyOptions,
+    transformDataForForm,
+  } = hookToUse(config.apiEndpoint, {
     search: debouncedSearch,
     sortField: config.defaultSort?.field,
     sortOrder: config.defaultSort?.order,
     idField: config.idField,
   });
+
+  // Apply foreign key options to config if they exist
+  const dynamicConfig = foreignKeyOptions
+    ? applyForeignKeyOptions(config, foreignKeyOptions)
+    : config;
+
+  // Transform initial data if needed
+  const transformedInitialData = React.useMemo(() => {
+    if (editingItem && transformDataForForm) {
+      return transformDataForForm(editingItem as Record<string, unknown>);
+    }
+    return editingItem;
+  }, [editingItem, transformDataForForm]);
 
   const handleCreate = () => {
     setEditingItem(undefined);
@@ -150,21 +164,18 @@ export function MasterDataPage<T extends MasterDataEntity>({ config }: MasterDat
 
   return (
     <Box sx={{ p: 3 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4" component="h1">
-          Gestión de {config.entityNamePlural}
-        </Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={handleCreate}
-        >
-          Nuevo {config.entityName}
-        </Button>
-      </Box>
+      <PageHeader
+        title={`Gestión de ${config.entityNamePlural}`}
+        actions={
+          <Button variant="contained" startIcon={<AddIcon />} onClick={handleCreate}>
+            Nuevo {config.entityName}
+          </Button>
+        }
+        sx={{ mb: 3 }}
+      />
 
       <MasterDataTable
-        config={config}
+        config={dynamicConfig}
         data={data}
         total={total}
         page={page}
@@ -183,8 +194,8 @@ export function MasterDataPage<T extends MasterDataEntity>({ config }: MasterDat
         open={formOpen}
         onClose={handleFormClose}
         onSubmit={handleFormSubmit}
-        config={config}
-        initialData={editingItem}
+        config={dynamicConfig}
+        initialData={transformedInitialData as Partial<T>}
         title={
           viewMode
             ? `Ver ${config.entityName}`
@@ -194,6 +205,7 @@ export function MasterDataPage<T extends MasterDataEntity>({ config }: MasterDat
         }
         loading={loading}
         readOnly={viewMode}
+        customFieldRenderers={config.customFieldRenderers}
       />
 
       <Snackbar

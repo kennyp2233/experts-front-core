@@ -1,9 +1,9 @@
 'use client';
 
 import React from 'react';
-import { ProductosMasterDataPage } from '../components/productos/ProductosMasterDataPage';
+import { MasterDataPage } from '../components/common/MasterDataPage';
 import { productosConfig } from '../configs/productos.config';
 
 export default function ProductosPage() {
-  return <ProductosMasterDataPage config={productosConfig} />;
+  return <MasterDataPage config={productosConfig} />;
 }

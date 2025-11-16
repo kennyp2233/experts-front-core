@@ -1,8 +1,8 @@
 'use client';
 
-import { TipoEmbarqueMasterDataPage } from '@/features/master-data/components/tipo-embarque/TipoEmbarqueMasterDataPage';
+import { MasterDataPage } from '@/features/master-data/components/common/MasterDataPage';
 import { tipoEmbarqueConfig } from '@/features/master-data/configs';
 
 export default function Page() {
-  return <TipoEmbarqueMasterDataPage config={tipoEmbarqueConfig} />;
+  return <MasterDataPage config={tipoEmbarqueConfig} />;
 }

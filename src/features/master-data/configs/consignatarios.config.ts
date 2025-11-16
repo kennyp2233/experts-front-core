@@ -1,12 +1,12 @@
 import { MasterDataConfig } from '../types/master-data.types';
-import { ConsignatariosMasterDataPage } from '../components/consignatarios/ConsignatariosMasterDataPage';
+import { useConsignatariosMasterData } from '../hooks/consignatarios/useConsignatariosMasterData';
 
 export const consignatariosConfig: MasterDataConfig = {
   entityName: 'Consignatario',
   entityNamePlural: 'Consignatarios',
   apiEndpoint: '/master-data/consignatarios',
   idField: 'id',
-  customComponent: ConsignatariosMasterDataPage,
+  useCustomHook: useConsignatariosMasterData,
   fields: [
     // ===== CAMPOS PRINCIPALES =====
     {

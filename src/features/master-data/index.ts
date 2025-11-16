@@ -2,11 +2,7 @@
 export { MasterDataTable } from './components/common/MasterDataTable';
 export { MasterDataForm } from './components/common/MasterDataForm';
 export { MasterDataPage } from './components/common/MasterDataPage';
-export { AerolineasMasterDataPage } from './components/aerolineas/AerolineasMasterDataPage';
-export { PaisesMasterDataPage } from './components/paises/PaisesMasterDataPage';
-export { ProductosMasterDataPage } from './components/productos/ProductosMasterDataPage';
-export { DestinoMasterDataPage } from './components/destino/DestinoMasterDataPage';
-export { OrigenMasterDataPage } from './components/origen/OrigenMasterDataPage';
+// All specific master data pages now use MasterDataPage with hook injection
 export { RutasManager } from './components/aerolineas/RutasManager';
 export { ConceptosCostoManager } from './components/aerolineas/ConceptosCostoManager';
 

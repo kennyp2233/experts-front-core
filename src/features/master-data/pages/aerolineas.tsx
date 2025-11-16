@@ -1,9 +1,9 @@
 'use client';
 
 import React from 'react';
-import { AerolineasMasterDataPage } from '../components/aerolineas/AerolineasMasterDataPage';
+import { MasterDataPage } from '../components/common/MasterDataPage';
 import { aerolineasConfig } from '../configs/aerolineas.config';
 
 export default function AerolineasPage() {
-  return <AerolineasMasterDataPage config={aerolineasConfig} />;
+  return <MasterDataPage config={aerolineasConfig} />;
 }

@@ -72,13 +72,12 @@ export function useMasterData<T extends MasterDataEntity>(
     }
   );
 
-  const create = async (data: Partial<T>): Promise<T> => {
+  const create = async (data: Partial<T>): Promise<void> => {
     setLoading(true);
     try {
-      const response = await api.post(endpoint, data);
+      await api.post(endpoint, data);
       // Refresh all queries for this endpoint
       mutate((key) => typeof key === 'string' && key.startsWith(endpoint));
-      return response.data;
     } catch (error) {
       throw new Error(`Error creating item: ${getErrorMessage(error)}`);
     } finally {
@@ -86,13 +85,12 @@ export function useMasterData<T extends MasterDataEntity>(
     }
   };
 
-  const update = async (id: number, data: Partial<T>): Promise<T> => {
+  const update = async (id: number, data: Partial<T>): Promise<void> => {
     setLoading(true);
     try {
-      const response = await api.patch(`${endpoint}/${id}`, data);
+      await api.patch(`${endpoint}/${id}`, data);
       // Refresh all queries for this endpoint
       mutate((key) => typeof key === 'string' && key.startsWith(endpoint));
-      return response.data;
     } catch (error) {
       throw new Error(`Error updating item: ${getErrorMessage(error)}`);
     } finally {
@@ -139,5 +137,8 @@ export function useMasterData<T extends MasterDataEntity>(
     remove,
     searchByName,
     refresh: () => mutate((key) => typeof key === 'string' && key.startsWith(endpoint)),
+    // Generic hook doesn't provide foreignKeyOptions, but custom hooks can
+    foreignKeyOptions: undefined,
+    transformDataForForm: undefined,
   };
 }

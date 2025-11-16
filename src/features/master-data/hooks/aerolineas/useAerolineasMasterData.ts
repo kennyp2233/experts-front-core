@@ -60,21 +60,21 @@ export function useAerolineasMasterData(endpoint: string, options: UseAerolineas
   const baseHook = useMasterData(endpoint, options);
   const [transforming, setTransforming] = useState(false);
 
-  const create = async (data: any) => {
+  const create = async (data: any): Promise<void> => {
     setTransforming(true);
     try {
       const transformedData = transformAerolineaData(data);
-      return await baseHook.create(transformedData);
+      await baseHook.create(transformedData);
     } finally {
       setTransforming(false);
     }
   };
 
-  const update = async (id: number, data: any) => {
+  const update = async (id: number, data: any): Promise<void> => {
     setTransforming(true);
     try {
       const transformedData = transformAerolineaData(data);
-      return await baseHook.update(id, transformedData);
+      await baseHook.update(id, transformedData);
     } finally {
       setTransforming(false);
     }

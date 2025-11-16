@@ -1,11 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useMasterData } from '../common/useMasterData';
-import api from '../../../../shared/services/api';
+import { useForeignKeyOptions } from '../../../../shared/hooks';
 
 interface UseProductosMasterDataOptions {
   search?: string;
   sortField?: string;
   sortOrder?: 'asc' | 'desc';
+}
+
+interface Medida {
+  id: number;
+  nombre: string;
 }
 
 // Transform data for productos endpoint
@@ -56,44 +61,34 @@ function transformProductoDataFromAPI(data: Record<string, unknown>): Record<str
 export function useProductosMasterData<T extends { id: number }>(endpoint: string, options: UseProductosMasterDataOptions = {}) {
   const baseHook = useMasterData<T>(endpoint, options);
   const [transforming, setTransforming] = useState(false);
-  const [medidas, setMedidas] = useState<{ value: number; label: string }[]>([]);
-  const [loadingOptions, setLoadingOptions] = useState(true);
 
-  // Load FK options
-  useEffect(() => {
-    const loadOptions = async () => {
-      try {
-        const medidasRes = await api.get('/master-data/medidas/simple');
-        setMedidas(medidasRes.data?.map((m: any) => ({
-          value: m.id,
-          label: m.nombre
-        })) || []);
-      } catch (error) {
-        console.error('Error loading medidas for productos:', error);
-        setMedidas([]);
-      } finally {
-        setLoadingOptions(false);
-      }
-    };
+  // Load FK options using the generic hook
+  const { options: fkOptions, loading: loadingOptions } = useForeignKeyOptions([
+    {
+      key: 'medidaId',
+      endpoint: '/master-data/medidas/simple',
+      mapper: (m: Medida) => ({
+        value: m.id,
+        label: m.nombre,
+      }),
+    },
+  ]);
 
-    loadOptions();
-  }, []);
-
-  const create = async (data: Partial<T>) => {
+  const create = async (data: Partial<T>): Promise<void> => {
     setTransforming(true);
     try {
       const transformedData = transformProductoData(data as Record<string, unknown>);
-      return await baseHook.create(transformedData as Partial<T>);
+      await baseHook.create(transformedData as Partial<T>);
     } finally {
       setTransforming(false);
     }
   };
 
-  const update = async (id: number, data: Partial<T>) => {
+  const update = async (id: number, data: Partial<T>): Promise<void> => {
     setTransforming(true);
     try {
       const transformedData = transformProductoData(data as Record<string, unknown>);
-      return await baseHook.update(id, transformedData as Partial<T>);
+      await baseHook.update(id, transformedData as Partial<T>);
     } finally {
       setTransforming(false);
     }
@@ -109,6 +104,8 @@ export function useProductosMasterData<T extends { id: number }>(endpoint: strin
     create,
     update,
     transformDataForForm,
-    medidas,
+    foreignKeyOptions: {
+      medidaId: fkOptions.medidaId || [],
+    },
   };
 }

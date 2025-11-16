@@ -1,9 +1,42 @@
-import { MasterDataConfig } from '../types/master-data.types';
+import React from 'react';
+import { Box } from '@mui/material';
+import { MasterDataConfig, MasterDataFormField } from '../types/master-data.types';
+import { useProductosMasterData } from '../hooks/productos/useProductosMasterData';
+import { ProductosArancelesManager } from '../components/productos/managers/ProductosArancelesManager';
+import { ProductosCompuestosManager } from '../components/productos/managers/ProductosCompuestosManager';
+import { ProductosMiProManager } from '../components/productos/managers/ProductosMiProManager';
 
 export const productosConfig: MasterDataConfig = {
   entityName: 'Producto',
   entityNamePlural: 'Productos',
   apiEndpoint: '/master-data/productos',
+  useCustomHook: useProductosMasterData,
+  customFieldRenderers: {
+    productosAranceles: (field: MasterDataFormField, value: unknown, onChange: (value: unknown) => void) => (
+      <Box key={field.name} sx={{ mt: 2, mb: 2 }}>
+        <ProductosArancelesManager
+          aranceles={(value as Array<Record<string, unknown>>) || []}
+          onChange={onChange}
+        />
+      </Box>
+    ),
+    productosCompuestos: (field: MasterDataFormField, value: unknown, onChange: (value: unknown) => void) => (
+      <Box key={field.name} sx={{ mt: 2, mb: 2 }}>
+        <ProductosCompuestosManager
+          compuestos={(value as Array<Record<string, unknown>>) || []}
+          onChange={onChange}
+        />
+      </Box>
+    ),
+    productosMiPros: (field: MasterDataFormField, value: unknown, onChange: (value: unknown) => void) => (
+      <Box key={field.name} sx={{ mt: 2, mb: 2 }}>
+        <ProductosMiProManager
+          miPros={(value as Array<Record<string, unknown>>) || []}
+          onChange={onChange}
+        />
+      </Box>
+    ),
+  },
   tabs: [
     { key: 'Información General', label: 'Información General', order: 1 },
     { key: 'Configuración', label: 'Configuración', order: 2 },
