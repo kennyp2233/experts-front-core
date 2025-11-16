@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 // import { Poppins, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProviderWrapper, ThemeProvider, SWRProvider, AuthProviderWrapper } from '../shared/providers';
+import { ToastProvider } from '../shared/providers/toast-provider';
 
 // const poppins = Poppins({
 //   weight: ['300', '400', '500', '600', '700', '800'],
@@ -40,11 +41,13 @@ export default function RootLayout({
       >
         <ThemeProvider>
           <ThemeProviderWrapper>
-            <SWRProvider>
-              <AuthProviderWrapper>
-                {children}
-              </AuthProviderWrapper>
-            </SWRProvider>
+            <ToastProvider>
+              <SWRProvider>
+                <AuthProviderWrapper>
+                  {children}
+                </AuthProviderWrapper>
+              </SWRProvider>
+            </ToastProvider>
           </ThemeProviderWrapper>
         </ThemeProvider>
       </body>
