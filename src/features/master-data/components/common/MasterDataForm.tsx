@@ -7,6 +7,9 @@ import { useFormState } from '../../hooks/common/useFormState';
 import { FormValidator } from '../../utils/FormValidator';
 import { FormFieldRenderer } from './FormFieldRenderer';
 import { MasterDataDialog, FormTabs } from '@/shared/components/ui';
+import { logger } from '@/shared/utils/logger';
+
+const masterDataLogger = logger.createChild('master-data');
 
 interface MasterDataFormProps<T extends MasterDataEntity> {
   open: boolean;
@@ -88,7 +91,7 @@ export function MasterDataForm<T extends MasterDataEntity>({
       reset();
       onClose();
     } catch (error) {
-      console.error('Error submitting form:', error);
+      masterDataLogger.error('Error submitting form', error);
       // Re-throw para que el componente padre maneje el error
       throw error;
     }

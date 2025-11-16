@@ -1,4 +1,5 @@
 import api from '../../../shared/services/api';
+import { logger } from '../../../shared/utils/logger';
 import {
   LoginRequest,
   RegisterRequest,
@@ -13,15 +14,16 @@ import {
 } from '../types/auth.types';
 
 class AuthService {
+  private logger = logger.createChild('auth');
   async login(credentials: LoginRequest): Promise<AuthResponse> {
     const response = await api.post('/auth/login', credentials);
-    console.log('Login response:', response.data);
+    this.logger.debug('Login response received', response.data);
     return response.data;
   }
 
   async register(userData: RegisterRequest): Promise<AuthResponse> {
     const response = await api.post('/auth/register', userData);
-    console.log('Register response:', response.data);
+    this.logger.debug('Register response received', response.data);
     return response.data;
   }
 
@@ -32,17 +34,17 @@ class AuthService {
 
   async logout(): Promise<void> {
     const response = await api.post('/auth/logout');
-    console.log('Logout response:', response.data);
+    this.logger.debug('Logout response received', response.data);
     // Backend clears the httpOnly cookies
   }
 
   async getProfile(): Promise<User> {
     try {
       const response = await api.get('/auth/profile');
-      console.log('Profile response:', response.data);
+      this.logger.debug('Profile response received', response.data);
       return response.data;
     } catch (error: any) {
-      console.error('Profile error:', {
+      this.logger.error('Profile request failed', error, {
         status: error.response?.status,
         message: error.response?.data?.message,
         error: error.message,
@@ -61,7 +63,7 @@ class AuthService {
    */
   async enable2FA(): Promise<Enable2FAResponse> {
     const response = await api.post('/auth/2fa/enable');
-    console.log('Enable 2FA response:', response.data);
+    this.logger.debug('Enable 2FA response received', response.data);
     return response.data;
   }
 
@@ -73,7 +75,7 @@ class AuthService {
    */
   async confirm2FA(data: Confirm2FARequest): Promise<Confirm2FAResponse> {
     const response = await api.post('/auth/2fa/confirm', data);
-    console.log('Confirm 2FA response:', response.data);
+    this.logger.debug('Confirm 2FA response received', response.data);
     return response.data;
   }
 
@@ -85,7 +87,7 @@ class AuthService {
    */
   async verify2FA(data: Verify2FARequest): Promise<Verify2FAResponse> {
     const response = await api.post('/auth/2fa/verify', data);
-    console.log('Verify 2FA response:', response.data);
+    this.logger.debug('Verify 2FA response received', response.data);
     return response.data;
   }
 
@@ -98,7 +100,7 @@ class AuthService {
    */
   async disable2FA(): Promise<Disable2FAResponse> {
     const response = await api.post('/auth/2fa/disable');
-    console.log('Disable 2FA response:', response.data);
+    this.logger.debug('Disable 2FA response received', response.data);
     return response.data;
   }
 }
