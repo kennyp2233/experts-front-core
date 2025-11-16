@@ -64,6 +64,13 @@ export function MasterDataForm<T extends MasterDataEntity>({
     config.fields
   );
 
+  /**
+   * Obtiene el valor de un campo anidado usando notación de puntos
+   */
+  const getNestedValue = (obj: any, path: string): any => {
+    return path.split('.').reduce((current, key) => current?.[key], obj);
+  };
+
   const handleFieldChange = (fieldName: string, value: any) => {
     updateField(fieldName, value);
   };
@@ -104,9 +111,9 @@ export function MasterDataForm<T extends MasterDataEntity>({
   const hasTabs = config.tabs && config.tabs.length > 0;
   const tabFields = hasTabs
     ? config.tabs!.map(tab => ({
-        ...tab,
-        fields: config.fields.filter(field => field.tab === tab.key)
-      }))
+      ...tab,
+      fields: config.fields.filter(field => field.tab === tab.key)
+    }))
     : [{ key: 'default', label: 'Información', fields: config.fields }];
 
   const renderTabContent = (fields: MasterDataFormField[]) => (
@@ -115,7 +122,7 @@ export function MasterDataForm<T extends MasterDataEntity>({
         <Box key={field.name}>
           <FormFieldRenderer
             field={field}
-            value={formData[field.name as keyof T]}
+            value={getNestedValue(formData, field.name)}
             error={errors[field.name]}
             onChange={(value) => handleFieldChange(field.name, value)}
             readOnly={readOnly}
@@ -127,9 +134,9 @@ export function MasterDataForm<T extends MasterDataEntity>({
   );
 
   return (
-    <Dialog 
-      open={open} 
-      onClose={handleClose} 
+    <Dialog
+      open={open}
+      onClose={handleClose}
       maxWidth="lg" // Changed from md to lg for complex forms like aerolineas
       fullWidth
       PaperProps={{
@@ -147,9 +154,9 @@ export function MasterDataForm<T extends MasterDataEntity>({
         {header ? (
           <Box sx={{ borderBottom: 1, borderColor: 'divider', px: 2, py: 1, flexShrink: 0 }}>{header}</Box>
         ) : (
-          <DialogTitle 
-            sx={{ 
-              fontWeight: 600, 
+          <DialogTitle
+            sx={{
+              fontWeight: 600,
               fontSize: '1.5rem',
               pb: 2,
               flexShrink: 0,
@@ -158,10 +165,10 @@ export function MasterDataForm<T extends MasterDataEntity>({
             {title}
           </DialogTitle>
         )}
-        
+
         {/* Body - scrollable */}
-        <DialogContent 
-          sx={{ 
+        <DialogContent
+          sx={{
             px: 2, // Reduced from 3 to 2 for more space
             py: 1, // Reduced from 2 to 1 for more space
             flex: 1,
@@ -175,9 +182,9 @@ export function MasterDataForm<T extends MasterDataEntity>({
                 value={activeTab}
                 onChange={(_, newValue) => setActiveTab(newValue)}
                 variant="fullWidth"
-                sx={{ 
-                  borderBottom: 1, 
-                  borderColor: 'divider', 
+                sx={{
+                  borderBottom: 1,
+                  borderColor: 'divider',
                   mb: 2,
                   '& .MuiTab-root': {
                     fontWeight: 500,
@@ -199,7 +206,7 @@ export function MasterDataForm<T extends MasterDataEntity>({
             renderTabContent(config.fields)
           )}
         </DialogContent>
-        
+
         {/* Footer slot - use provided footer if available, otherwise default actions */}
         {footer ? (
           <Box sx={{ px: 2, py: 1, flexShrink: 0 }}>{footer}</Box>

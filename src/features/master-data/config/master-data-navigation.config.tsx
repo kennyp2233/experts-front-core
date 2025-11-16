@@ -11,6 +11,9 @@ import {
   Warehouse as WarehouseIcon,
   AccountCircle as AccountCircleIcon,
   DriveEta as DriveEtaIcon,
+  Agriculture as AgricultureIcon,
+  AssignmentInd as AssignmentIndIcon,
+  Group as GroupIcon,
 } from '@mui/icons-material';
 import type { MenuItem } from '../../dashboard/components/sidebar/types';
 
@@ -187,6 +190,26 @@ export const MASTER_DATA_ENTITIES: MasterDataEntity[] = [
     available: true,
   },
   {
+    id: 'embarcadores',
+    label: 'Embarcadores',
+    href: '/admin/master-data/embarcadores',
+    icon: <BusinessIcon />,
+    color: '#5e35b1',
+    description: 'Administrar información de embarcadores',
+    category: 'comercial',
+    available: true,
+  },
+  {
+    id: 'consignatarios',
+    label: 'Consignatarios',
+    href: '/admin/master-data/consignatarios',
+    icon: <GroupIcon />,
+    color: '#3949ab',
+    description: 'Gestionar consignatarios y sus configuraciones',
+    category: 'comercial',
+    available: true,
+  },
+  {
     id: 'sub-agencia',
     label: 'Sub-Agencia',
     href: '/admin/master-data/sub-agencia',
@@ -204,6 +227,28 @@ export const MASTER_DATA_ENTITIES: MasterDataEntity[] = [
     color: '#d32f2f',
     description: 'Configurar unidades de medida',
     category: 'comercial',
+    available: true,
+  },
+
+  // Agrícola
+  {
+    id: 'finca',
+    label: 'Fincas',
+    href: '/admin/master-data/fincas',
+    icon: <AgricultureIcon />,
+    color: '#2e7d32',
+    description: 'Administrar fincas y sus configuraciones',
+    category: 'agrícola',
+    available: true,
+  },
+  {
+    id: 'funcionario-agrocalidad',
+    label: 'Funcionarios Agrocalidad',
+    href: '/admin/master-data/funcionario-agrocalidad',
+    icon: <AssignmentIndIcon />,
+    color: '#f57c00',
+    description: 'Gestionar funcionarios de agrocalidad',
+    category: 'agrícola',
     available: true,
   },
 ];
@@ -242,20 +287,30 @@ export const MASTER_DATA_CATEGORIES: MasterDataCategory[] = [
     icon: <BusinessIcon />,
     entities: MASTER_DATA_ENTITIES.filter(e => e.category === 'comercial' && e.available),
   },
+  {
+    id: 'agrícola',
+    title: 'Agrícola',
+    icon: <AgricultureIcon />,
+    entities: MASTER_DATA_ENTITIES.filter(e => e.category === 'agrícola' && e.available),
+  },
 ];
 
 /**
- * Genera los items del menú para el sidebar
+ * Genera los items del menú para el sidebar organizados por categorías
  * Solo incluye entidades disponibles
  */
 export function getMasterDataMenuItems(): MenuItem[] {
-  const availableEntities = MASTER_DATA_ENTITIES.filter(entity => entity.available);
-
-  return availableEntities.map(entity => ({
-    label: entity.label,
-    icon: entity.icon,
-    href: entity.href,
-  }));
+  return MASTER_DATA_CATEGORIES
+    .filter(category => category.entities.length > 0)
+    .map(category => ({
+      label: category.title,
+      icon: category.icon,
+      children: category.entities.map(entity => ({
+        label: entity.label,
+        icon: entity.icon,
+        href: entity.href,
+      })),
+    }));
 }
 
 /**

@@ -23,11 +23,35 @@ export function useFormState<T extends MasterDataEntity>(
     setActiveTab(0);
   }, [JSON.stringify(initialData)]);
 
+  /**
+   * Obtiene el valor de un campo anidado usando notación de puntos
+   */
+  const getNestedValue = (obj: any, path: string): any => {
+    return path.split('.').reduce((current, key) => current?.[key], obj);
+  };
+
+  /**
+   * Establece el valor de un campo anidado usando notación de puntos
+   */
+  const setNestedValue = (obj: any, path: string, value: any): any => {
+    const keys = path.split('.');
+    const lastKey = keys.pop()!;
+    const target = keys.reduce((current, key) => {
+      if (!current[key] || typeof current[key] !== 'object') {
+        current[key] = {};
+      }
+      return current[key];
+    }, obj);
+    target[lastKey] = value;
+    return obj;
+  };
+
   const updateField = (fieldName: string, value: any) => {
-    setFormData((prev) => ({
-      ...prev,
-      [fieldName]: value,
-    }));
+    setFormData((prev) => {
+      const newData = { ...prev };
+      setNestedValue(newData, fieldName, value);
+      return newData;
+    });
 
     // Limpiar error para este campo cuando cambia
     if (errors[fieldName]) {

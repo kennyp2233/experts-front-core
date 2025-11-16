@@ -18,6 +18,7 @@ export { subAgenciaConfig } from './sub-agencia.config';
 export { embarcadoresConfig } from './embarcadores.config';
 export { fincaConfig } from './finca.config';
 export { funcionarioAgrocalidadConfig } from './funcionario-agrocalidad.config';
+export { consignatariosConfig } from './consignatarios.config';
 
 // Configuración de navegación centralizada
 export * from '../config/master-data-navigation.config';
@@ -42,6 +43,7 @@ import { subAgenciaConfig } from './sub-agencia.config';
 import { embarcadoresConfig } from './embarcadores.config';
 import { fincaConfig } from './finca.config';
 import { funcionarioAgrocalidadConfig } from './funcionario-agrocalidad.config';
+import { consignatariosConfig } from './consignatarios.config';
 
 // Tipos de configuraciones disponibles
 export const MASTER_DATA_CONFIGS = {
@@ -64,6 +66,7 @@ export const MASTER_DATA_CONFIGS = {
   embarcadores: 'embarcadoresConfig',
   finca: 'fincaConfig',
   funcionarioAgrocalidad: 'funcionarioAgrocalidadConfig',
+  consignatarios: 'consignatariosConfig',
 } as const;
 
 export type MasterDataConfigKey = keyof typeof MASTER_DATA_CONFIGS;
@@ -92,6 +95,7 @@ export function getMasterDataConfig(key: MasterDataConfigKey) {
     embarcadores: embarcadoresConfig,
     finca: fincaConfig,
     funcionarioAgrocalidad: funcionarioAgrocalidadConfig,
+    consignatarios: consignatariosConfig,
   };
 
   return configs[key];
@@ -118,8 +122,9 @@ export const ALL_MASTER_DATA_CONFIGS = [
   medidasConfig,          // 15. Medidas
   clientesConfig,         // 16. Clientes
   embarcadoresConfig,     // 17. Embarcadores
-  fincaConfig,            // 18. Fincas
-  funcionarioAgrocalidadConfig, // 19. Funcionarios Agrocalidad
+  consignatariosConfig,   // 18. Consignatarios (depende de clientes y embarcadores)
+  fincaConfig,            // 19. Fincas
+  funcionarioAgrocalidadConfig, // 20. Funcionarios Agrocalidad
 ];
 
 /**
@@ -145,4 +150,5 @@ export const MASTER_DATA_ROUTES = {
   '/admin/master-data/embarcadores': embarcadoresConfig,
   '/admin/master-data/fincas': fincaConfig,
   '/admin/master-data/funcionario-agrocalidad': funcionarioAgrocalidadConfig,
+  '/admin/master-data/consignatarios': consignatariosConfig,
 } as const;

@@ -19,6 +19,11 @@ interface MasterDataPageProps<T extends MasterDataEntity> {
 }
 
 export function MasterDataPage<T extends MasterDataEntity>({ config }: MasterDataPageProps<T>) {
+  // If a custom component is defined, use it instead
+  if (config.customComponent) {
+    const CustomComponent = config.customComponent;
+    return <CustomComponent config={config} />;
+  }
   const [searchValue, setSearchValue] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
 

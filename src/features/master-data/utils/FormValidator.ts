@@ -9,6 +9,13 @@ import { MasterDataFormField, MasterDataEntity } from '../types/master-data.type
  */
 export class FormValidator {
   /**
+   * Obtiene el valor de un campo anidado usando notación de puntos
+   */
+  private static getNestedValue(obj: any, path: string): any {
+    return path.split('.').reduce((current, key) => current?.[key], obj);
+  }
+
+  /**
    * Valida un campo individual basándose en sus reglas
    */
   static validateField(field: MasterDataFormField, value: any): string | null {
@@ -94,7 +101,8 @@ export class FormValidator {
     const errors: Record<string, string> = {};
 
     fields.forEach((field) => {
-      const error = this.validateField(field, formData[field.name]);
+      const value = this.getNestedValue(formData, field.name);
+      const error = this.validateField(field, value);
       if (error) {
         errors[field.name] = error;
       }
