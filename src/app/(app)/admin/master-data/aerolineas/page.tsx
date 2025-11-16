@@ -1,8 +1,8 @@
 'use client';
 
-import { AerolineasMasterDataPage } from '@/features/master-data/components/aerolineas/AerolineasMasterDataPage';
+import { MasterDataPage } from '@/features/master-data/components/common/MasterDataPage';
 import { aerolineasConfig } from '@/features/master-data/configs';
 
 export default function Page() {
-  return <AerolineasMasterDataPage config={aerolineasConfig} />;
+  return <MasterDataPage config={aerolineasConfig} />;
 }

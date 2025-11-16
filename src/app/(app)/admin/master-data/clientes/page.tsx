@@ -1,8 +1,8 @@
 'use client';
 
-import { ClientesMasterDataPage } from '@/features/master-data/components/clientes/ClientesMasterDataPage';
+import { MasterDataPage } from '@/features/master-data/components/common/MasterDataPage';
 import { clientesConfig } from '@/features/master-data/configs';
 
 export default function Page() {
-  return <ClientesMasterDataPage config={clientesConfig} />;
+  return <MasterDataPage config={clientesConfig} />;
 }

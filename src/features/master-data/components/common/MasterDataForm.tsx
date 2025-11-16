@@ -17,7 +17,7 @@ interface MasterDataFormProps<T extends MasterDataEntity> {
   title: string;
   loading?: boolean;
   readOnly?: boolean;
-  customFieldRenderers?: Record<string, (field: MasterDataFormField, value: any, onChange: (value: any) => void, error?: string) => React.ReactNode>;
+  customFieldRenderers?: Record<string, (field: MasterDataFormField, value: any, onChange: (value: any) => void, error?: string, formData?: Record<string, unknown>) => React.ReactNode>;
   /** Optional custom header - if provided, will replace the default DialogTitle */
   header?: React.ReactNode;
   /** Optional custom footer - if provided, will replace the default DialogActions */
@@ -119,6 +119,7 @@ export function MasterDataForm<T extends MasterDataEntity>({
             onChange={(value) => handleFieldChange(field.name, value)}
             readOnly={readOnly}
             customRenderers={customFieldRenderers}
+            formData={formData}
           />
         </Box>
       ))}

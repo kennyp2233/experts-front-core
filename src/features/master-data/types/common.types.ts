@@ -73,6 +73,8 @@ export interface UseMasterDataReturn<T> {
   remove: (id: number) => Promise<void>;
   // Optional: Foreign key options para poblar selects dinámicamente
   foreignKeyOptions?: Record<string, SelectOption[]>;
+  // Optional: Transform data for form (e.g., nested objects)
+  transformDataForForm?: (data: Record<string, unknown>) => Record<string, unknown>;
 }
 
 export interface MasterDataConfig {
@@ -87,6 +89,10 @@ export interface MasterDataConfig {
    * Debe retornar la misma estructura que useMasterData más foreignKeyOptions opcional.
    */
   useCustomHook?: (endpoint: string, options: UseMasterDataOptions) => UseMasterDataReturn<any>;
+  /**
+   * Custom field renderers for complex form fields (e.g., nested arrays/objects)
+   */
+  customFieldRenderers?: Record<string, (field: MasterDataFormField, value: unknown, onChange: (value: unknown) => void, error?: string) => React.ReactElement>;
   fields: MasterDataFormField[];
   tableColumns: MasterDataTableColumn[];
   searchFields?: string[];

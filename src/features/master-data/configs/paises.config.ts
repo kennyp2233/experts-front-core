@@ -1,10 +1,12 @@
 import { MasterDataConfig } from '../types/master-data.types';
+import { usePaisesMasterData } from '../hooks/paises/usePaisesMasterData';
 
 export const paisesConfig: MasterDataConfig = {
   entityName: 'País',
   entityNamePlural: 'Países',
   apiEndpoint: '/master-data/paises',
   idField: 'idPais',
+  useCustomHook: usePaisesMasterData,
   fields: [
     {
       name: 'siglasPais',

@@ -65,7 +65,7 @@ export function useProductosMasterData<T extends { id: number }>(endpoint: strin
   // Load FK options using the generic hook
   const { options: fkOptions, loading: loadingOptions } = useForeignKeyOptions([
     {
-      key: 'medidas',
+      key: 'medidaId',
       endpoint: '/master-data/medidas/simple',
       mapper: (m: Medida) => ({
         value: m.id,
@@ -74,21 +74,21 @@ export function useProductosMasterData<T extends { id: number }>(endpoint: strin
     },
   ]);
 
-  const create = async (data: Partial<T>) => {
+  const create = async (data: Partial<T>): Promise<void> => {
     setTransforming(true);
     try {
       const transformedData = transformProductoData(data as Record<string, unknown>);
-      return await baseHook.create(transformedData as Partial<T>);
+      await baseHook.create(transformedData as Partial<T>);
     } finally {
       setTransforming(false);
     }
   };
 
-  const update = async (id: number, data: Partial<T>) => {
+  const update = async (id: number, data: Partial<T>): Promise<void> => {
     setTransforming(true);
     try {
       const transformedData = transformProductoData(data as Record<string, unknown>);
-      return await baseHook.update(id, transformedData as Partial<T>);
+      await baseHook.update(id, transformedData as Partial<T>);
     } finally {
       setTransforming(false);
     }
@@ -104,6 +104,8 @@ export function useProductosMasterData<T extends { id: number }>(endpoint: strin
     create,
     update,
     transformDataForForm,
-    medidas: fkOptions.medidas || [],
+    foreignKeyOptions: {
+      medidaId: fkOptions.medidaId || [],
+    },
   };
 }

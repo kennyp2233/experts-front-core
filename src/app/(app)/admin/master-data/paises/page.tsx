@@ -1,8 +1,8 @@
 'use client';
 
-import { PaisesMasterDataPage } from '@/features/master-data/components/paises/PaisesMasterDataPage';
+import { MasterDataPage } from '@/features/master-data/components/common/MasterDataPage';
 import { paisesConfig } from '@/features/master-data/configs';
 
 export default function Page() {
-  return <PaisesMasterDataPage config={paisesConfig} />;
+  return <MasterDataPage config={paisesConfig} />;
 }

@@ -25,15 +25,7 @@ export function usePaisesMasterData(endpoint: string, options: UsePaisesMasterDa
   // Load FK options using the generic hook
   const { options: fkOptions, loading: loadingOptions } = useForeignKeyOptions([
     {
-      key: 'paisesPadre',
-      endpoint: '/master-data/paises',
-      mapper: (p: PaisResponse) => ({
-        value: p.idPais,
-        label: `${p.siglasPais} - ${p.nombre}`,
-      }),
-    },
-    {
-      key: 'acuerdos',
+      key: 'idAcuerdo',
       endpoint: '/master-data/acuerdos-arancelarios',
       mapper: (a: AcuerdoResponse) => ({
         value: a.idAcuerdo,
@@ -45,7 +37,8 @@ export function usePaisesMasterData(endpoint: string, options: UsePaisesMasterDa
   return {
     ...baseHook,
     loading: baseHook.loading || loadingOptions,
-    paisesPadre: fkOptions.paisesPadre || [],
-    acuerdos: fkOptions.acuerdos || [],
+    foreignKeyOptions: {
+      idAcuerdo: fkOptions.idAcuerdo || [],
+    },
   };
 }

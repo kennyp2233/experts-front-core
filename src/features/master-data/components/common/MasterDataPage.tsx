@@ -58,6 +58,7 @@ export function MasterDataPage<T extends MasterDataEntity>({ config }: MasterDat
     update,
     remove,
     foreignKeyOptions,
+    transformDataForForm,
   } = hookToUse(config.apiEndpoint, {
     search: debouncedSearch,
     sortField: config.defaultSort?.field,
@@ -69,6 +70,14 @@ export function MasterDataPage<T extends MasterDataEntity>({ config }: MasterDat
   const dynamicConfig = foreignKeyOptions
     ? applyForeignKeyOptions(config, foreignKeyOptions)
     : config;
+
+  // Transform initial data if needed
+  const transformedInitialData = React.useMemo(() => {
+    if (editingItem && transformDataForForm) {
+      return transformDataForForm(editingItem as Record<string, unknown>);
+    }
+    return editingItem;
+  }, [editingItem, transformDataForForm]);
 
   const handleCreate = () => {
     setEditingItem(undefined);
@@ -186,7 +195,7 @@ export function MasterDataPage<T extends MasterDataEntity>({ config }: MasterDat
         onClose={handleFormClose}
         onSubmit={handleFormSubmit}
         config={dynamicConfig}
-        initialData={editingItem}
+        initialData={transformedInitialData as Partial<T>}
         title={
           viewMode
             ? `Ver ${config.entityName}`
@@ -196,6 +205,7 @@ export function MasterDataPage<T extends MasterDataEntity>({ config }: MasterDat
         }
         loading={loading}
         readOnly={viewMode}
+        customFieldRenderers={config.customFieldRenderers}
       />
 
       <Snackbar
