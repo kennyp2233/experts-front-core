@@ -1,5 +1,5 @@
 import { useMasterData } from '../common/useMasterData';
-import { useForeignKeyOptions } from '../../../../shared/hooks';
+import { useForeignKeyOptions } from '../common/useForeignKeyOptions';
 
 interface UseConsignatariosMasterDataOptions {
   search?: string;

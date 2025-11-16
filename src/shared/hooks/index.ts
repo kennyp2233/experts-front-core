@@ -1,7 +1,4 @@
 // Shared hooks
-export { useForeignKeyOptions } from './useForeignKeyOptions';
-export type { SelectOption, ForeignKeyConfig } from './useForeignKeyOptions';
-
 export { useAsync } from './useAsync';
 export type { AsyncState, AsyncHandlers, UseAsyncReturn } from './useAsync';
 
