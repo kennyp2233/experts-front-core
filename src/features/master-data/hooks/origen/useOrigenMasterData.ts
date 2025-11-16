@@ -1,6 +1,5 @@
-import { useState, useEffect } from 'react';
 import { useMasterData } from '../common/useMasterData';
-import api from '../../../../shared/services/api';
+import { useForeignKeyOptions } from '../../../../shared/hooks';
 
 interface UseOrigenMasterDataOptions {
   search?: string;
@@ -8,47 +7,45 @@ interface UseOrigenMasterDataOptions {
   sortOrder?: 'asc' | 'desc';
 }
 
+interface PaisResponse {
+  idPais: number;
+  siglasPais: string;
+  nombre: string;
+}
+
+interface CaeAduanaResponse {
+  idCaeAduana: number;
+  nombre: string;
+  codigo: string;
+}
+
 export function useOrigenMasterData(endpoint: string, options: UseOrigenMasterDataOptions = {}) {
   const baseHook = useMasterData<any>(endpoint, options);
-  const [paises, setPaises] = useState<{ value: number; label: string }[]>([]);
-  const [caeAduanas, setCaeAduanas] = useState<{ value: number; label: string }[]>([]);
-  const [loadingOptions, setLoadingOptions] = useState(true);
 
-  // Load FK options
-  useEffect(() => {
-    const loadOptions = async () => {
-      try {
-        const [paisesRes, caeAduanasRes] = await Promise.all([
-          api.get('/master-data/paises'),
-          api.get('/master-data/cae-aduana'),
-        ]);
-
-        setPaises(paisesRes.data.data?.map((p: any) => ({
-          value: p.idPais,
-          label: `${p.siglasPais} - ${p.nombre}`
-        })) || []);
-
-        setCaeAduanas(caeAduanasRes.data.data?.map((c: any) => ({
-          value: c.idCaeAduana,
-          label: `${c.nombre} (${c.codigo})`
-        })) || []);
-      } catch (error) {
-        console.error('Error loading FK options for origen:', error);
-        // Set empty arrays as fallback
-        setPaises([]);
-        setCaeAduanas([]);
-      } finally {
-        setLoadingOptions(false);
-      }
-    };
-
-    loadOptions();
-  }, []);
+  // Load FK options using the generic hook
+  const { options: fkOptions, loading: loadingOptions } = useForeignKeyOptions([
+    {
+      key: 'paises',
+      endpoint: '/master-data/paises',
+      mapper: (p: PaisResponse) => ({
+        value: p.idPais,
+        label: `${p.siglasPais} - ${p.nombre}`,
+      }),
+    },
+    {
+      key: 'caeAduanas',
+      endpoint: '/master-data/cae-aduana',
+      mapper: (c: CaeAduanaResponse) => ({
+        value: c.idCaeAduana,
+        label: `${c.nombre} (${c.codigo})`,
+      }),
+    },
+  ]);
 
   return {
     ...baseHook,
     loading: baseHook.loading || loadingOptions,
-    paises,
-    caeAduanas,
+    paises: fkOptions.paises || [],
+    caeAduanas: fkOptions.caeAduanas || [],
   };
 }
