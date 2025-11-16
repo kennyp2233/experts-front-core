@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { api } from '../services';
-import { logger } from '../utils';
+import { api } from '../../../../shared/services';
+import { logger } from '../../../../shared/utils';
 
 const fkLogger = logger.createChild('FK-Options');
 

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMasterData } from '../common/useMasterData';
-import { useForeignKeyOptions } from '../../../../shared/hooks';
+import { useForeignKeyOptions } from '../common/useForeignKeyOptions';
 
 interface UseProductosMasterDataOptions {
   search?: string;
