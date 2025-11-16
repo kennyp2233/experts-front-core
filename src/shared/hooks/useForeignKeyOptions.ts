@@ -45,7 +45,7 @@ interface UseForeignKeyOptionsReturn {
  * // Later use: options.paises, options.acuerdos
  */
 export function useForeignKeyOptions(
-  configs: ForeignKeyConfig[]
+  configs: ForeignKeyConfig<any>[]
 ): UseForeignKeyOptionsReturn {
   const [options, setOptions] = useState<Record<string, SelectOption[]>>({});
   const [loading, setLoading] = useState(true);

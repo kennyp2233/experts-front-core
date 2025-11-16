@@ -1,5 +1,6 @@
 import { useMasterData } from '../common/useMasterData';
 import { useForeignKeyOptions } from '../../../../shared/hooks';
+import type { Pais } from '../../types/paises.types';
 
 interface UsePaisesMasterDataOptions {
   search?: string;
@@ -7,13 +8,13 @@ interface UsePaisesMasterDataOptions {
   sortOrder?: 'asc' | 'desc';
 }
 
-interface Pais {
+interface PaisResponse {
   idPais: number;
   siglasPais: string;
   nombre: string;
 }
 
-interface Acuerdo {
+interface AcuerdoResponse {
   idAcuerdo: number;
   nombre: string;
 }
@@ -26,7 +27,7 @@ export function usePaisesMasterData(endpoint: string, options: UsePaisesMasterDa
     {
       key: 'paisesPadre',
       endpoint: '/master-data/paises',
-      mapper: (p: Pais) => ({
+      mapper: (p: PaisResponse) => ({
         value: p.idPais,
         label: `${p.siglasPais} - ${p.nombre}`,
       }),
@@ -34,7 +35,7 @@ export function usePaisesMasterData(endpoint: string, options: UsePaisesMasterDa
     {
       key: 'acuerdos',
       endpoint: '/master-data/acuerdos-arancelarios',
-      mapper: (a: Acuerdo) => ({
+      mapper: (a: AcuerdoResponse) => ({
         value: a.idAcuerdo,
         label: a.nombre || `Acuerdo ${a.idAcuerdo}`,
       }),
