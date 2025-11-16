@@ -17,7 +17,7 @@ interface MasterDataFormProps<T extends MasterDataEntity> {
   title: string;
   loading?: boolean;
   readOnly?: boolean;
-  customFieldRenderers?: Record<string, (field: MasterDataFormField, value: any, onChange: (value: any) => void, error?: string, formData?: Record<string, unknown>) => React.ReactNode>;
+  customFieldRenderers?: Record<string, (field: MasterDataFormField, value: any, onChange: (value: any) => void, error?: string, formData?: Record<string, unknown>, readOnly?: boolean) => React.ReactNode>;
   /** Optional custom header - if provided, will replace the default DialogTitle */
   header?: React.ReactNode;
   /** Optional custom footer - if provided, will replace the default DialogActions */

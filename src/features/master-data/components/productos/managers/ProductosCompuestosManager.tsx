@@ -15,11 +15,12 @@ import { Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { ProductosCompuesto } from '../../../types/master-data.types';
 
 interface ProductosCompuestosManagerProps {
+  readOnly?: boolean;
   compuestos: ProductosCompuesto[];
   onChange: (compuestos: ProductosCompuesto[]) => void;
 }
 
-export function ProductosCompuestosManager({ compuestos, onChange }: ProductosCompuestosManagerProps) {
+export function ProductosCompuestosManager({ compuestos, onChange, readOnly = false }: ProductosCompuestosManagerProps) {
   const [nuevoCompuesto, setNuevoCompuesto] = useState<Partial<ProductosCompuesto>>({
     destino: '',
     declaracion: '',
@@ -74,6 +75,7 @@ export function ProductosCompuestosManager({ compuestos, onChange }: ProductosCo
                     onChange={(e) => actualizarCompuesto(index, 'destino', e.target.value)}
                     size="small"
                     sx={{ minWidth: 150 }}
+                    disabled={readOnly}
                   />
                   <TextField
                     label="Declaración"
@@ -83,16 +85,19 @@ export function ProductosCompuestosManager({ compuestos, onChange }: ProductosCo
                     sx={{ minWidth: 200 }}
                     multiline
                     rows={2}
+                    disabled={readOnly}
                   />
-                  <Box sx={{ ml: 'auto' }}>
-                    <IconButton
-                      size="small"
-                      color="error"
-                      onClick={() => eliminarCompuesto(index)}
-                    >
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                  </Box>
+                  {!readOnly && (
+                    <Box sx={{ ml: 'auto' }}>
+                      <IconButton
+                        size="small"
+                        color="error"
+                        onClick={() => eliminarCompuesto(index)}
+                      >
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </Box>
+                  )}
                 </Box>
               </CardContent>
             </Card>
@@ -101,40 +106,42 @@ export function ProductosCompuestosManager({ compuestos, onChange }: ProductosCo
       )}
 
       {/* Formulario para agregar nuevo compuesto */}
-      <Card variant="outlined" sx={{ bgcolor: 'action.hover' }}>
-        <CardContent>
-          <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 2 }}>
-            Agregar Nuevo Producto Compuesto
-          </Typography>
+      {!readOnly && (
+        <Card variant="outlined" sx={{ bgcolor: 'action.hover' }}>
+          <CardContent>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 2 }}>
+              Agregar Nuevo Producto Compuesto
+            </Typography>
 
-          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 2 }}>
-            <TextField
-              label="Destino"
-              value={nuevoCompuesto.destino || ''}
-              onChange={(e) => setNuevoCompuesto({ ...nuevoCompuesto, destino: e.target.value })}
-              size="small"
-              fullWidth
-            />
-            <TextField
-              label="Declaración"
-              value={nuevoCompuesto.declaracion || ''}
-              onChange={(e) => setNuevoCompuesto({ ...nuevoCompuesto, declaracion: e.target.value })}
-              size="small"
-              fullWidth
-              multiline
-              rows={2}
-            />
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={agregarCompuesto}
-              size="small"
-            >
-              Agregar
-            </Button>
-          </Box>
-        </CardContent>
-      </Card>
+            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 2 }}>
+              <TextField
+                label="Destino"
+                value={nuevoCompuesto.destino || ''}
+                onChange={(e) => setNuevoCompuesto({ ...nuevoCompuesto, destino: e.target.value })}
+                size="small"
+                fullWidth
+              />
+              <TextField
+                label="Declaración"
+                value={nuevoCompuesto.declaracion || ''}
+                onChange={(e) => setNuevoCompuesto({ ...nuevoCompuesto, declaracion: e.target.value })}
+                size="small"
+                fullWidth
+                multiline
+                rows={2}
+              />
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={agregarCompuesto}
+                size="small"
+              >
+                Agregar
+              </Button>
+            </Box>
+          </CardContent>
+        </Card>
+      )}
     </Box>
   );
 }

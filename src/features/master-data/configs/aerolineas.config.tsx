@@ -11,21 +11,23 @@ export const aerolineasConfig: MasterDataConfig = {
   apiEndpoint: '/master-data/aerolinea',
   useCustomHook: useAerolineasMasterData,
   customFieldRenderers: {
-    rutas: (field: MasterDataFormField, value: any, onChange: (value: any) => void, error?: string, formData?: Record<string, unknown>) => (
+    rutas: (field: MasterDataFormField, value: any, onChange: (value: any) => void, error?: string, formData?: Record<string, unknown>, readOnly?: boolean) => (
       <Box key={field.name} sx={{ mt: 2, mb: 2 }}>
         <RutasManager
           rutas={value || []}
           onChange={onChange}
           isCreating={!formData?.id}
           currentAerolineaId={formData?.id as number | undefined}
+          readOnly={readOnly}
         />
       </Box>
     ),
-    conceptos: (field: MasterDataFormField, value: any, onChange: (value: any) => void, error?: string) => (
+    conceptos: (field: MasterDataFormField, value: any, onChange: (value: any) => void, error?: string, formData?: Record<string, unknown>, readOnly?: boolean) => (
       <Box key={field.name} sx={{ mt: 2, mb: 2 }}>
         <ConceptosCostoManager
           conceptos={value || []}
           onChange={onChange}
+          readOnly={readOnly}
         />
       </Box>
     ),

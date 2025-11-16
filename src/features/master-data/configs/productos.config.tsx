@@ -12,27 +12,30 @@ export const productosConfig: MasterDataConfig = {
   apiEndpoint: '/master-data/productos',
   useCustomHook: useProductosMasterData,
   customFieldRenderers: {
-    productosAranceles: (field: MasterDataFormField, value: unknown, onChange: (value: unknown) => void) => (
+    productosAranceles: (field: MasterDataFormField, value: unknown, onChange: (value: unknown) => void, error?: string, formData?: Record<string, unknown>, readOnly?: boolean) => (
       <Box key={field.name} sx={{ mt: 2, mb: 2 }}>
         <ProductosArancelesManager
           aranceles={(value as Array<Record<string, unknown>>) || []}
           onChange={onChange}
+          readOnly={readOnly}
         />
       </Box>
     ),
-    productosCompuestos: (field: MasterDataFormField, value: unknown, onChange: (value: unknown) => void) => (
+    productosCompuestos: (field: MasterDataFormField, value: unknown, onChange: (value: unknown) => void, error?: string, formData?: Record<string, unknown>, readOnly?: boolean) => (
       <Box key={field.name} sx={{ mt: 2, mb: 2 }}>
         <ProductosCompuestosManager
           compuestos={(value as Array<Record<string, unknown>>) || []}
           onChange={onChange}
+          readOnly={readOnly}
         />
       </Box>
     ),
-    productosMiPros: (field: MasterDataFormField, value: unknown, onChange: (value: unknown) => void) => (
+    productosMiPros: (field: MasterDataFormField, value: unknown, onChange: (value: unknown) => void, error?: string, formData?: Record<string, unknown>, readOnly?: boolean) => (
       <Box key={field.name} sx={{ mt: 2, mb: 2 }}>
         <ProductosMiProManager
           miPros={(value as Array<Record<string, unknown>>) || []}
           onChange={onChange}
+          readOnly={readOnly}
         />
       </Box>
     ),

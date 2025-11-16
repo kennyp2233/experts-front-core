@@ -24,9 +24,10 @@ interface RutasManagerProps {
   onChange: (rutas: AerolineaRuta[]) => void;
   isCreating?: boolean; // Indica si estamos creando una nueva aerolínea
   currentAerolineaId?: number; // ID de la aerolínea actual (para excluirla de rutas VIA)
+  readOnly?: boolean; // Indica si es modo solo lectura (view mode)
 }
 
-export function RutasManager({ rutas, onChange, isCreating = false, currentAerolineaId }: RutasManagerProps) {
+export function RutasManager({ rutas, onChange, isCreating = false, currentAerolineaId, readOnly = false }: RutasManagerProps) {
   const [nuevaRuta, setNuevaRuta] = useState<Partial<AerolineaRuta>>({
     tipoRuta: 'ORIGEN',
     orden: rutas.length + 1,
@@ -191,15 +192,17 @@ export function RutasManager({ rutas, onChange, isCreating = false, currentAerol
                     </Typography>
                   )}
 
-                  <Box sx={{ ml: 'auto' }}>
-                    <IconButton
-                      size="small"
-                      color="error"
-                      onClick={() => eliminarRuta(index)}
-                    >
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                  </Box>
+                  {!readOnly && (
+                    <Box sx={{ ml: 'auto' }}>
+                      <IconButton
+                        size="small"
+                        color="error"
+                        onClick={() => eliminarRuta(index)}
+                      >
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </Box>
+                  )}
                 </Box>
               </CardContent>
             </Card>
@@ -208,11 +211,12 @@ export function RutasManager({ rutas, onChange, isCreating = false, currentAerol
       )}
 
       {/* Formulario para agregar nueva ruta */}
-      <Card variant="outlined" sx={{ bgcolor: 'action.hover' }}>
-        <CardContent>
-          <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 2 }}>
-            Agregar Nueva Ruta
-          </Typography>
+      {!readOnly && (
+        <Card variant="outlined" sx={{ bgcolor: 'action.hover' }}>
+          <CardContent>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 2 }}>
+              Agregar Nueva Ruta
+            </Typography>
 
           <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 2 }}>
             <FormControl fullWidth size="small">
@@ -320,6 +324,7 @@ export function RutasManager({ rutas, onChange, isCreating = false, currentAerol
           </Box>
         </CardContent>
       </Card>
+      )}
     </Box>
   );
 }
