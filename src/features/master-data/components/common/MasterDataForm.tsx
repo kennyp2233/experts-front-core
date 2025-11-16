@@ -1,20 +1,12 @@
 'use client';
 
 import React, { useState } from 'react';
-import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-  Box,
-  Tabs,
-  Tab,
-} from '@mui/material';
+import { Button, Box } from '@mui/material';
 import { MasterDataEntity, MasterDataFormField, MasterDataConfig } from '../../types/master-data.types';
 import { useFormState } from '../../hooks/common/useFormState';
 import { FormValidator } from '../../utils/FormValidator';
 import { FormFieldRenderer } from './FormFieldRenderer';
+import { MasterDataDialog, FormTabs } from '@/shared/components/ui';
 
 interface MasterDataFormProps<T extends MasterDataEntity> {
   open: boolean;
@@ -133,105 +125,43 @@ export function MasterDataForm<T extends MasterDataEntity>({
     </Box>
   );
 
+  const dialogActions = footer ? undefined : (
+    <>
+      <Button onClick={handleClose} disabled={loading} variant="outlined" color="inherit">
+        {readOnly ? 'Cerrar' : 'Cancelar'}
+      </Button>
+      {!readOnly && (
+        <Button type="submit" variant="contained" disabled={loading}>
+          {loading ? 'Guardando...' : 'Guardar'}
+        </Button>
+      )}
+    </>
+  );
+
   return (
-    <Dialog
+    <MasterDataDialog
       open={open}
       onClose={handleClose}
-      maxWidth="lg" // Changed from md to lg for complex forms like aerolineas
-      fullWidth
-      PaperProps={{
-        sx: {
-          borderRadius: 3,
-          boxShadow: 24,
-          maxHeight: '95vh', // Increased from 90vh for complex forms like aerolineas
-          display: 'flex',
-          flexDirection: 'column',
-        },
-      }}
+      title={title}
+      size="lg"
+      header={header}
+      footer={footer}
+      actions={dialogActions}
     >
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-        {/* Header slot - use provided header if available, otherwise default title */}
-        {header ? (
-          <Box sx={{ borderBottom: 1, borderColor: 'divider', px: 2, py: 1, flexShrink: 0 }}>{header}</Box>
+      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        {hasTabs ? (
+          <>
+            <FormTabs
+              tabs={tabFields.map((tab) => ({ key: tab.key, label: tab.label }))}
+              activeTab={activeTab}
+              onTabChange={setActiveTab}
+            />
+            {renderTabContent(tabFields[activeTab].fields)}
+          </>
         ) : (
-          <DialogTitle
-            sx={{
-              fontWeight: 600,
-              fontSize: '1.5rem',
-              pb: 2,
-              flexShrink: 0,
-            }}
-          >
-            {title}
-          </DialogTitle>
-        )}
-
-        {/* Body - scrollable */}
-        <DialogContent
-          sx={{
-            px: 2, // Reduced from 3 to 2 for more space
-            py: 1, // Reduced from 2 to 1 for more space
-            flex: 1,
-            overflow: 'auto',
-            minHeight: 0, // Allow flex shrinking
-          }}
-        >
-          {hasTabs ? (
-            <>
-              <Tabs
-                value={activeTab}
-                onChange={(_, newValue) => setActiveTab(newValue)}
-                variant="fullWidth"
-                sx={{
-                  borderBottom: 1,
-                  borderColor: 'divider',
-                  mb: 2,
-                  '& .MuiTab-root': {
-                    fontWeight: 500,
-                    fontSize: '0.95rem',
-                    textTransform: 'none',
-                  },
-                  '& .Mui-selected': {
-                    fontWeight: 600,
-                  },
-                }}
-              >
-                {tabFields.map((tab, index) => (
-                  <Tab key={tab.key} label={tab.label} />
-                ))}
-              </Tabs>
-              {renderTabContent(tabFields[activeTab].fields)}
-            </>
-          ) : (
-            renderTabContent(config.fields)
-          )}
-        </DialogContent>
-
-        {/* Footer slot - use provided footer if available, otherwise default actions */}
-        {footer ? (
-          <Box sx={{ px: 2, py: 1, flexShrink: 0 }}>{footer}</Box>
-        ) : (
-          <DialogActions sx={{ flexShrink: 0 }}>
-            <Button
-              onClick={handleClose}
-              disabled={loading}
-              variant="outlined"
-              color="inherit"
-            >
-              {readOnly ? 'Cerrar' : 'Cancelar'}
-            </Button>
-            {!readOnly && (
-              <Button
-                type="submit"
-                variant="contained"
-                disabled={loading}
-              >
-                {loading ? 'Guardando...' : 'Guardar'}
-              </Button>
-            )}
-          </DialogActions>
+          renderTabContent(config.fields)
         )}
       </form>
-    </Dialog>
+    </MasterDataDialog>
   );
 }

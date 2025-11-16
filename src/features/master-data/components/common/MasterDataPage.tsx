@@ -1,18 +1,13 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import {
-  Box,
-  Button,
-  Typography,
-  Alert,
-  Snackbar,
-} from '@mui/material';
+import { Box, Button, Alert, Snackbar } from '@mui/material';
 import { Add as AddIcon } from '@mui/icons-material';
 import { useMasterData } from '../../hooks/common/useMasterData';
 import { MasterDataTable } from './MasterDataTable';
 import { MasterDataForm } from './MasterDataForm';
 import { MasterDataEntity, MasterDataConfig } from '../../types/master-data.types';
+import { PageHeader } from '@/shared/components/ui';
 
 interface MasterDataPageProps<T extends MasterDataEntity> {
   config: MasterDataConfig;
@@ -150,18 +145,15 @@ export function MasterDataPage<T extends MasterDataEntity>({ config }: MasterDat
 
   return (
     <Box sx={{ p: 3 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4" component="h1">
-          Gestión de {config.entityNamePlural}
-        </Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={handleCreate}
-        >
-          Nuevo {config.entityName}
-        </Button>
-      </Box>
+      <PageHeader
+        title={`Gestión de ${config.entityNamePlural}`}
+        actions={
+          <Button variant="contained" startIcon={<AddIcon />} onClick={handleCreate}>
+            Nuevo {config.entityName}
+          </Button>
+        }
+        sx={{ mb: 3 }}
+      />
 
       <MasterDataTable
         config={config}
