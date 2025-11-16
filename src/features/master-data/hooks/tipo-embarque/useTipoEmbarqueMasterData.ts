@@ -24,7 +24,7 @@ export function useTipoEmbarqueMasterData(endpoint: string, options: UseTipoEmba
   // Load FK options using the generic hook
   const { options: fkOptions, loading: loadingOptions } = useForeignKeyOptions([
     {
-      key: 'tiposCarga',
+      key: 'idTipoCarga',
       endpoint: '/master-data/tipo-carga',
       mapper: (tc: TipoCargaResponse) => ({
         value: tc.id,
@@ -32,7 +32,7 @@ export function useTipoEmbarqueMasterData(endpoint: string, options: UseTipoEmba
       }),
     },
     {
-      key: 'tiposEmbalaje',
+      key: 'idTipoEmbalaje',
       endpoint: '/master-data/tipo-embalaje',
       mapper: (te: TipoEmbalajeResponse) => ({
         value: te.id,
@@ -44,7 +44,9 @@ export function useTipoEmbarqueMasterData(endpoint: string, options: UseTipoEmba
   return {
     ...baseHook,
     loading: baseHook.loading || loadingOptions,
-    tiposCarga: fkOptions.tiposCarga || [],
-    tiposEmbalaje: fkOptions.tiposEmbalaje || [],
+    foreignKeyOptions: {
+      idTipoCarga: fkOptions.idTipoCarga || [],
+      idTipoEmbalaje: fkOptions.idTipoEmbalaje || [],
+    },
   };
 }
