@@ -17,9 +17,10 @@ import { ProductosAranceles } from '../../../types/master-data.types';
 interface ProductosArancelesManagerProps {
   aranceles: ProductosAranceles[];
   onChange: (aranceles: ProductosAranceles[]) => void;
+  readOnly?: boolean;
 }
 
-export function ProductosArancelesManager({ aranceles, onChange }: ProductosArancelesManagerProps) {
+export function ProductosArancelesManager({ aranceles, onChange, readOnly = false }: ProductosArancelesManagerProps) {
   const [nuevoArancel, setNuevoArancel] = useState<Partial<ProductosAranceles>>({
     arancelesDestino: '',
     arancelesCodigo: '',
@@ -74,6 +75,7 @@ export function ProductosArancelesManager({ aranceles, onChange }: ProductosAran
                     onChange={(e) => actualizarArancel(index, 'arancelesDestino', e.target.value)}
                     size="small"
                     sx={{ minWidth: 150 }}
+                    disabled={readOnly}
                   />
                   <TextField
                     label="Código"
@@ -81,16 +83,19 @@ export function ProductosArancelesManager({ aranceles, onChange }: ProductosAran
                     onChange={(e) => actualizarArancel(index, 'arancelesCodigo', e.target.value)}
                     size="small"
                     sx={{ minWidth: 150 }}
+                    disabled={readOnly}
                   />
-                  <Box sx={{ ml: 'auto' }}>
-                    <IconButton
-                      size="small"
-                      color="error"
-                      onClick={() => eliminarArancel(index)}
-                    >
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                  </Box>
+                  {!readOnly && (
+                    <Box sx={{ ml: 'auto' }}>
+                      <IconButton
+                        size="small"
+                        color="error"
+                        onClick={() => eliminarArancel(index)}
+                      >
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </Box>
+                  )}
                 </Box>
               </CardContent>
             </Card>
@@ -99,38 +104,40 @@ export function ProductosArancelesManager({ aranceles, onChange }: ProductosAran
       )}
 
       {/* Formulario para agregar nuevo arancel */}
-      <Card variant="outlined" sx={{ bgcolor: 'action.hover' }}>
-        <CardContent>
-          <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 2 }}>
-            Agregar Nuevo Arancel
-          </Typography>
+      {!readOnly && (
+        <Card variant="outlined" sx={{ bgcolor: 'action.hover' }}>
+          <CardContent>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 2 }}>
+              Agregar Nuevo Arancel
+            </Typography>
 
-          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 2 }}>
-            <TextField
-              label="Destino"
-              value={nuevoArancel.arancelesDestino || ''}
-              onChange={(e) => setNuevoArancel({ ...nuevoArancel, arancelesDestino: e.target.value })}
-              size="small"
-              fullWidth
-            />
-            <TextField
-              label="Código"
-              value={nuevoArancel.arancelesCodigo || ''}
-              onChange={(e) => setNuevoArancel({ ...nuevoArancel, arancelesCodigo: e.target.value })}
-              size="small"
-              fullWidth
-            />
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={agregarArancel}
-              size="small"
-            >
-              Agregar
-            </Button>
-          </Box>
-        </CardContent>
-      </Card>
+            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 2 }}>
+              <TextField
+                label="Destino"
+                value={nuevoArancel.arancelesDestino || ''}
+                onChange={(e) => setNuevoArancel({ ...nuevoArancel, arancelesDestino: e.target.value })}
+                size="small"
+                fullWidth
+              />
+              <TextField
+                label="Código"
+                value={nuevoArancel.arancelesCodigo || ''}
+                onChange={(e) => setNuevoArancel({ ...nuevoArancel, arancelesCodigo: e.target.value })}
+                size="small"
+                fullWidth
+              />
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={agregarArancel}
+                size="small"
+              >
+                Agregar
+              </Button>
+            </Box>
+          </CardContent>
+        </Card>
+      )}
     </Box>
   );
 }

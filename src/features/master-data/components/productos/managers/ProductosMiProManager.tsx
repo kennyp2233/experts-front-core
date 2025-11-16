@@ -15,11 +15,12 @@ import { Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { ProductosMiPro } from '../../../types/master-data.types';
 
 interface ProductosMiProManagerProps {
+  readOnly?: boolean;
   miPros: ProductosMiPro[];
   onChange: (miPros: ProductosMiPro[]) => void;
 }
 
-export function ProductosMiProManager({ miPros, onChange }: ProductosMiProManagerProps) {
+export function ProductosMiProManager({ miPros, onChange, readOnly = false }: ProductosMiProManagerProps) {
   const [nuevoMiPro, setNuevoMiPro] = useState<Partial<ProductosMiPro>>({
     acuerdo: '',
     djoCode: '',
@@ -77,6 +78,7 @@ export function ProductosMiProManager({ miPros, onChange }: ProductosMiProManage
                     onChange={(e) => actualizarMiPro(index, 'acuerdo', e.target.value)}
                     size="small"
                     sx={{ minWidth: 120 }}
+                    disabled={readOnly}
                   />
                   <TextField
                     label="DJO Code"
@@ -84,6 +86,7 @@ export function ProductosMiProManager({ miPros, onChange }: ProductosMiProManage
                     onChange={(e) => actualizarMiPro(index, 'djoCode', e.target.value)}
                     size="small"
                     sx={{ minWidth: 120 }}
+                    disabled={readOnly}
                   />
                   <TextField
                     label="Tariff Code"
@@ -91,16 +94,19 @@ export function ProductosMiProManager({ miPros, onChange }: ProductosMiProManage
                     onChange={(e) => actualizarMiPro(index, 'tariffCode', e.target.value)}
                     size="small"
                     sx={{ minWidth: 120 }}
+                    disabled={readOnly}
                   />
-                  <Box sx={{ ml: 'auto' }}>
-                    <IconButton
-                      size="small"
-                      color="error"
-                      onClick={() => eliminarMiPro(index)}
-                    >
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                  </Box>
+                  {!readOnly && (
+                    <Box sx={{ ml: 'auto' }}>
+                      <IconButton
+                        size="small"
+                        color="error"
+                        onClick={() => eliminarMiPro(index)}
+                      >
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </Box>
+                  )}
                 </Box>
               </CardContent>
             </Card>
@@ -109,45 +115,46 @@ export function ProductosMiProManager({ miPros, onChange }: ProductosMiProManage
       )}
 
       {/* Formulario para agregar nuevo MiPro */}
-      <Card variant="outlined" sx={{ bgcolor: 'action.hover' }}>
-        <CardContent>
-          <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 2 }}>
-            Agregar Nueva Configuración MiPro
-          </Typography>
+      {!readOnly && (
+        <Card variant="outlined" sx={{ bgcolor: 'action.hover' }}>
+          <CardContent>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 2 }}>
+              Agregar Nueva Configuración MiPro
+            </Typography>
 
-          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 2 }}>
-            <TextField
-              label="Acuerdo"
-              value={nuevoMiPro.acuerdo || ''}
-              onChange={(e) => setNuevoMiPro({ ...nuevoMiPro, acuerdo: e.target.value })}
-              size="small"
-              fullWidth
-            />
-            <TextField
-              label="DJO Code"
-              value={nuevoMiPro.djoCode || ''}
-              onChange={(e) => setNuevoMiPro({ ...nuevoMiPro, djoCode: e.target.value })}
-              size="small"
-              fullWidth
-            />
-            <TextField
-              label="Tariff Code"
-              value={nuevoMiPro.tariffCode || ''}
-              onChange={(e) => setNuevoMiPro({ ...nuevoMiPro, tariffCode: e.target.value })}
-              size="small"
-              fullWidth
-            />
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={agregarMiPro}
-              size="small"
-            >
-              Agregar
-            </Button>
-          </Box>
-        </CardContent>
-      </Card>
+            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minwidth(150px, 1fr))', gap: 2 }}>
+              <TextField
+                label="Acuerdo"
+                value={nuevoMiPro.acuerdo || ''}
+                onChange={(e) => setNuevoMiPro({ ...nuevoMiPro, acuerdo: e.target.value })}
+                size="small"
+                fullWidth
+              />
+              <TextField
+                label="DJO Code"
+                value={nuevoMiPro.djoCode || ''}
+                onChange={(e) => setNuevoMiPro({ ...nuevoMiPro, djoCode: e.target.value })}
+                size="small"
+                fullWidth
+              />
+              <TextField
+                label="Tariff Code"
+                value={nuevoMiPro.tariffCode || ''}
+                onChange={(e) => setNuevoMiPro({ ...nuevoMiPro, tariffCode: e.target.value })}
+                size="small"
+                fullWidth
+              />
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={agregarMiPro}
+                size="small">
+                Agregar
+              </Button>
+            </Box>
+          </CardContent>
+        </Card>
+      )}
     </Box>
   );
 }

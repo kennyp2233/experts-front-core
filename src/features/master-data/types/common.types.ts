@@ -92,7 +92,7 @@ export interface MasterDataConfig {
   /**
    * Custom field renderers for complex form fields (e.g., nested arrays/objects)
    */
-  customFieldRenderers?: Record<string, (field: MasterDataFormField, value: unknown, onChange: (value: unknown) => void, error?: string) => React.ReactElement>;
+  customFieldRenderers?: Record<string, (field: MasterDataFormField, value: unknown, onChange: (value: unknown) => void, error?: string, formData?: Record<string, unknown>, readOnly?: boolean) => React.ReactElement>;
   fields: MasterDataFormField[];
   tableColumns: MasterDataTableColumn[];
   searchFields?: string[];

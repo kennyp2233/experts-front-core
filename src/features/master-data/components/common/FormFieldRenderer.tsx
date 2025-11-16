@@ -19,7 +19,7 @@ interface FormFieldRendererProps {
   error?: string;
   onChange: (value: any) => void;
   readOnly?: boolean;
-  customRenderers?: Record<string, (field: MasterDataFormField, value: any, onChange: (value: any) => void, error?: string, formData?: Record<string, unknown>) => React.ReactNode>;
+  customRenderers?: Record<string, (field: MasterDataFormField, value: any, onChange: (value: any) => void, error?: string, formData?: Record<string, unknown>, readOnly?: boolean) => React.ReactNode>;
   formData?: Record<string, unknown>;
 }
 
@@ -44,7 +44,7 @@ export function FormFieldRenderer({
   if (customRenderers[field.type]) {
     return (
       <Box key={field.name}>
-        {customRenderers[field.type](field, value, onChange, error, formData)}
+        {customRenderers[field.type](field, value, onChange, error, formData, readOnly)}
       </Box>
     );
   }

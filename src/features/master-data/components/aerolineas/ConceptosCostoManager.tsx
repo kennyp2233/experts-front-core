@@ -27,6 +27,7 @@ import { ConceptoCosto } from '../../types/master-data.types';
 interface ConceptosCostoManagerProps {
   conceptos: ConceptoCosto[];
   onChange: (conceptos: ConceptoCosto[]) => void;
+  readOnly?: boolean; // Indica si es modo solo lectura (view mode)
 }
 
 const ALL_TIPOS: ConceptoCosto['tipo'][] = [
@@ -40,7 +41,7 @@ const ALL_TIPOS: ConceptoCosto['tipo'][] = [
   'AUX2',
 ];
 
-export function ConceptosCostoManager({ conceptos, onChange }: ConceptosCostoManagerProps) {
+export function ConceptosCostoManager({ conceptos, onChange, readOnly = false }: ConceptosCostoManagerProps) {
   const theme = useTheme();
   // Pre-generar con todos los enums si no hay conceptos
   useEffect(() => {
@@ -105,9 +106,11 @@ export function ConceptosCostoManager({ conceptos, onChange }: ConceptosCostoMan
                 Valor
               </TableCell>
               <TableCell sx={{ fontWeight: 600, width: '25%' }}>Multiplicador</TableCell>
-              <TableCell sx={{ fontWeight: 600, width: '10%', textAlign: 'center' }}>
-                Acción
-              </TableCell>
+              {!readOnly && (
+                <TableCell sx={{ fontWeight: 600, width: '10%', textAlign: 'center' }}>
+                  Acción
+                </TableCell>
+              )}
             </TableRow>
           </TableHead>
           <TableBody>
@@ -128,6 +131,7 @@ export function ConceptosCostoManager({ conceptos, onChange }: ConceptosCostoMan
                     placeholder="ej: CG"
                     fullWidth
                     inputProps={{ maxLength: 10 }}
+                    disabled={readOnly}
                   />
                 </TableCell>
 
@@ -143,6 +147,7 @@ export function ConceptosCostoManager({ conceptos, onChange }: ConceptosCostoMan
                       handleUpdate(index, { valor: parseFloat(e.target.value) || 0 })
                     }
                     fullWidth
+                    disabled={readOnly}
                   />
                 </TableCell>
 
@@ -159,6 +164,7 @@ export function ConceptosCostoManager({ conceptos, onChange }: ConceptosCostoMan
                           multiplicador: v === '' ? null : (v as 'GROSS_WEIGHT' | 'CHARGEABLE_WEIGHT'),
                         });
                       }}
+                      disabled={readOnly}
                     >
                       <MenuItem value="">Ninguno</MenuItem>
                       <MenuItem value="GROSS_WEIGHT">Gross Weight</MenuItem>
@@ -168,16 +174,18 @@ export function ConceptosCostoManager({ conceptos, onChange }: ConceptosCostoMan
                 </TableCell>
 
                 {/* Eliminar */}
-                <TableCell align="center">
-                  <IconButton
-                    size="small"
-                    color="error"
-                    onClick={() => handleDelete(index)}
-                    title="Eliminar concepto"
-                  >
-                    <DeleteIcon fontSize="small" />
-                  </IconButton>
-                </TableCell>
+                {!readOnly && (
+                  <TableCell align="center">
+                    <IconButton
+                      size="small"
+                      color="error"
+                      onClick={() => handleDelete(index)}
+                      title="Eliminar concepto"
+                    >
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                  </TableCell>
+                )}
               </TableRow>
             ))}
           </TableBody>
