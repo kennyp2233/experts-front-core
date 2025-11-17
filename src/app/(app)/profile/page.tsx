@@ -15,10 +15,13 @@ import {
   DialogContent,
   DialogActions,
   Stack,
+  Switch,
+  FormControlLabel,
 } from '@mui/material';
 import { useUser, useEnable2FA, useConfirm2FA, useDisable2FA } from '@/features/auth';
 import { useToast } from '@/shared/providers/toast-provider';
 import { useErrorHandler } from '@/shared/hooks';
+import OTPInput from '@/shared/components/OTPInput';
 
 export default function ProfilePage() {
   const { user, isLoading: userLoading } = useUser();
@@ -34,7 +37,7 @@ export default function ProfilePage() {
 
   // 2FA Enable Flow
   const [showQRDialog, setShowQRDialog] = useState(false);
-  const [confirmCode, setConfirmCode] = useState('');
+  const [confirmCode, setConfirmCode] = useState(['', '', '', '', '', '']);
 
   // 2FA Disable Flow
   const [showDisableDialog, setShowDisableDialog] = useState(false);
@@ -49,12 +52,15 @@ export default function ProfilePage() {
   };
 
   const handleConfirm2FA = async () => {
+    const code = confirmCode.join('');
+    if (code.length !== 6) return;
+
     try {
-      await confirm2FA({ token: confirmCode });
+      await confirm2FA({ token: code });
 
       setIs2FAEnabled(true);
       setShowQRDialog(false);
-      setConfirmCode('');
+      setConfirmCode(['', '', '', '', '', '']);
       toast.success('2FA habilitado exitosamente');
     } catch (err) {
       toast.error(getErrorMessage(err, 'Código inválido. Intenta nuevamente.'));
@@ -75,7 +81,7 @@ export default function ProfilePage() {
 
   const handleCloseQRDialog = () => {
     setShowQRDialog(false);
-    setConfirmCode('');
+    setConfirmCode(['', '', '', '', '', '']);
   };
 
   if (userLoading) {
@@ -161,41 +167,32 @@ export default function ProfilePage() {
           </Typography>
 
           <Box mb={3}>
-            <Typography variant="body2" color="text.secondary" gutterBottom>
-              Estado:{' '}
-              {is2FAEnabled ? (
-                <Typography component="span" color="success.main" fontWeight="bold">
-                  Habilitado
-                </Typography>
-              ) : (
-                <Typography component="span" color="text.secondary">
-                  Deshabilitado
-                </Typography>
-              )}
-            </Typography>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={is2FAEnabled}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      handleEnable2FA();
+                    } else {
+                      setShowDisableDialog(true);
+                    }
+                  }}
+                  disabled={isAnyLoading}
+                />
+              }
+              label={
+                <Box>
+                  <Typography variant="body2" color="text.secondary">
+                    Autenticación de Dos Factores
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {is2FAEnabled ? 'Habilitado' : 'Deshabilitado'}
+                  </Typography>
+                </Box>
+              }
+            />
           </Box>
-
-          <Stack direction="row" spacing={2}>
-            {!is2FAEnabled ? (
-              <Button
-                variant="contained"
-                color="primary"
-                onClick={handleEnable2FA}
-                disabled={isAnyLoading}
-              >
-                {enableLoading ? <CircularProgress size={24} /> : 'Habilitar 2FA'}
-              </Button>
-            ) : (
-              <Button
-                variant="outlined"
-                color="error"
-                onClick={() => setShowDisableDialog(true)}
-                disabled={isAnyLoading}
-              >
-                Deshabilitar 2FA
-              </Button>
-            )}
-          </Stack>
         </CardContent>
       </Card>
 
@@ -235,13 +232,9 @@ export default function ProfilePage() {
             3. Ingresa el código de 6 dígitos de tu aplicación para confirmar:
           </Typography>
 
-          <TextField
-            fullWidth
-            label="Código de verificación"
+          <OTPInput
             value={confirmCode}
-            onChange={(e) => setConfirmCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-            placeholder="123456"
-            inputProps={{ maxLength: 6 }}
+            onChange={setConfirmCode}
             disabled={confirmLoading}
           />
         </DialogContent>
@@ -252,7 +245,7 @@ export default function ProfilePage() {
           <Button
             onClick={handleConfirm2FA}
             variant="contained"
-            disabled={confirmLoading || confirmCode.length !== 6}
+            disabled={confirmLoading || confirmCode.some(digit => digit === '')}
           >
             {confirmLoading ? <CircularProgress size={24} /> : 'Confirmar'}
           </Button>

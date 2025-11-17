@@ -27,6 +27,7 @@ interface AuthContextType {
   login: (credentials: LoginRequest) => Promise<void>;
   requires2FA: boolean;
   tempToken: string | null;
+  resetLogin: () => void;
 
   // Register flow
   register: (userData: RegisterRequest) => Promise<void>;
@@ -52,7 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { user, isLoading: userLoading, isAuthenticated } = useUser();
 
   // Auth mutations
-  const { login, requires2FA, tempToken, isLoading: loginLoading } = useLogin();
+  const { login, requires2FA, tempToken, isLoading: loginLoading, reset: resetLogin } = useLogin();
   const { register, isLoading: registerLoading } = useRegister();
   const { logout } = useLogout();
 
@@ -92,6 +93,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await disable2FAMutate();
   };
 
+  const logoutWrapper = async (): Promise<void> => {
+    await logout();
+    resetLogin();
+  };
+
   const value: AuthContextType = {
     user,
     isLoading: userLoading || loginLoading || registerLoading,
@@ -99,8 +105,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     login: loginWrapper,
     requires2FA,
     tempToken,
+    resetLogin,
     register: registerWrapper,
-    logout,
+    logout: logoutWrapper,
     verify2FA,
     enable2FA,
     confirm2FA,

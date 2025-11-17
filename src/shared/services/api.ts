@@ -51,13 +51,14 @@ api.interceptors.response.use(
     const is401 = error.response?.status === 401;
     const isLogoutEndpoint = error.config?.url?.includes('/auth/logout');
     const isProfileEndpoint = error.config?.url?.includes('/auth/profile');
+    const is2FAEndpoint = error.config?.url?.includes('/auth/2fa/');
     
     // Check if we're already on the auth page
     const isOnAuthPage = typeof window !== 'undefined' && window.location.pathname.startsWith('/auth');
     
-    // Only handle 401 errors that are NOT from logout/profile endpoints,
+    // Only handle 401 errors that are NOT from logout/profile/2fa endpoints,
     // NOT already on auth page, and if not already logging out
-    if (is401 && !isLogoutEndpoint && !isProfileEndpoint && !isOnAuthPage && !isLoggingOut()) {
+    if (is401 && !isLogoutEndpoint && !isProfileEndpoint && !is2FAEndpoint && !isOnAuthPage && !isLoggingOut()) {
       apiLogger.warn('401 Unauthorized - initiating logout', { url: error.config?.url });
       setLoggingOut(true);
 
