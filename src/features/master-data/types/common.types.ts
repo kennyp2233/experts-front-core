@@ -102,4 +102,5 @@ export interface MasterDataConfig {
     order: 'asc' | 'desc';
   };
   tabs?: MasterDataTab[];
+  validationSchema?: any; // Yup schema
 }

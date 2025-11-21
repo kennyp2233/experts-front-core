@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { Button, Box } from '@mui/material';
+import { ValidationError } from 'yup';
 import { MasterDataEntity, MasterDataFormField, MasterDataConfig } from '../../types/master-data.types';
 import { useFormState } from '../../hooks/common/useFormState';
 import { FormValidator } from '../../utils/FormValidator';
@@ -79,9 +80,26 @@ export function MasterDataForm<T extends MasterDataEntity>({
     }
 
     // Validar el formulario completo
-    const validationErrors = FormValidator.validateForm(config.fields, formData);
+    let validationErrors: Record<string, string> = {};
 
-    if (FormValidator.hasErrors(validationErrors)) {
+    if (config.validationSchema) {
+      try {
+        await config.validationSchema.validate(formData, { abortEarly: false });
+      } catch (err) {
+        if (err instanceof ValidationError) {
+          validationErrors = err.inner.reduce((acc, error) => {
+            if (error.path) {
+              acc[error.path] = error.message;
+            }
+            return acc;
+          }, {} as Record<string, string>);
+        }
+      }
+    } else {
+      validationErrors = FormValidator.validateForm(config.fields, formData);
+    }
+
+    if (Object.keys(validationErrors).length > 0) {
       setAllErrors(validationErrors);
       return;
     }

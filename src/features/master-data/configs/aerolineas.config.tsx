@@ -1,11 +1,23 @@
 import React from 'react';
 import { Box } from '@mui/material';
+import * as yup from 'yup';
 import { MasterDataConfig, MasterDataFormField } from '../types/master-data.types';
 import { useAerolineasMasterData } from '../hooks/aerolineas/useAerolineasMasterData';
 import { RutasManager } from '../components/aerolineas/RutasManager';
 import { ConceptosCostoManager } from '../components/aerolineas/ConceptosCostoManager';
 
+const validationSchema = yup.object({
+  codigo: yup.string().max(10, 'Máximo 10 caracteres').nullable(),
+  nombre: yup.string().required('El nombre es requerido').min(2, 'Mínimo 2 caracteres').max(100, 'Máximo 100 caracteres'),
+  ciRuc: yup.string().matches(/^\d[\d-]*$/, 'Formato inválido (solo dígitos y guiones)').nullable(),
+  prefijoAwb: yup.string().matches(/^\d{3}$/, 'Debe tener exactamente 3 dígitos').nullable(),
+  email: yup.string().email('Email inválido').nullable(),
+  tarifaRate: yup.number().transform((value) => (isNaN(value) ? undefined : value)).min(0, 'Debe ser mayor o igual a 0').nullable(),
+  pca: yup.number().transform((value) => (isNaN(value) ? undefined : value)).min(0, 'Debe ser mayor o igual a 0').max(100, 'Debe ser menor o igual a 100').nullable(),
+});
+
 export const aerolineasConfig: MasterDataConfig = {
+  validationSchema,
   entityName: 'Aerolínea',
   entityNamePlural: 'Aerolíneas',
   apiEndpoint: '/master-data/aerolinea',
