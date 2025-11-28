@@ -28,6 +28,10 @@ export function useMasterDataList<T extends { id: number; nombre: string }>(
     endpoint,
     async (url: string) => {
       const response = await api.get(url);
+      // Handle paginated response structure
+      if (response.data && typeof response.data === 'object' && 'data' in response.data && Array.isArray(response.data.data)) {
+        return response.data.data;
+      }
       return response.data;
     },
     {

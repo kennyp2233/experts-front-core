@@ -7,7 +7,7 @@ import { RutasManager } from '../components/aerolineas/RutasManager';
 import { ConceptosCostoManager } from '../components/aerolineas/ConceptosCostoManager';
 
 const validationSchema = yup.object({
-  codigo: yup.string().max(10, 'Máximo 10 caracteres').nullable(),
+  codigo: yup.string().nullable(),
   nombre: yup.string().required('El nombre es requerido').min(2, 'Mínimo 2 caracteres').max(100, 'Máximo 100 caracteres'),
   ciRuc: yup.string().matches(/^\d[\d-]*$/, 'Formato inválido (solo dígitos y guiones)').nullable(),
   prefijoAwb: yup.string().matches(/^\d{3}$/, 'Debe tener exactamente 3 dígitos').nullable(),

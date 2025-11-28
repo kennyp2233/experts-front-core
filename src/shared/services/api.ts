@@ -52,10 +52,19 @@ api.interceptors.response.use(
     const isLogoutEndpoint = error.config?.url?.includes('/auth/logout');
     const isProfileEndpoint = error.config?.url?.includes('/auth/profile');
     const is2FAEndpoint = error.config?.url?.includes('/auth/2fa/');
-    
+
+    // Check for token refresh success message from backend
+    const isRefreshSuccess = error.response?.data?.message === 'Token refresh succeeded, retry request' ||
+      error.response?.data?.message?.includes('Token refresh succeeded');
+
+    if (is401 && isRefreshSuccess) {
+      apiLogger.debug('Token refresh succeeded, retrying original request', { url: error.config?.url });
+      return api.request(error.config);
+    }
+
     // Check if we're already on the auth page
     const isOnAuthPage = typeof window !== 'undefined' && window.location.pathname.startsWith('/auth');
-    
+
     // Only handle 401 errors that are NOT from logout/profile/2fa endpoints,
     // NOT already on auth page, and if not already logging out
     if (is401 && !isLogoutEndpoint && !isProfileEndpoint && !is2FAEndpoint && !isOnAuthPage && !isLoggingOut()) {
@@ -73,7 +82,7 @@ api.interceptors.response.use(
         // Ignore logout errors - cookie might already be invalid
         apiLogger.debug('Logout API call failed (expected if cookie invalid)', logoutError);
       }
-      
+
       // Redirect to login page
       if (typeof window !== 'undefined') {
         window.location.href = '/auth';
@@ -84,7 +93,7 @@ api.interceptors.response.use(
         setLoggingOut(false);
       }, 1000);
     }
-    
+
     return Promise.reject(error);
   }
 );

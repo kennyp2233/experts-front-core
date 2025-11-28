@@ -28,7 +28,7 @@ export const embarcadoresConfig: MasterDataConfig = {
     {
       name: 'direccion',
       label: 'Dirección',
-      type: 'text',
+      type: 'textarea',
       required: false,
       validation: {
         maxLength: 200,
@@ -39,9 +39,6 @@ export const embarcadoresConfig: MasterDataConfig = {
       label: 'Teléfono',
       type: 'text',
       required: false,
-      validation: {
-        maxLength: 20,
-      },
     },
     {
       name: 'email',

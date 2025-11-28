@@ -27,9 +27,11 @@ interface ThemeProviderProps {
 
 export function ThemeProvider({ children }: ThemeProviderProps) {
   const [mode, setModeState] = useState<ThemeMode>('system');
+  const [mounted, setMounted] = useState(false);
 
   // Load theme from localStorage on mount
   useEffect(() => {
+    setMounted(true);
     const savedMode = localStorage.getItem('theme-mode') as ThemeMode;
     if (savedMode) {
       setModeState(savedMode);
@@ -49,7 +51,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   };
 
   // Determine actual theme mode
-  const prefersDarkMode = typeof window !== 'undefined'
+  const prefersDarkMode = mounted && typeof window !== 'undefined'
     ? window.matchMedia('(prefers-color-scheme: dark)').matches
     : false;
 

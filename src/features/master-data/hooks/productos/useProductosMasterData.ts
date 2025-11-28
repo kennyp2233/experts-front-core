@@ -15,32 +15,36 @@ interface Medida {
 
 // Transform data for productos endpoint
 function transformProductoData(data: Record<string, unknown>): Record<string, unknown> {
+  // Create a shallow copy
   const transformed = { ...data };
 
-  // Ensure arrays are properly handled
+  // Remove system fields and relations that shouldn't be sent
+  delete transformed.id;
+  delete transformed.createdAt;
+  delete transformed.updatedAt;
+  delete transformed.medida; // Remove the relation object, keep medidaId
+
+  // Ensure arrays are properly handled and cleaned
   if (transformed.productosAranceles && Array.isArray(transformed.productosAranceles)) {
-    // Remove temporary IDs used in UI
-    transformed.productosAranceles = (transformed.productosAranceles as Record<string, unknown>[]).map((arancel) => {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { id, ...cleanArancel } = arancel;
-      return cleanArancel;
-    });
+    transformed.productosAranceles = (transformed.productosAranceles as Record<string, unknown>[]).map((arancel) => ({
+      arancelesDestino: arancel.arancelesDestino,
+      arancelesCodigo: arancel.arancelesCodigo,
+    }));
   }
 
   if (transformed.productosCompuestos && Array.isArray(transformed.productosCompuestos)) {
-    transformed.productosCompuestos = (transformed.productosCompuestos as Record<string, unknown>[]).map((compuesto) => {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { id, ...cleanCompuesto } = compuesto;
-      return cleanCompuesto;
-    });
+    transformed.productosCompuestos = (transformed.productosCompuestos as Record<string, unknown>[]).map((compuesto) => ({
+      destino: compuesto.destino,
+      declaracion: compuesto.declaracion,
+    }));
   }
 
   if (transformed.productosMiPros && Array.isArray(transformed.productosMiPros)) {
-    transformed.productosMiPros = (transformed.productosMiPros as Record<string, unknown>[]).map((miPro) => {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { id, ...cleanMiPro } = miPro;
-      return cleanMiPro;
-    });
+    transformed.productosMiPros = (transformed.productosMiPros as Record<string, unknown>[]).map((miPro) => ({
+      acuerdo: miPro.acuerdo,
+      djoCode: miPro.djoCode,
+      tariffCode: miPro.tariffCode,
+    }));
   }
 
   return transformed;

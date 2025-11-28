@@ -7,7 +7,11 @@ import { useErrorHandler } from '@/shared/hooks';
 import { useToast } from '@/shared/providers';
 import { RegisterRequest } from '../types/auth.types';
 
-export default function RegisterForm() {
+interface RegisterFormProps {
+  onPasswordFocus?: (focused: boolean) => void;
+}
+
+export default function RegisterForm({ onPasswordFocus }: RegisterFormProps) {
   const { register } = useAuth();
   const toast = useToast();
   const { getErrorMessage } = useErrorHandler();
@@ -103,6 +107,8 @@ export default function RegisterForm() {
           disabled={loading}
           variant="outlined"
           size="small"
+          onFocus={() => onPasswordFocus?.(true)}
+          onBlur={() => onPasswordFocus?.(false)}
         />
 
         <Button

@@ -16,7 +16,7 @@ interface PaisResponse {
 interface CaeAduanaResponse {
   idCaeAduana: number;
   nombre: string;
-  codigo: string;
+  codigoAduana: string;
 }
 
 export function useOrigenMasterData(endpoint: string, options: UseOrigenMasterDataOptions = {}) {
@@ -37,7 +37,7 @@ export function useOrigenMasterData(endpoint: string, options: UseOrigenMasterDa
       endpoint: '/master-data/cae-aduana',
       mapper: (c: CaeAduanaResponse) => ({
         value: c.idCaeAduana,
-        label: `${c.nombre} (${c.codigo})`,
+        label: `${c.nombre} (${c.codigoAduana})`,
       }),
     },
   ]);

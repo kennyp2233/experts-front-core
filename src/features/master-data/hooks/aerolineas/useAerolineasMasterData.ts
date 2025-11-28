@@ -14,8 +14,8 @@ function transformAerolineaData(data: any): any {
   // rutas and conceptos are now arrays from visual components, no need to parse JSON
   // But we still need to build the plantilla object from individual fields
   if (transformed.plantillaGuiaMadre || transformed.plantillaFormatoAerolinea ||
-      transformed.plantillaReservas || transformed.tarifaRate || transformed.pca ||
-      (transformed.conceptos && Array.isArray(transformed.conceptos))) {
+    transformed.plantillaReservas || transformed.tarifaRate || transformed.pca ||
+    (transformed.conceptos && Array.isArray(transformed.conceptos))) {
     transformed.plantilla = {
       plantillaGuiaMadre: transformed.plantillaGuiaMadre,
       plantillaFormatoAerolinea: transformed.plantillaFormatoAerolinea,
@@ -32,6 +32,20 @@ function transformAerolineaData(data: any): any {
   delete transformed.plantillaReservas;
   delete transformed.tarifaRate;
   delete transformed.pca;
+
+  // Remove conceptos from root as it is now inside plantilla
+  delete transformed.conceptos;
+
+  // Clean up rutas to only include allowed fields
+  if (transformed.rutas && Array.isArray(transformed.rutas)) {
+    transformed.rutas = transformed.rutas.map((ruta: any) => ({
+      tipoRuta: ruta.tipoRuta,
+      orden: ruta.orden,
+      origenId: ruta.origenId,
+      destinoId: ruta.destinoId,
+      viaAerolineaId: ruta.viaAerolineaId,
+    }));
+  }
 
   return transformed;
 }

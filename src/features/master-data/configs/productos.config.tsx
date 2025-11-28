@@ -175,7 +175,11 @@ export const productosConfig: MasterDataConfig = {
     { key: 'nombre', label: 'Nombre' },
     { key: 'descripcion', label: 'Descripción' },
     { key: 'especie', label: 'Especie' },
-    { key: 'medidaId', label: 'Medida' },
+    {
+      key: 'medida',
+      label: 'Medida',
+      render: (value) => (value as { nombre: string })?.nombre || '-'
+    },
     { key: 'precioUnitario', label: 'Precio Unitario' },
     { key: 'stemsPorFull', label: 'Stems/Full' },
     { key: 'estado', label: 'Estado' },

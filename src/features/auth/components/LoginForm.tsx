@@ -8,7 +8,11 @@ import { useToast } from '@/shared/providers';
 import { LoginRequest } from '../types/auth.types';
 import OTPInput from '@/shared/components/OTPInput';
 
-export default function LoginForm() {
+interface LoginFormProps {
+  onPasswordFocus?: (focused: boolean) => void;
+}
+
+export default function LoginForm({ onPasswordFocus }: LoginFormProps) {
   const { login, requires2FA, tempToken, verify2FA, resetLogin } = useAuth();
   const toast = useToast();
   const { getErrorMessage } = useErrorHandler();
@@ -32,7 +36,7 @@ export default function LoginForm() {
       }
     } catch (err: any) {
       const errorMessage = getErrorMessage(err, 'Error al iniciar sesión');
-      
+
       // Check if max attempts exceeded or account blocked (429 Too Many Requests)
       if (err?.response?.status === 429) {
         toast.error('Demasiados intentos fallidos. Cuenta bloqueada temporalmente.');
@@ -138,6 +142,8 @@ export default function LoginForm() {
           disabled={loading}
           variant="outlined"
           size="small"
+          onFocus={() => onPasswordFocus?.(true)}
+          onBlur={() => onPasswordFocus?.(false)}
         />
 
         <Button

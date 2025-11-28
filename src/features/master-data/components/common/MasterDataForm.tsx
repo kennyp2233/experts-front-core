@@ -101,6 +101,22 @@ export function MasterDataForm<T extends MasterDataEntity>({
 
     if (Object.keys(validationErrors).length > 0) {
       setAllErrors(validationErrors);
+
+      // Find the first field with an error
+      const firstErrorField = Object.keys(validationErrors)[0];
+
+      // Find the tab containing this field
+      if (config.tabs && config.tabs.length > 0) {
+        const fieldConfig = config.fields.find(f => f.name === firstErrorField);
+        if (fieldConfig && fieldConfig.tab) {
+          const tabIndex = config.tabs.findIndex(t => t.key === fieldConfig.tab);
+          if (tabIndex !== -1) {
+            setActiveTab(tabIndex);
+          }
+        }
+      }
+
+      masterDataLogger.warn('Form validation failed', validationErrors);
       return;
     }
 
@@ -153,7 +169,12 @@ export function MasterDataForm<T extends MasterDataEntity>({
         {readOnly ? 'Cerrar' : 'Cancelar'}
       </Button>
       {!readOnly && (
-        <Button type="submit" variant="contained" disabled={loading}>
+        <Button
+          type="submit"
+          form="master-data-form-id"
+          variant="contained"
+          disabled={loading}
+        >
           {loading ? 'Guardando...' : 'Guardar'}
         </Button>
       )}
@@ -170,7 +191,11 @@ export function MasterDataForm<T extends MasterDataEntity>({
       footer={footer}
       actions={dialogActions}
     >
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <form
+        id="master-data-form-id"
+        onSubmit={handleSubmit}
+        style={{ display: 'flex', flexDirection: 'column', height: '100%' }}
+      >
         {hasTabs ? (
           <>
             <FormTabs
