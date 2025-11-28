@@ -54,18 +54,22 @@ function transformAerolineaData(data: any): any {
 function transformAerolineaDataFromAPI(data: any): any {
   const transformed = { ...data };
 
+  // Handle both 'plantilla' (from some endpoints) and 'aerolineasPlantilla' (from Prisma relation)
+  const plantillaSource = transformed.plantilla || transformed.aerolineasPlantilla;
+
   // If plantilla exists, flatten it to individual fields for form
-  if (transformed.plantilla) {
-    transformed.plantillaGuiaMadre = transformed.plantilla.plantillaGuiaMadre;
-    transformed.plantillaFormatoAerolinea = transformed.plantilla.plantillaFormatoAerolinea;
-    transformed.plantillaReservas = transformed.plantilla.plantillaReservas;
-    transformed.tarifaRate = transformed.plantilla.tarifaRate;
-    transformed.pca = transformed.plantilla.pca;
-    transformed.conceptos = transformed.plantilla.conceptos || [];
+  if (plantillaSource) {
+    transformed.plantillaGuiaMadre = plantillaSource.plantillaGuiaMadre;
+    transformed.plantillaFormatoAerolinea = plantillaSource.plantillaFormatoAerolinea;
+    transformed.plantillaReservas = plantillaSource.plantillaReservas;
+    transformed.tarifaRate = plantillaSource.tarifaRate;
+    transformed.pca = plantillaSource.pca;
+    transformed.conceptos = plantillaSource.conceptos || [];
   }
 
-  // Remove plantilla object as it's now flattened
+  // Remove nested objects as they're now flattened
   delete transformed.plantilla;
+  delete transformed.aerolineasPlantilla;
 
   return transformed;
 }
