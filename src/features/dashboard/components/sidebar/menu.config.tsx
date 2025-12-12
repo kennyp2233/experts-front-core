@@ -19,6 +19,7 @@ export const MENU_SECTIONS: MenuSection[] = [
         href: '/admin/master-data',
         children: getMasterDataMenuItems(),
       },
+      { label: 'Certificados FITO', icon: <StorageIcon />, href: '/admin/fito', roles: ['ADMIN'] },
       { label: 'Trabajadores', icon: <PeopleIcon />, href: '/admin/workers', roles: ['ADMIN'] },
     ],
   },
