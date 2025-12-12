@@ -22,8 +22,13 @@ export const useFitoGuiasHijas = (docNumero: number | null) => {
         () => fitoService.getGuiasHijas(docNumero!)
     );
 
+    // Filter out hijas with 0 stems or 0 cajas
+    const filteredHijas = (data || []).filter(
+        (hija) => hija.detNumStems > 0 && hija.detCajas > 0
+    );
+
     return {
-        hijas: data || [],
+        hijas: filteredHijas,
         isLoading,
         isError: error
     };

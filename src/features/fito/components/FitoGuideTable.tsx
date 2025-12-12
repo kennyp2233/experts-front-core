@@ -111,9 +111,16 @@ export const FitoGuideTable: React.FC<FitoGuideTableProps> = ({ onGenerate, disa
     }, [selectedMadre]);
 
     // Auto-populate direccionConsignatario from hijas marFITO
+    // Format: "CONSIGNATARIO NAME||ADDRESS PART 1||ADDRESS PART 2" -> extract everything after first ||
     useEffect(() => {
         if (hijas.length > 0 && hijas[0].marFITO) {
-            setConfig(prev => ({ ...prev, direccionConsignatario: hijas[0].marFITO || '' }));
+            const raw = hijas[0].marFITO;
+            const parts = raw.split('||');
+            // Everything after the first || is the address, join remaining parts with space
+            const address = parts.length > 1
+                ? parts.slice(1).join(' ').trim()
+                : raw; // If no ||, use full value
+            setConfig(prev => ({ ...prev, direccionConsignatario: address }));
         }
     }, [hijas]);
 
@@ -150,7 +157,15 @@ export const FitoGuideTable: React.FC<FitoGuideTableProps> = ({ onGenerate, disa
 
     const handleGenerate = () => {
         if (selectedMadre) {
-            onGenerate(selectedMadre.docNumero, config, productMappings);
+            // Clean mappings to only include backend-expected fields
+            const cleanedMappings: ProductMapping[] = productMappings.map(({ originalCode, codigoAgrocalidad, nombreComun, matched, confidence }) => ({
+                originalCode,
+                codigoAgrocalidad,
+                nombreComun,
+                matched,
+                confidence
+            }));
+            onGenerate(selectedMadre.docNumero, config, cleanedMappings);
             setWizardOpen(false);
         }
     };
@@ -356,7 +371,7 @@ export const FitoGuideTable: React.FC<FitoGuideTableProps> = ({ onGenerate, disa
                             <CheckIcon sx={{ fontSize: 64, color: 'success.main', mb: 2 }} />
                             <Typography variant="h6">¡Configuración Completa!</Typography>
                             <Typography color="text.secondary">
-                                {hijas.length} productos listos para generar XML con {productMappings.length} mapeos.
+                                {hijas.length} productos listos para generar archivo FITO con {productMappings.length} mapeos.
                             </Typography>
                         </Box>
                     )}
@@ -380,7 +395,7 @@ export const FitoGuideTable: React.FC<FitoGuideTableProps> = ({ onGenerate, disa
                     )}
                     {activeStep === 2 && (
                         <Button variant="contained" onClick={handleGenerate} startIcon={<DocIcon />}>
-                            Generar {hijas.length} XMLs
+                            Generar FITO
                         </Button>
                     )}
                 </DialogActions>

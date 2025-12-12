@@ -9,45 +9,59 @@ export const createFeedbackComponents = (mode: 'light' | 'dark'): Components<The
         fontSize: '0.9375rem',
         border: `1px solid`,
         alignItems: 'center',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
       }),
       standardSuccess: ({ theme }) => ({
-        backgroundColor: mode === 'light' 
-          ? 'rgba(16, 185, 129, 0.1)' 
-          : 'rgba(52, 211, 153, 0.15)',
-        color: theme.palette.success.dark,
+        backgroundColor: mode === 'light'
+          ? 'rgba(16, 185, 129, 0.85)'
+          : 'rgba(22, 101, 52, 0.9)',
+        color: mode === 'light' ? '#052e16' : '#bbf7d0',
         borderColor: theme.palette.success.main,
         '& .MuiAlert-icon': {
-          color: theme.palette.success.main,
+          color: mode === 'light' ? '#052e16' : '#bbf7d0',
+        },
+        '& .MuiAlert-action .MuiIconButton-root': {
+          color: mode === 'light' ? '#052e16' : '#bbf7d0',
         },
       }),
       standardError: ({ theme }) => ({
-        backgroundColor: mode === 'light' 
-          ? 'rgba(239, 68, 68, 0.1)' 
-          : 'rgba(248, 113, 113, 0.15)',
-        color: theme.palette.error.dark,
+        backgroundColor: mode === 'light'
+          ? 'rgba(239, 68, 68, 0.85)'
+          : 'rgba(127, 29, 29, 0.9)',
+        color: mode === 'light' ? '#450a0a' : '#fecaca',
         borderColor: theme.palette.error.main,
         '& .MuiAlert-icon': {
-          color: theme.palette.error.main,
+          color: mode === 'light' ? '#450a0a' : '#fecaca',
+        },
+        '& .MuiAlert-action .MuiIconButton-root': {
+          color: mode === 'light' ? '#450a0a' : '#fecaca',
         },
       }),
       standardWarning: ({ theme }) => ({
-        backgroundColor: mode === 'light' 
-          ? 'rgba(245, 158, 11, 0.1)' 
-          : 'rgba(251, 191, 36, 0.15)',
-        color: theme.palette.warning.dark,
+        backgroundColor: mode === 'light'
+          ? 'rgba(245, 158, 11, 0.85)'
+          : 'rgba(120, 53, 15, 0.9)',
+        color: mode === 'light' ? '#451a03' : '#fef3c7',
         borderColor: theme.palette.warning.main,
         '& .MuiAlert-icon': {
-          color: theme.palette.warning.main,
+          color: mode === 'light' ? '#451a03' : '#fef3c7',
+        },
+        '& .MuiAlert-action .MuiIconButton-root': {
+          color: mode === 'light' ? '#451a03' : '#fef3c7',
         },
       }),
       standardInfo: ({ theme }) => ({
-        backgroundColor: mode === 'light' 
-          ? 'rgba(59, 130, 246, 0.1)' 
-          : 'rgba(96, 165, 250, 0.15)',
-        color: theme.palette.info.dark,
+        backgroundColor: mode === 'light'
+          ? 'rgba(59, 130, 246, 0.85)'
+          : 'rgba(30, 58, 138, 0.9)',
+        color: mode === 'light' ? '#172554' : '#bfdbfe',
         borderColor: theme.palette.info.main,
         '& .MuiAlert-icon': {
-          color: theme.palette.info.main,
+          color: mode === 'light' ? '#172554' : '#bfdbfe',
+        },
+        '& .MuiAlert-action .MuiIconButton-root': {
+          color: mode === 'light' ? '#172554' : '#bfdbfe',
         },
       }),
     },
@@ -96,8 +110,8 @@ export const createFeedbackComponents = (mode: 'light' | 'dark'): Components<The
   MuiTooltip: {
     styleOverrides: {
       tooltip: ({ theme }) => ({
-        backgroundColor: mode === 'light' 
-          ? 'rgba(30, 41, 59, 0.95)' 
+        backgroundColor: mode === 'light'
+          ? 'rgba(30, 41, 59, 0.95)'
           : 'rgba(241, 245, 249, 0.95)',
         color: mode === 'light' ? '#F1F5F9' : '#1E293B',
         fontSize: '0.8125rem',
@@ -109,8 +123,8 @@ export const createFeedbackComponents = (mode: 'light' | 'dark'): Components<The
           : '0 4px 6px rgba(0, 0, 0, 0.4)',
       }),
       arrow: ({ theme }) => ({
-        color: mode === 'light' 
-          ? 'rgba(30, 41, 59, 0.95)' 
+        color: mode === 'light'
+          ? 'rgba(30, 41, 59, 0.95)'
           : 'rgba(241, 245, 249, 0.95)',
       }),
     },

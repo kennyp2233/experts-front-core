@@ -82,6 +82,7 @@ export interface PuertoInternacional {
 export interface ProductCatalogItem {
     codigoAgrocalidad: string;
     nombreComun: string;
+    nombreSubtipoProducto?: string;
 }
 
 export interface ProductMatchResult {

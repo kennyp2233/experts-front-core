@@ -49,7 +49,10 @@ export const FitoPage: React.FC = () => {
                 setGenerating(false);
 
                 if (status.status === 'completed') {
-                    setMessage({ type: 'success', text: `¡Generación completada! ${status.processedCount} XML(s) listos para descargar.` });
+                    setMessage({ type: 'success', text: '¡Generación completada! El archivo XML está listo.' });
+                    // Auto-download when completed
+                    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+                    window.open(`${baseUrl}/api/v1/fito/download/${jobId}`, '_blank');
                 } else {
                     setMessage({ type: 'error', text: 'La generación falló. Revise los detalles.' });
                 }
@@ -74,8 +77,8 @@ export const FitoPage: React.FC = () => {
             pollingRef.current = setInterval(() => pollJobStatus(result.jobId), 2000);
 
         } catch (error: any) {
-            console.error('Error generating XMLs:', error);
-            setMessage({ type: 'error', text: error.message || 'Error al generar XMLs' });
+            console.error('Error generating XML:', error);
+            setMessage({ type: 'error', text: error.message || 'Error al generar el archivo FITO' });
             setGenerating(false);
         }
     };
@@ -128,7 +131,7 @@ export const FitoPage: React.FC = () => {
 
             {/* Progress Dialog */}
             <Dialog open={progressDialogOpen} maxWidth="sm" fullWidth>
-                <DialogTitle>Generando XMLs</DialogTitle>
+                <DialogTitle>Generando Archivo FITO</DialogTitle>
                 <DialogContent>
                     <Box sx={{ mb: 2 }}>
                         {jobStatus?.status === 'completed' ? (
@@ -162,7 +165,7 @@ export const FitoPage: React.FC = () => {
                         onClick={handleDownload}
                         disabled={jobStatus?.status !== 'completed'}
                     >
-                        Descargar XMLs
+                        Descargar XML
                     </Button>
                 </DialogActions>
             </Dialog>
