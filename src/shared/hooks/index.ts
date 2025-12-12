@@ -7,3 +7,6 @@ export type { MutationState, MutationOptions, MutationHandlers, UseMutationRetur
 
 export { useErrorHandler } from './useErrorHandler';
 export type { ErrorDetails } from './useErrorHandler';
+
+export { useMobileNavigation } from './useMobileNavigation';
+export type { UseMobileNavigationReturn } from './useMobileNavigation';

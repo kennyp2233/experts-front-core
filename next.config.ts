@@ -63,9 +63,9 @@ const nextConfig: NextConfig = {
   },
 
   // Environment variables validation (optional)
-  // env: {
-  //   NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
-  // },
+  env: {
+    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
+  },
 };
 
 export default nextConfig;

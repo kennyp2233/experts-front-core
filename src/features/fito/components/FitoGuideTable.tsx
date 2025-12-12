@@ -3,7 +3,7 @@ import {
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
     CircularProgress, Typography, Box, Button, Chip, TextField, Alert, LinearProgress,
     Dialog, DialogTitle, DialogContent, DialogActions, FormControl, InputLabel, Select, MenuItem,
-    Autocomplete, Divider, Stepper, Step, StepLabel
+    Autocomplete, Divider, Stepper, Step, StepLabel, useMediaQuery, useTheme
 } from '@mui/material';
 import {
     Description as DocIcon,
@@ -42,6 +42,10 @@ export const FitoGuideTable: React.FC<FitoGuideTableProps> = ({ onGenerate, disa
     const { guias, isLoading, isError } = useFitoGuias();
     const [selectedMadre, setSelectedMadre] = useState<FitoGuide | null>(null);
     const { hijas, isLoading: isLoadingHijas } = useFitoGuiasHijas(selectedMadre?.docNumero ?? null);
+
+    // Responsive
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
     // Wizard state
     const [wizardOpen, setWizardOpen] = useState(false);
@@ -172,9 +176,21 @@ export const FitoGuideTable: React.FC<FitoGuideTableProps> = ({ onGenerate, disa
 
     return (
         <>
-            <Box sx={{ display: 'flex', gap: 2, height: 'calc(100vh - 180px)', overflow: 'hidden' }}>
+            <Box sx={{
+                display: 'flex',
+                flexDirection: { xs: 'column', md: 'row' },
+                gap: 2,
+                height: { xs: 'auto', md: 'calc(100vh - 180px)' },
+                overflow: { xs: 'visible', md: 'hidden' }
+            }}>
                 {/* Left Panel - Guías List */}
-                <Paper variant="outlined" sx={{ flex: '0 0 400px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                <Paper variant="outlined" sx={{
+                    flex: { xs: '0 0 auto', md: '0 0 400px' },
+                    display: 'flex',
+                    flexDirection: 'column',
+                    overflow: 'hidden',
+                    maxHeight: { xs: '300px', md: 'none' }
+                }}>
                     <Box sx={{ p: 1.5, borderBottom: '1px solid', borderColor: 'divider', bgcolor: 'background.default' }}>
                         <Typography variant="subtitle1" fontWeight={600}>Guías Disponibles</Typography>
                     </Box>
@@ -224,8 +240,10 @@ export const FitoGuideTable: React.FC<FitoGuideTableProps> = ({ onGenerate, disa
                             disabled={!selectedMadre || hijas.length === 0 || disabled}
                             onClick={handleOpenWizard}
                             startIcon={<ConfigIcon />}
+                            size={isMobile ? 'small' : 'medium'}
+                            sx={{ whiteSpace: 'nowrap' }}
                         >
-                            Configurar y Generar
+                            {isMobile ? 'Generar' : 'Configurar y Generar'}
                         </Button>
                     </Paper>
 
@@ -277,8 +295,14 @@ export const FitoGuideTable: React.FC<FitoGuideTableProps> = ({ onGenerate, disa
                 </Box>
             </Box>
 
-            {/* Wizard Dialog */}
-            <Dialog open={wizardOpen} onClose={() => setWizardOpen(false)} maxWidth="md" fullWidth>
+            {/* Wizard Dialog - fullScreen on mobile */}
+            <Dialog
+                open={wizardOpen}
+                onClose={() => setWizardOpen(false)}
+                maxWidth="md"
+                fullWidth
+                fullScreen={isMobile}
+            >
                 <DialogTitle>
                     <Stepper activeStep={activeStep} sx={{ mb: 1 }}>
                         {STEPS.map((label) => (

@@ -136,7 +136,17 @@ export const ProductMappingStep = forwardRef<ProductMappingStepRef, ProductMappi
                     </Alert>
                 )}
 
-                <TableContainer component={Paper} variant="outlined" sx={{ maxHeight: 300, overflow: 'auto' }}>
+                <TableContainer
+                    component={Paper}
+                    variant="outlined"
+                    sx={{
+                        maxHeight: { xs: 250, md: 300 },
+                        overflow: 'auto',
+                        '& .MuiTable-root': {
+                            minWidth: { xs: 500, md: 'auto' }
+                        }
+                    }}
+                >
                     <Table size="small" stickyHeader>
                         <TableHead>
                             <TableRow>

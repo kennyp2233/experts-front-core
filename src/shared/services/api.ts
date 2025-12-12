@@ -3,7 +3,7 @@ import { logger } from '../utils/logger';
 
 const apiLogger = logger.createChild('API');
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005';
 const API_VERSION = 'v1';
 
 // Use sessionStorage to prevent multiple logout calls (SSR-safe)

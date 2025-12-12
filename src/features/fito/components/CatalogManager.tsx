@@ -63,7 +63,7 @@ const CatalogCard: React.FC<CatalogCardProps> = ({ title, icon, catalogType, des
     };
 
     return (
-        <Card variant="outlined" sx={{ flex: 1, minWidth: 220 }}>
+        <Card variant="outlined" sx={{ flex: { xs: '1 1 100%', sm: 1 }, minWidth: { xs: '100%', sm: 220 } }}>
             <CardContent sx={{ pb: 1 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                     {icon}
@@ -100,16 +100,16 @@ const StatsPanel: React.FC<{ stats: CatalogStats | undefined; isLoading: boolean
     if (!stats) return <Typography color="text.secondary">Sin datos</Typography>;
 
     return (
-        <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
-            <Paper variant="outlined" sx={{ p: 2, flex: 1, minWidth: 200 }}>
+        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', flexDirection: { xs: 'column', sm: 'row' } }}>
+            <Paper variant="outlined" sx={{ p: 2, flex: { xs: '1 1 100%', sm: 1 }, minWidth: { xs: '100%', sm: 200 } }}>
                 <Typography variant="subtitle2" color="text.secondary">Productos</Typography>
                 <Typography variant="h4" fontWeight={700} color="primary.main">{stats.productos.total.toLocaleString()}</Typography>
             </Paper>
-            <Paper variant="outlined" sx={{ p: 2, flex: 1, minWidth: 200 }}>
+            <Paper variant="outlined" sx={{ p: 2, flex: { xs: '1 1 100%', sm: 1 }, minWidth: { xs: '100%', sm: 200 } }}>
                 <Typography variant="subtitle2" color="text.secondary">Puertos Internacionales</Typography>
                 <Typography variant="h4" fontWeight={700} color="secondary.main">{stats.puertos.internacional.toLocaleString()}</Typography>
             </Paper>
-            <Paper variant="outlined" sx={{ p: 2, flex: 1, minWidth: 200 }}>
+            <Paper variant="outlined" sx={{ p: 2, flex: { xs: '1 1 100%', sm: 1 }, minWidth: { xs: '100%', sm: 200 } }}>
                 <Typography variant="subtitle2" color="text.secondary">Puertos Ecuador</Typography>
                 <Typography variant="h4" fontWeight={700} color="success.main">{stats.puertos.ecuador.toLocaleString()}</Typography>
             </Paper>
@@ -143,7 +143,7 @@ export const CatalogManager: React.FC = () => {
             <Divider sx={{ my: 2 }} />
 
             <Typography variant="subtitle2" sx={{ mb: 1 }}>Subir Catálogos</Typography>
-            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', flexDirection: { xs: 'column', sm: 'row' } }}>
                 <CatalogCard
                     title="Productos"
                     icon={<ProductIcon color="primary" fontSize="small" />}

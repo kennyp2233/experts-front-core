@@ -101,7 +101,18 @@ export const FitoPage: React.FC = () => {
     return (
         <Box>
             <Paper variant="outlined" sx={{ mb: 2 }}>
-                <Tabs value={tab} onChange={(_, v) => setTab(v)}>
+                <Tabs
+                    value={tab}
+                    onChange={(_, v) => setTab(v)}
+                    variant="fullWidth"
+                    sx={{
+                        '& .MuiTab-root': {
+                            minWidth: { xs: 0, sm: 160 },
+                            fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                            px: { xs: 1, sm: 2 },
+                        }
+                    }}
+                >
                     <Tab icon={<GuiaIcon />} iconPosition="start" label="Generación de Guías" />
                     <Tab icon={<CatalogIcon />} iconPosition="start" label="Catálogos" />
                 </Tabs>
