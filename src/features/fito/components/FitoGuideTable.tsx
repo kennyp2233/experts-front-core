@@ -15,12 +15,12 @@ import {
 } from '@mui/icons-material';
 import useSWR from 'swr';
 import { useFitoGuias, useFitoGuiasHijas } from '../hooks/useFito';
-import { FitoGuide, FitoXmlConfig, PuertoEcuador, PuertoInternacional, ProductMapping } from '../types/fito.types';
+import { FitoGuide, FitoXmlConfig, PuertoEcuador, PuertoInternacional, ProductMapping, GuiaHijaAgregada } from '../types/fito.types';
 import { ProductMappingStep, ProductMappingStepRef } from './ProductMappingStep';
 import api from '../../../shared/services/api';
 
 interface FitoGuideTableProps {
-    onGenerate: (docNumero: number, config: FitoXmlConfig, productMappings: ProductMapping[]) => void;
+    onGenerate: (docNumero: number, config: FitoXmlConfig, productMappings: ProductMapping[], guiasHijas: GuiaHijaAgregada[]) => void;
     disabled?: boolean;
 }
 
@@ -62,9 +62,10 @@ export const FitoGuideTable: React.FC<FitoGuideTableProps> = ({ onGenerate, disa
         fechaEmbarque: '',
         codigoPuertoEc: 'AEECUIO',
         codigoPuertoDestino: '',
-        nombreMarca: '',
+        nombreMarca: 'LAS DEL EXPORTADOR',
         nombreConsignatario: '',
-        direccionConsignatario: ''
+        direccionConsignatario: '',
+        informacionAdicional: ''
     });
 
     // Puerto destino search state
@@ -100,12 +101,33 @@ export const FitoGuideTable: React.FC<FitoGuideTableProps> = ({ onGenerate, disa
             setConfig(prev => ({
                 ...prev,
                 fechaEmbarque: fechaStr,
-                nombreConsignatario: selectedMadre.consignatarioNombre || '',
-                nombreMarca: selectedMadre.consignatarioNombre || ''
+                nombreConsignatario: selectedMadre.consignatarioNombre || ''
             }));
 
-            if (selectedMadre.docDestino) {
-                setDestinoSearch(selectedMadre.docDestino);
+            // Auto-buscar puerto usando docFITODestino
+            // First, resolve the destination code to get the name
+            const fitoDestino = selectedMadre.docFITODestino;
+            if (fitoDestino) {
+                // Resolve destination code from PIN_auxDestinos via backend
+                api.get<{ desCodigo: string; desNombre: string; desAeropuerto: string; desPais: string } | null>(`/fito/destino/${encodeURIComponent(fitoDestino)}`)
+                    .then(r => {
+                        const destino = r.data;
+                        // Use desNombre or desAeropuerto for searching
+                        const searchTerm = destino?.desNombre || destino?.desAeropuerto || fitoDestino;
+                        setDestinoSearch(searchTerm);
+
+                        // Now search for ports using the resolved name
+                        return api.get<PuertoInternacional[]>(`/catalogs/puertos/search?q=${encodeURIComponent(searchTerm)}&esEcuador=false`);
+                    })
+                    .then(r => {
+                        if (r.data.length > 0) {
+                            // Auto-seleccionar el primer match
+                            handleDestinoSelect(r.data[0]);
+                            // También mostrar todas las opciones por si el usuario quiere cambiar
+                            setDestinoOptions(r.data);
+                        }
+                    })
+                    .catch(() => { /* ignore errors */ });
             }
         }
     }, [selectedMadre]);
@@ -137,6 +159,15 @@ export const FitoGuideTable: React.FC<FitoGuideTableProps> = ({ onGenerate, disa
     const handleDestinoSelect = (puerto: PuertoInternacional | null) => {
         setSelectedDestino(puerto);
         setConfig(prev => ({ ...prev, codigoPuertoDestino: puerto?.codigoPuerto || '' }));
+        // Update inputValue to show selected option's label
+        if (puerto) {
+            const label = `${puerto.nombrePuerto} (${puerto.codigoPuerto})${puerto.nombrePais ? ` - ${puerto.nombrePais}` : ''}`;
+            setDestinoSearch(label);
+            // Ensure the selected option is in options for Autocomplete to display correctly
+            setDestinoOptions(prev => prev.some(p => p.codigoPuerto === puerto.codigoPuerto) ? prev : [puerto, ...prev]);
+        } else {
+            setDestinoSearch('');
+        }
     };
 
     const handleNextStep = () => {
@@ -165,12 +196,44 @@ export const FitoGuideTable: React.FC<FitoGuideTableProps> = ({ onGenerate, disa
                 matched,
                 confidence
             }));
-            onGenerate(selectedMadre.docNumero, config, cleanedMappings);
+
+            // Build mapping lookup for quick access
+            const mappingLookup = new Map<string, string>();
+            cleanedMappings.forEach(m => mappingLookup.set(m.originalCode, m.codigoAgrocalidad));
+
+            // Filter hijas with bulto/cantidad > 0, then aggregate by plaRUC + proCodigo
+            const filteredHijas = hijas.filter(h => h.detCajas > 0 || h.detNumStems > 0);
+
+            const aggregationMap = new Map<string, GuiaHijaAgregada>();
+            filteredHijas.forEach(h => {
+                const key = `${h.plaRUC || 'SIN_RUC'}|${h.proCodigo}`;
+                const existing = aggregationMap.get(key);
+                const codigoAgrocalidad = mappingLookup.get(h.proCodigo) || h.proCodigo;
+
+                if (existing) {
+                    existing.detCajas += h.detCajas || 0;
+                    existing.detNumStems += h.detNumStems || 0;
+                } else {
+                    aggregationMap.set(key, {
+                        plaRUC: h.plaRUC || 'SIN_RUC',
+                        plaNombre: h.plaNombre || '',
+                        proCodigo: h.proCodigo,
+                        codigoAgrocalidad,
+                        detCajas: h.detCajas || 0,
+                        detNumStems: h.detNumStems || 0
+                    });
+                }
+            });
+
+            const aggregatedHijas = Array.from(aggregationMap.values());
+
+            onGenerate(selectedMadre.docNumero, config, cleanedMappings, aggregatedHijas);
             setWizardOpen(false);
         }
     };
 
-    const isStep1Valid = config.fechaEmbarque && config.codigoPuertoEc && config.codigoPuertoDestino;
+    const isStep1Valid = config.fechaEmbarque && config.codigoPuertoEc && config.codigoPuertoDestino
+        && config.nombreMarca && config.nombreConsignatario && config.direccionConsignatario;
 
     if (isLoading) {
         return (
@@ -228,7 +291,7 @@ export const FitoGuideTable: React.FC<FitoGuideTableProps> = ({ onGenerate, disa
                                             </TableCell>
                                             <TableCell sx={{ whiteSpace: 'nowrap' }}>{row.docFecha?.split('T')[0]}</TableCell>
                                             <TableCell>
-                                                <Chip label={row.docDestino || '-'} size="small" variant="outlined" sx={{ height: 20, fontSize: '0.75rem' }} />
+                                                <Chip label={row.docFITODestino || row.docDestino || '-'} size="small" variant="outlined" sx={{ height: 20, fontSize: '0.75rem' }} />
                                             </TableCell>
                                         </TableRow>
                                     );
@@ -328,8 +391,8 @@ export const FitoGuideTable: React.FC<FitoGuideTableProps> = ({ onGenerate, disa
                 <DialogContent sx={{ maxHeight: '60vh', overflowY: 'auto' }}>
                     {activeStep === 0 && (
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
-                            {selectedMadre?.docDestino && (
-                                <Alert severity="info" sx={{ py: 0.5 }}>Destino en guía: <strong>{selectedMadre.docDestino}</strong></Alert>
+                            {selectedMadre?.docFITODestino && (
+                                <Alert severity="info" sx={{ py: 0.5 }}>FITO Destino: <strong>{selectedMadre.docFITODestino}</strong></Alert>
                             )}
                             <Autocomplete
                                 options={destinoOptions}
@@ -355,8 +418,10 @@ export const FitoGuideTable: React.FC<FitoGuideTableProps> = ({ onGenerate, disa
                                 </Select>
                             </FormControl>
                             <TextField label="Tipo de Solicitud" value={config.tipoSolicitud} onChange={(e) => setConfig({ ...config, tipoSolicitud: e.target.value })} size="small" fullWidth />
-                            <TextField label="Consignatario" value={config.nombreConsignatario} onChange={(e) => setConfig({ ...config, nombreConsignatario: e.target.value })} size="small" fullWidth />
-                            <TextField label="Dirección Consignatario" value={config.direccionConsignatario} onChange={(e) => setConfig({ ...config, direccionConsignatario: e.target.value })} size="small" fullWidth multiline rows={2} />
+                            <TextField label="Nombre Marca" value={config.nombreMarca} onChange={(e) => setConfig({ ...config, nombreMarca: e.target.value })} size="small" fullWidth required helperText="Requerido - Por defecto: LAS DEL EXPORTADOR" />
+                            <TextField label="Consignatario" value={config.nombreConsignatario} onChange={(e) => setConfig({ ...config, nombreConsignatario: e.target.value })} size="small" fullWidth required />
+                            <TextField label="Dirección Consignatario" value={config.direccionConsignatario} onChange={(e) => setConfig({ ...config, direccionConsignatario: e.target.value })} size="small" fullWidth multiline rows={2} required />
+                            <TextField label="Información Adicional (Opcional)" value={config.informacionAdicional || ''} onChange={(e) => setConfig({ ...config, informacionAdicional: e.target.value })} size="small" fullWidth multiline rows={2} />
                         </Box>
                     )}
                     {activeStep === 1 && (

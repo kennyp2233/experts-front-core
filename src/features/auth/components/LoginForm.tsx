@@ -34,6 +34,10 @@ export default function LoginForm({ onPasswordFocus }: LoginFormProps) {
         // Initial login
         await login(formData);
       }
+      // Keep loading state true after success - the redirect will happen
+      // and we don't want to show the form briefly before navigation
+      // Wait a bit to ensure smooth transition
+      await new Promise(resolve => setTimeout(resolve, 500));
     } catch (err: any) {
       const errorMessage = getErrorMessage(err, 'Error al iniciar sesión');
 
@@ -44,7 +48,7 @@ export default function LoginForm({ onPasswordFocus }: LoginFormProps) {
       } else {
         toast.error(errorMessage);
       }
-    } finally {
+      // Only reset loading on error, not on success
       setLoading(false);
     }
   };

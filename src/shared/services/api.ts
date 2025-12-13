@@ -58,7 +58,10 @@ api.interceptors.response.use(
       error.response?.data?.message?.includes('Token refresh succeeded');
 
     if (is401 && isRefreshSuccess) {
-      apiLogger.debug('Token refresh succeeded, retrying original request', { url: error.config?.url });
+      apiLogger.debug('Token refresh succeeded, waiting for cookie to be set...', { url: error.config?.url });
+      // Wait for browser to process Set-Cookie header before retrying
+      await new Promise(resolve => setTimeout(resolve, 100));
+      apiLogger.debug('Retrying original request', { url: error.config?.url });
       return api.request(error.config);
     }
 

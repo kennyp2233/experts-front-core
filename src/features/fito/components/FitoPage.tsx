@@ -4,7 +4,7 @@ import { Description as GuiaIcon, FolderOpen as CatalogIcon, Download as Downloa
 import { FitoGuideTable } from './FitoGuideTable';
 import { CatalogManager } from './CatalogManager';
 import { fitoService } from '../services/fito.service';
-import { FitoXmlConfig, FitoJob, ProductMapping } from '../types/fito.types';
+import { FitoXmlConfig, FitoJob, ProductMapping, GuiaHijaAgregada } from '../types/fito.types';
 
 interface TabPanelProps {
     children?: React.ReactNode;
@@ -62,12 +62,12 @@ export const FitoPage: React.FC = () => {
         }
     };
 
-    const handleGenerate = async (docNumero: number, config: FitoXmlConfig, productMappings: ProductMapping[]) => {
+    const handleGenerate = async (docNumero: number, config: FitoXmlConfig, productMappings: ProductMapping[], guiasHijas: GuiaHijaAgregada[]) => {
         setGenerating(true);
         setJobStatus(null);
 
         try {
-            const result = await fitoService.generate({ guias: [docNumero], config, productMappings });
+            const result = await fitoService.generate({ guias: [docNumero], config, productMappings, guiasHijas });
             setCurrentJobId(result.jobId);
             setProgressDialogOpen(true);
             setMessage({ type: 'info', text: 'Generación iniciada...' });

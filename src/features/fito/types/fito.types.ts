@@ -6,6 +6,7 @@ export interface FitoGuide {
     marCodigo: number;
     docFecha: string;
     docDestino?: string;
+    docFITODestino?: string;
     consignatarioNombre?: string;
     consignatarioDireccion?: string;
 }
@@ -46,6 +47,7 @@ export interface FitoXmlConfig {
     nombreMarca: string;
     nombreConsignatario: string;
     direccionConsignatario: string;
+    informacionAdicional?: string;
 }
 
 export interface ProductMapping {
@@ -56,10 +58,20 @@ export interface ProductMapping {
     confidence: number;
 }
 
+export interface GuiaHijaAgregada {
+    plaRUC: string;
+    plaNombre: string;
+    proCodigo: string;
+    codigoAgrocalidad: string;
+    detCajas: number;
+    detNumStems: number;
+}
+
 export interface GenerateFitoDto {
     guias: number[];
     config: FitoXmlConfig;
     productMappings: ProductMapping[];
+    guiasHijas: GuiaHijaAgregada[];
 }
 
 export interface GenerationResponse {
