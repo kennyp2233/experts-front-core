@@ -112,8 +112,13 @@ export const FitoGuideTable: React.FC<FitoGuideTableProps> = ({ onGenerate, disa
                 api.get<{ desCodigo: string; desNombre: string; desAeropuerto: string; desPais: string } | null>(`/fito/destino/${encodeURIComponent(fitoDestino)}`)
                     .then(r => {
                         const destino = r.data;
-                        // Use desNombre or desAeropuerto for searching
-                        const searchTerm = destino?.desNombre || destino?.desAeropuerto || fitoDestino;
+                        // Special case: TSE -> search for ASTANA
+                        let searchTerm: string;
+                        if (fitoDestino.toUpperCase() === 'TSE') {
+                            searchTerm = 'ASTANA';
+                        } else {
+                            searchTerm = destino?.desNombre || destino?.desAeropuerto || fitoDestino;
+                        }
                         setDestinoSearch(searchTerm);
 
                         // Now search for ports using the resolved name
@@ -132,17 +137,24 @@ export const FitoGuideTable: React.FC<FitoGuideTableProps> = ({ onGenerate, disa
         }
     }, [selectedMadre]);
 
-    // Auto-populate direccionConsignatario from hijas marFITO
-    // Format: "CONSIGNATARIO NAME||ADDRESS PART 1||ADDRESS PART 2" -> extract everything after first ||
+    // Auto-populate nombreConsignatario and direccionConsignatario from hijas marFITO
+    // Format: "CONSIGNATARIO NAME||ADDRESS PART 1||ADDRESS PART 2"
+    // -> Name = before first ||, Address = everything after first ||
     useEffect(() => {
         if (hijas.length > 0 && hijas[0].marFITO) {
             const raw = hijas[0].marFITO;
             const parts = raw.split('||');
-            // Everything after the first || is the address, join remaining parts with space
+            // Name is the first part (before first ||)
+            const name = parts[0]?.trim() || '';
+            // Address is everything after the first ||
             const address = parts.length > 1
                 ? parts.slice(1).join(' ').trim()
-                : raw; // If no ||, use full value
-            setConfig(prev => ({ ...prev, direccionConsignatario: address }));
+                : ''; // If no ||, there's no address
+            setConfig(prev => ({
+                ...prev,
+                nombreConsignatario: name || prev.nombreConsignatario,
+                direccionConsignatario: address || prev.direccionConsignatario
+            }));
         }
     }, [hijas]);
 
