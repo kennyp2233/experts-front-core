@@ -9,17 +9,25 @@ interface ProtectedRouteProps {
   children: React.ReactNode;
 }
 
+/**
+ * Gate for /(app)/* routes. Renders the spinner until the *first* profile
+ * attempt has settled (axios interceptor finished its single-flight refresh
+ * if applicable). Only after that, decides whether to redirect or render.
+ *
+ * Note: `isMutating` (login/register in-flight) is intentionally ignored —
+ * those happen on /auth pages and have their own loading UI.
+ */
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   const router = useRouter();
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isAuthLoading } = useAuth();
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      router.push('/auth');
+    if (!isAuthLoading && !isAuthenticated) {
+      router.replace('/auth');
     }
-  }, [isAuthenticated, isLoading, router]);
+  }, [isAuthenticated, isAuthLoading, router]);
 
-  if (isLoading) {
+  if (isAuthLoading) {
     return (
       <Box
         sx={{

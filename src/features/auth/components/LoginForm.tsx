@@ -27,28 +27,29 @@ export default function LoginForm({ onPasswordFocus }: LoginFormProps) {
 
     try {
       if (requires2FA && tempToken) {
-        // Verify 2FA
         const code = twoFactorCode.join('');
         await verify2FA(code, trustDevice);
+        // 2FA verified: SWR cache is seeded by the hook; /auth/page.tsx will
+        // route to /dashboard on the next render. Keep loading=true so the
+        // form doesn't flash before unmount.
       } else {
-        // Initial login
-        await login(formData);
+        const response = await login(formData);
+        if (response.requires2FA) {
+          // Next render will show the 2FA UI — re-enable inputs.
+          setLoading(false);
+        }
+        // Otherwise: login succeeded fully. Leave loading=true; the redirect
+        // to /dashboard in /auth/page.tsx will unmount this form.
       }
-      // Keep loading state true after success - the redirect will happen
-      // and we don't want to show the form briefly before navigation
-      // Wait a bit to ensure smooth transition
-      await new Promise(resolve => setTimeout(resolve, 500));
     } catch (err: any) {
       const errorMessage = getErrorMessage(err, 'Error al iniciar sesión');
 
-      // Check if max attempts exceeded or account blocked (429 Too Many Requests)
       if (err?.response?.status === 429) {
         toast.error('Demasiados intentos fallidos. Cuenta bloqueada temporalmente.');
-        resetLogin(); // Reset to initial login state
+        resetLogin();
       } else {
         toast.error(errorMessage);
       }
-      // Only reset loading on error, not on success
       setLoading(false);
     }
   };

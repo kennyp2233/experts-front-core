@@ -9,33 +9,33 @@ import { use2FA } from './use2FA';
 import type {
   LoginRequest,
   RegisterRequest,
+  AuthResponse,
   Enable2FAResponse,
-  Verify2FARequest,
 } from '../types/auth.types';
 
-/**
- * Simplified Auth Context
- * Now delegates all operations to specialized hooks
- */
 interface AuthContextType {
-  // User state (from SWR)
   user: ReturnType<typeof useUser>['user'];
+  /** True while the very first profile attempt has not settled (no data, no error). */
+  isAuthLoading: boolean;
+  /** True while a login/register mutation is in-flight. NOT for gating protected UI. */
+  isMutating: boolean;
+  /**
+   * Back-compat alias: isAuthLoading || isMutating.
+   * Prefer the specific flags above. New code should not gate auth on this.
+   */
   isLoading: boolean;
   isAuthenticated: boolean;
 
-  // Login flow
-  login: (credentials: LoginRequest) => Promise<void>;
+  /** Returns the AuthResponse so callers can inspect `requires2FA` without waiting for re-render. */
+  login: (credentials: LoginRequest) => Promise<AuthResponse>;
   requires2FA: boolean;
   tempToken: string | null;
   resetLogin: () => void;
 
-  // Register flow
   register: (userData: RegisterRequest) => Promise<void>;
 
-  // Logout
   logout: () => Promise<void>;
 
-  // 2FA operations
   verify2FA: (token: string, trustDevice?: boolean) => Promise<void>;
   enable2FA: () => Promise<Enable2FAResponse>;
   confirm2FA: (token: string) => Promise<void>;
@@ -44,20 +44,19 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-/**
- * Simplified AuthProvider
- * No internal state - just composition of specialized hooks
- */
 export function AuthProvider({ children }: { children: ReactNode }) {
-  // User query (SWR)
-  const { user, isLoading: userLoading, isAuthenticated } = useUser();
+  const { user, hasSettled, isAuthenticated } = useUser();
 
-  // Auth mutations
-  const { login, requires2FA, tempToken, isLoading: loginLoading, reset: resetLogin } = useLogin();
+  const {
+    login,
+    requires2FA,
+    tempToken,
+    isLoading: loginLoading,
+    reset: resetLogin,
+  } = useLogin();
   const { register, isLoading: registerLoading } = useRegister();
   const { logout } = useLogout();
 
-  // 2FA operations
   const {
     enable2FA: enable2FAMutate,
     confirm2FA: confirm2FAMutate,
@@ -65,9 +64,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     disable2FA: disable2FAMutate,
   } = use2FA();
 
-  // Wrapper functions to match original API
-  const loginWrapper = async (credentials: LoginRequest): Promise<void> => {
-    await login(credentials);
+  const loginWrapper = async (credentials: LoginRequest): Promise<AuthResponse> => {
+    return login(credentials);
   };
 
   const registerWrapper = async (userData: RegisterRequest): Promise<void> => {
@@ -98,9 +96,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     resetLogin();
   };
 
+  const isAuthLoading = !hasSettled;
+  const isMutating = loginLoading || registerLoading;
+
   const value: AuthContextType = {
     user,
-    isLoading: userLoading || loginLoading || registerLoading,
+    isAuthLoading,
+    isMutating,
+    isLoading: isAuthLoading || isMutating,
     isAuthenticated,
     login: loginWrapper,
     requires2FA,
@@ -117,10 +120,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-/**
- * Hook to access auth context
- * @throws {Error} if used outside AuthProvider
- */
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
