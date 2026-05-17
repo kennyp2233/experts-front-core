@@ -32,11 +32,13 @@ export function EbfHealthBadge() {
   }
 
   return (
-    <Chip
-      icon={<CheckCircle />}
-      label="EBF: conectado"
-      size="small"
-      color="success"
-    />
+    <Tooltip title="Sesión activa con portal.ebfcargo.com">
+      <Chip
+        icon={<CheckCircle />}
+        label="EBF: conectado"
+        size="small"
+        color="success"
+      />
+    </Tooltip>
   );
 }
