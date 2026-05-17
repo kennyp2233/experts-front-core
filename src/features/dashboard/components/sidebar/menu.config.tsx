@@ -1,8 +1,16 @@
 'use client';
 
-import { Dashboard as DashboardIcon, People as PeopleIcon, Settings as SettingsIcon, Storage as StorageIcon } from '@mui/icons-material';
+import {
+  Dashboard as DashboardIcon,
+  People as PeopleIcon,
+  Storage as StorageIcon,
+  Hub as HubIcon,
+  FlightTakeoff as FlightIcon,
+  History as HistoryIcon,
+  Description as DescriptionIcon,
+  AddCircleOutline as AddCircleIcon,
+} from '@mui/icons-material';
 import type { MenuSection } from './types';
-import { getMasterDataMenuItems } from '../../../master-data/configs';
 
 export const MENU_SECTIONS: MenuSection[] = [
   {
@@ -13,20 +21,28 @@ export const MENU_SECTIONS: MenuSection[] = [
   {
     title: 'Administración',
     items: [
-      {
-        label: 'Datos Maestros',
-        icon: <StorageIcon />,
-        href: '/admin/master-data',
-        children: getMasterDataMenuItems(),
-      },
       { label: 'Certificados FITO', icon: <StorageIcon />, href: '/admin/fito', roles: ['ADMIN'] },
-      { label: 'Trabajadores', icon: <PeopleIcon />, href: '/admin/workers', roles: ['ADMIN'] },
+    ],
+  },
+  {
+    title: 'EBF',
+    items: [
+      {
+        label: 'Coordinaciones',
+        icon: <HubIcon />,
+        href: '/ebf/coordinaciones',
+        children: [
+          { label: 'Vigentes', icon: <FlightIcon />, href: '/ebf/coordinaciones' },
+          { label: 'Histórico', icon: <HistoryIcon />, href: '/ebf/coordinaciones/historico' },
+          { label: 'Nueva', icon: <AddCircleIcon />, href: '/ebf/coordinaciones/nueva' },
+        ],
+      },
+      { label: 'DAEs', icon: <DescriptionIcon />, href: '/ebf/daes' },
     ],
   },
   {
     title: 'Ajustes',
     items: [
-      { label: 'Configuración', icon: <SettingsIcon />, href: '/admin/settings', roles: ['ADMIN'] },
       { label: 'Mi Perfil', icon: <PeopleIcon />, href: '/profile' },
     ],
   },
