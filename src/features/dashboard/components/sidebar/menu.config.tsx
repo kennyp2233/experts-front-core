@@ -9,6 +9,8 @@ import {
   History as HistoryIcon,
   Description as DescriptionIcon,
   AddCircleOutline as AddCircleIcon,
+  Inventory2 as AwbsIcon,
+  CompareArrows as SyncIcon,
 } from '@mui/icons-material';
 import type { MenuSection } from './types';
 
@@ -28,7 +30,7 @@ export const MENU_SECTIONS: MenuSection[] = [
     title: 'EBF',
     items: [
       {
-        label: 'Coordinaciones',
+        label: 'Coordinaciones (manager)',
         icon: <HubIcon />,
         href: '/ebf/coordinaciones',
         children: [
@@ -37,7 +39,14 @@ export const MENU_SECTIONS: MenuSection[] = [
           { label: 'Nueva', icon: <AddCircleIcon />, href: '/ebf/coordinaciones/nueva' },
         ],
       },
+      { label: 'AWBs (cliente)', icon: <AwbsIcon />, href: '/ebf/customer/awbs' },
       { label: 'DAEs', icon: <DescriptionIcon />, href: '/ebf/daes' },
+    ],
+  },
+  {
+    title: 'Sync',
+    items: [
+      { label: 'EBF ↔ Access', icon: <SyncIcon />, href: '/sync/ebf-access' },
     ],
   },
   {

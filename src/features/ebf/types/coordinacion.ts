@@ -14,6 +14,11 @@ export interface CoordinacionListItem {
   destinoAwb: string | null;
   destinoFinal: string | null;
   creacion: string | null;
+  /** "22-05-2026 12:29" — parseado de la columna "Creación". */
+  creacionFecha: string | null;
+  /** "EXPERTS" / "MAURICIO PINCHAO" — usuario que coordinó. */
+  creacionUser: string | null;
+  /** id accionable del registro de coordinación EBF (botón update/delete). */
   detalleId: string | null;
   raw: Record<string, string>;
 }
