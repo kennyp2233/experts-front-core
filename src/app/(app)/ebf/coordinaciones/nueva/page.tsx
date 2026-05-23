@@ -2,8 +2,8 @@
 
 import { Box, Stack, Typography } from '@mui/material';
 import {
-  CoordinacionFormPlaceholder,
   EbfHealthBadge,
+  NuevaCoordinacionForm,
 } from '../../../../../features/ebf';
 
 export default function EbfNuevaCoordinacionPage() {
@@ -20,7 +20,7 @@ export default function EbfNuevaCoordinacionPage() {
         </Typography>
         <EbfHealthBadge />
       </Stack>
-      <CoordinacionFormPlaceholder />
+      <NuevaCoordinacionForm />
     </Box>
   );
 }
