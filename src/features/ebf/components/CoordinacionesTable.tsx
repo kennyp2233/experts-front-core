@@ -20,10 +20,14 @@ import {
 import {
   Refresh as RefreshIcon,
   Visibility as VisibilityIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
 } from '@mui/icons-material';
 import Link from 'next/link';
 import { useCoordinaciones } from '../hooks/useEbf';
 import type { CoordinacionListItem } from '../types/coordinacion';
+import { EditCoordinacionDialog } from './EditCoordinacionDialog';
+import { DeleteCoordinacionDialog } from './DeleteCoordinacionDialog';
 
 type StringColumnKey = {
   [K in keyof CoordinacionListItem]: CoordinacionListItem[K] extends
@@ -55,6 +59,8 @@ interface Props {
 
 export function CoordinacionesTable({ includeHistorico = false }: Props) {
   const [page, setPage] = useState(1);
+  const [editId, setEditId] = useState<number | null>(null);
+  const [deleteRow, setDeleteRow] = useState<CoordinacionListItem | null>(null);
   const { page: data, error, isLoading, mutate } = useCoordinaciones({
     page,
     includeHistorico,
@@ -114,14 +120,38 @@ export function CoordinacionesTable({ includeHistorico = false }: Props) {
                   ))}
                   <TableCell align="right">
                     {r.detalleId ? (
-                      <IconButton
-                        size="small"
-                        component={Link}
-                        href={`/ebf/coordinaciones/${encodeURIComponent(r.detalleId)}`}
-                        aria-label="Ver detalle"
-                      >
-                        <VisibilityIcon fontSize="small" />
-                      </IconButton>
+                      <Stack direction="row" spacing={0.5} justifyContent="flex-end">
+                        <IconButton
+                          size="small"
+                          component={Link}
+                          href={`/ebf/coordinaciones/${encodeURIComponent(r.detalleId)}`}
+                          aria-label="Ver detalle"
+                        >
+                          <VisibilityIcon fontSize="small" />
+                        </IconButton>
+                        {!includeHistorico && (
+                          <>
+                            <IconButton
+                              size="small"
+                              onClick={() =>
+                                setEditId(parseInt(r.detalleId!, 10))
+                              }
+                              aria-label="Editar"
+                              color="primary"
+                            >
+                              <EditIcon fontSize="small" />
+                            </IconButton>
+                            <IconButton
+                              size="small"
+                              onClick={() => setDeleteRow(r)}
+                              aria-label="Eliminar"
+                              color="error"
+                            >
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </>
+                        )}
+                      </Stack>
                     ) : (
                       '—'
                     )}
@@ -149,6 +179,22 @@ export function CoordinacionesTable({ includeHistorico = false }: Props) {
           Siguiente
         </Button>
       </Stack>
+
+      <EditCoordinacionDialog
+        detalleId={editId}
+        open={editId != null}
+        onClose={() => setEditId(null)}
+        onUpdated={() => {
+          mutate();
+        }}
+      />
+      <DeleteCoordinacionDialog
+        row={deleteRow}
+        onClose={() => setDeleteRow(null)}
+        onDeleted={() => {
+          mutate();
+        }}
+      />
     </Stack>
   );
 }

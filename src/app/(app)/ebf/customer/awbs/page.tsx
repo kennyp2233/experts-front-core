@@ -1,12 +1,9 @@
 'use client';
 
 import { Box, Stack, Typography } from '@mui/material';
-import {
-  EbfHealthBadge,
-  NuevaCoordinacionForm,
-} from '../../../../../features/ebf';
+import { CustomerAwbsListPage } from '../../../../../features/ebf';
 
-export default function EbfNuevaCoordinacionPage() {
+export default function EbfCustomerAwbsPage() {
   return (
     <Box sx={{ p: 3 }}>
       <Stack
@@ -16,11 +13,10 @@ export default function EbfNuevaCoordinacionPage() {
         sx={{ mb: 3 }}
       >
         <Typography variant="h5" fontWeight={600}>
-          Nueva coordinación
+          AWBs (vista cliente EBF)
         </Typography>
-        <EbfHealthBadge />
       </Stack>
-      <NuevaCoordinacionForm />
+      <CustomerAwbsListPage />
     </Box>
   );
 }
