@@ -26,9 +26,16 @@ const setLoggingOut = (value: boolean) => {
   }
 };
 
+/**
+ * Timeout global. Subido de 10s a 30s porque varios endpoints del back
+ * proxyen requests al portal EBF (Django + gunicorn en Ecuador) que en
+ * carga alta pueden tardar >10s — sobre todo los endpoints customer
+ * (lista AWBs con muchos consignees) y el modal de coordinar. Calls
+ * realmente largos (ej. sync run) pasan un override per-request.
+ */
 const api = axios.create({
   baseURL: `${API_BASE_URL}/api/${API_VERSION}`,
-  timeout: 10000,
+  timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
   },
