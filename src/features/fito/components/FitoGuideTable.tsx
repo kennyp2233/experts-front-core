@@ -15,7 +15,7 @@ import {
 } from '@mui/icons-material';
 import useSWR from 'swr';
 import { useFitoGuias, useFitoGuiasHijas } from '../hooks/useFito';
-import { FitoGuide, FitoXmlConfig, PuertoEcuador, PuertoInternacional, ProductMapping, GuiaHijaAgregada } from '../types/fito.types';
+import { FitoGuide, FitoXmlConfig, PuertoEcuador, PuertoInternacional, ProductMapping, GuiaHijaAgregada, USOS_PREVISTOS } from '../types/fito.types';
 import { ProductMappingStep, ProductMappingStepRef } from './ProductMappingStep';
 import api from '../../../shared/services/api';
 
@@ -65,6 +65,8 @@ export const FitoGuideTable: React.FC<FitoGuideTableProps> = ({ onGenerate, disa
         nombreMarca: 'LAS DEL EXPORTADOR',
         nombreConsignatario: '',
         direccionConsignatario: '',
+        // Consumo por defecto; el usuario puede cambiarlo según el envío (Agrocalidad SHC-2952)
+        codigoUsoPrevisto: '0002',
         informacionAdicional: ''
     });
 
@@ -245,7 +247,8 @@ export const FitoGuideTable: React.FC<FitoGuideTableProps> = ({ onGenerate, disa
     };
 
     const isStep1Valid = config.fechaEmbarque && config.codigoPuertoEc && config.codigoPuertoDestino
-        && config.nombreMarca && config.nombreConsignatario && config.direccionConsignatario;
+        && config.nombreMarca && config.nombreConsignatario && config.direccionConsignatario
+        && config.codigoUsoPrevisto;
 
     if (isLoading) {
         return (
@@ -433,6 +436,12 @@ export const FitoGuideTable: React.FC<FitoGuideTableProps> = ({ onGenerate, disa
                             <TextField label="Nombre Marca" value={config.nombreMarca} onChange={(e) => setConfig({ ...config, nombreMarca: e.target.value })} size="small" fullWidth required helperText="Requerido - Por defecto: LAS DEL EXPORTADOR" />
                             <TextField label="Consignatario" value={config.nombreConsignatario} onChange={(e) => setConfig({ ...config, nombreConsignatario: e.target.value })} size="small" fullWidth required />
                             <TextField label="Dirección Consignatario" value={config.direccionConsignatario} onChange={(e) => setConfig({ ...config, direccionConsignatario: e.target.value })} size="small" fullWidth multiline rows={2} required />
+                            <FormControl fullWidth size="small" required>
+                                <InputLabel>Uso Previsto</InputLabel>
+                                <Select value={config.codigoUsoPrevisto} label="Uso Previsto" onChange={(e) => setConfig({ ...config, codigoUsoPrevisto: e.target.value })}>
+                                    {USOS_PREVISTOS.map(u => <MenuItem key={u.codigo} value={u.codigo}>{u.nombre} ({u.codigo})</MenuItem>)}
+                                </Select>
+                            </FormControl>
                             <TextField label="Información Adicional (Opcional)" value={config.informacionAdicional || ''} onChange={(e) => setConfig({ ...config, informacionAdicional: e.target.value })} size="small" fullWidth multiline rows={2} />
                         </Box>
                     )}

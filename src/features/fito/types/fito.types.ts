@@ -47,8 +47,19 @@ export interface FitoXmlConfig {
     nombreMarca: string;
     nombreConsignatario: string;
     direccionConsignatario: string;
+    codigoUsoPrevisto: string;
     informacionAdicional?: string;
 }
+
+// Catálogo "Uso previsto" de Agrocalidad (GUIA), obligatorio desde 2026-10-01
+export const USOS_PREVISTOS = [
+    { codigo: '0001', nombre: 'Plantación' },
+    { codigo: '0002', nombre: 'Consumo' },
+    { codigo: '0003', nombre: 'Procesamiento' },
+    { codigo: '0004', nombre: 'Decoración' },
+    { codigo: '0005', nombre: 'Germinación para consumo' },
+    { codigo: '0006', nombre: 'Investigación' },
+] as const;
 
 export interface ProductMapping {
     originalCode: string;
