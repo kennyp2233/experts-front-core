@@ -1,36 +1,35 @@
 import { Components, Theme } from '@mui/material/styles';
 
+// Tablas: cabecera neutra (el color de marca queda para acciones y selección),
+// celdas compactas y contenedor con scroll para que ninguna columna quede
+// inalcanzable.
 export const createTableComponents = (mode: 'light' | 'dark'): Components<Theme> => ({
     MuiTable: {
         styleOverrides: {
-            root: ({ theme }) => ({
+            root: {
                 borderCollapse: 'separate',
                 borderSpacing: 0,
-            }),
+            },
         },
     },
     MuiTableHead: {
         styleOverrides: {
             root: ({ theme }) => ({
                 '& .MuiTableCell-head': {
-                    backgroundColor: mode === 'light' 
-                        ? 'rgba(255, 107, 53, 1)' 
-                        : 'rgba(255, 138, 91, 1)',
-                    color: theme.palette.text.primary,
-                    borderBottom: `2px solid ${theme.palette.divider}`,
+                    backgroundColor: mode === 'light' ? '#F8FAFC' : '#172033',
+                    color: theme.palette.text.secondary,
+                    borderBottom: `1px solid ${theme.palette.divider}`,
                     fontWeight: 600,
-                    fontSize: '0.875rem',
+                    fontSize: '0.75rem',
                     textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
-                    padding: '16px 20px',
+                    letterSpacing: '0.04em',
+                    padding: '10px 12px',
                     whiteSpace: 'nowrap',
                     '&:first-of-type': {
-                        borderTopLeftRadius: 12,
-                        paddingLeft: 24,
+                        paddingLeft: 16,
                     },
                     '&:last-of-type': {
-                        borderTopRightRadius: 12,
-                        paddingRight: 24,
+                        paddingRight: 16,
                     },
                 },
             }),
@@ -40,23 +39,23 @@ export const createTableComponents = (mode: 'light' | 'dark'): Components<Theme>
         styleOverrides: {
             root: ({ theme }) => ({
                 '& .MuiTableCell-body': {
-                    padding: '16px 20px',
+                    padding: '10px 12px',
                     borderBottom: `1px solid ${theme.palette.divider}`,
-                    fontSize: '0.9375rem',
+                    fontSize: '0.875rem',
                     color: theme.palette.text.primary,
                     '&:first-of-type': {
-                        paddingLeft: 24,
+                        paddingLeft: 16,
                     },
                     '&:last-of-type': {
-                        paddingRight: 24,
+                        paddingRight: 16,
                     },
                 },
                 '& .MuiTableRow-root': {
-                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                    transition: 'background-color 0.15s ease',
                     '&:hover': {
                         backgroundColor: mode === 'light'
-                            ? 'rgba(255, 107, 53, 0.04)'
-                            : 'rgba(255, 138, 91, 0.08)',
+                            ? 'rgba(15, 23, 42, 0.03)'
+                            : 'rgba(255, 255, 255, 0.04)',
                     },
                     '&:last-of-type .MuiTableCell-body': {
                         borderBottom: 'none',
@@ -87,11 +86,9 @@ export const createTableComponents = (mode: 'light' | 'dark'): Components<Theme>
             root: ({ theme }) => ({
                 borderRadius: 12,
                 border: `1px solid ${theme.palette.divider}`,
-                overflow: 'hidden',
+                overflow: 'auto',
                 backgroundColor: theme.palette.background.paper,
-                boxShadow: mode === 'light'
-                    ? '0 1px 3px rgba(0, 0, 0, 0.08)'
-                    : '0 1px 3px rgba(0, 0, 0, 0.4)',
+                boxShadow: 'none',
             }),
         },
     },
@@ -134,9 +131,9 @@ export const createTableComponents = (mode: 'light' | 'dark'): Components<Theme>
         styleOverrides: {
             root: ({ theme }) => ({
                 fontWeight: 600,
-                fontSize: '0.8125rem',
-                height: 28,
-                borderRadius: 8,
+                fontSize: '0.75rem',
+                height: 24,
+                borderRadius: 6,
                 transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                 '&.MuiChip-filled': {
                     '&.MuiChip-colorSuccess': {
@@ -165,10 +162,7 @@ export const createTableComponents = (mode: 'light' | 'dark'): Components<Theme>
                     },
                 },
                 '&.MuiChip-outlined': {
-                    borderWidth: 1.5,
-                },
-                '&:hover': {
-                    transform: 'scale(1.02)',
+                    borderWidth: 1,
                 },
             }),
             deleteIcon: {

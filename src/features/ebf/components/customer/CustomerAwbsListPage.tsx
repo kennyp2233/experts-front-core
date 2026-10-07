@@ -1,47 +1,44 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
+import { Box, Button, Chip, TextField, Typography } from '@mui/material';
 import {
-  Alert,
-  Box,
-  Button,
-  Chip,
-  CircularProgress,
-  IconButton,
-  Paper,
-  Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableFooter,
-  TableHead,
-  TableRow,
-  TextField,
-  Typography,
-} from '@mui/material';
-import {
-  Refresh as RefreshIcon,
   Search as SearchIcon,
-  Visibility as VisibilityIcon,
   FlightTakeoff as DepartedIcon,
   Schedule as InProgressIcon,
 } from '@mui/icons-material';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { DataTable, type DataTableColumn } from '@/shared/components/ui';
+import { formatDate, toIsoDate } from '@/shared/utils';
 import { useCustomerAwbs } from '../../hooks/useCustomerAwbs';
 import type {
   AwbState,
   CustomerAwbListItem,
 } from '../../types/customer-awb';
 
-/** Devuelve fecha YYYY-MM-DD para hoy y N días atrás. */
+/** Rango por defecto: últimos N días hasta hoy (fechas locales, no UTC). */
 function defaultEtdRange(daysBack = 30): { start: string; end: string } {
   const today = new Date();
   const start = new Date(today);
   start.setDate(today.getDate() - daysBack);
-  const fmt = (d: Date) => d.toISOString().slice(0, 10);
-  return { start: fmt(start), end: fmt(today) };
+  return { start: toIsoDate(start), end: toIsoDate(today) };
 }
+
+// El portal EBF devuelve los estados en inglés.
+const STATE_LABELS: Record<string, string> = {
+  DEPARTED: 'Salió',
+  DELIVERED: 'Entregado',
+  ARRIVED: 'Llegó',
+  'IN PROGRESS': 'En proceso',
+  IN_PROGRESS: 'En proceso',
+  PENDING: 'Pendiente',
+  CANCELLED: 'Cancelado',
+};
+
+const stateLabel = (label: string, state: AwbState) => {
+  const raw = (label || state).trim();
+  return STATE_LABELS[raw.toUpperCase()] ?? raw;
+};
 
 function stateChip(state: AwbState, label: string) {
   const props = {
@@ -58,7 +55,7 @@ function stateChip(state: AwbState, label: string) {
   return (
     <Chip
       size="small"
-      label={label || state}
+      label={stateLabel(label, state)}
       color={props.color}
       icon={props.icon}
       variant="outlined"
@@ -69,14 +66,124 @@ function stateChip(state: AwbState, label: string) {
 const NUM = (n: number | null | undefined) =>
   n == null ? '—' : n.toLocaleString('es-EC', { maximumFractionDigits: 3 });
 
+const COLUMNS: DataTableColumn<CustomerAwbListItem>[] = [
+  {
+    key: 'awbNumber',
+    label: 'AWB',
+    description: 'Guía aérea master',
+    value: (r) => r.awbNumber,
+    render: (r) => (
+      <Typography component="span" variant="inherit" fontWeight={600}>
+        {r.awbNumber}
+      </Typography>
+    ),
+    mobile: 'title',
+  },
+  {
+    key: 'consignee',
+    label: 'Consignatario',
+    description: 'Cliente que recibe la carga',
+    value: (r) => r.consignee,
+    maxWidth: 240,
+    mobile: 'subtitle',
+  },
+  {
+    key: 'etd',
+    label: 'ETD',
+    description: 'Fecha estimada de salida',
+    value: (r) => formatDate(r.etd, ''),
+  },
+  {
+    key: 'eta',
+    label: 'ETA',
+    description: 'Fecha estimada de llegada',
+    value: (r) => formatDate(r.eta, ''),
+    defaultHidden: true,
+  },
+  { key: 'airline', label: 'Aerolínea', value: (r) => r.airline, maxWidth: 180 },
+  {
+    key: 'destinoAwb',
+    label: 'Destino AWB',
+    description: 'Aeropuerto de destino de la guía master',
+    value: (r) => r.destinoAwb,
+    defaultHidden: true,
+  },
+  {
+    key: 'destinoFinal',
+    label: 'Destino final',
+    description: 'Ciudad o aeropuerto donde se entrega la carga',
+    value: (r) => r.destinoFinal,
+  },
+  {
+    key: 'bxsCoo',
+    label: 'Cajas COO',
+    description: 'Cajas coordinadas en equivalente full: 1 media caja = 0,5 (BXS-COO)',
+    value: (r) => NUM(r.bxsCoo),
+    align: 'right',
+  },
+  {
+    key: 'pcsCoo',
+    label: 'Piezas COO',
+    description: 'Cajas físicas coordinadas, sin importar su tamaño (PCS-COO)',
+    value: (r) => NUM(r.pcsCoo),
+    align: 'right',
+    defaultHidden: true,
+  },
+  {
+    key: 'bxsWh',
+    label: 'Cajas bodega',
+    description: 'Cajas en equivalente full recibidas en bodega (BXS-WH)',
+    value: (r) => NUM(r.bxsWh),
+    align: 'right',
+  },
+  {
+    key: 'pcsWh',
+    label: 'Piezas bodega',
+    description: 'Cajas físicas recibidas en bodega (PCS-WH)',
+    value: (r) => NUM(r.pcsWh),
+    align: 'right',
+    defaultHidden: true,
+  },
+  {
+    key: 'grossWeight',
+    label: 'Peso bruto',
+    description: 'Peso bruto en kg (gross weight)',
+    value: (r) => NUM(r.grossWeight),
+    align: 'right',
+  },
+  {
+    key: 'chargeWeight',
+    label: 'Peso cobrable',
+    description: 'Peso facturable en kg: el mayor entre peso bruto y volumétrico (chargeable weight)',
+    value: (r) => NUM(r.chargeWeight),
+    align: 'right',
+    defaultHidden: true,
+  },
+  {
+    key: 'state',
+    label: 'Estado',
+    value: (r) => r.stateLabel || r.state,
+    render: (r) => stateChip(r.state, r.stateLabel),
+    align: 'center',
+  },
+];
+
+interface AppliedQuery {
+  etdStart: string;
+  etdEnd: string;
+  aerolinea: string;
+  awb: string;
+  page: number;
+}
+
 export function CustomerAwbsListPage() {
-  const defaults = defaultEtdRange(30);
+  const router = useRouter();
+  const [defaults] = useState(() => defaultEtdRange(30));
   const [etdStart, setEtdStart] = useState(defaults.start);
   const [etdEnd, setEtdEnd] = useState(defaults.end);
   const [aerolinea, setAerolinea] = useState('');
   const [awb, setAwb] = useState('');
-  const [page, setPage] = useState(1);
-  const [appliedQuery, setAppliedQuery] = useState({
+  const [applied, setApplied] = useState<AppliedQuery>({
     etdStart: defaults.start,
     etdEnd: defaults.end,
     aerolinea: '',
@@ -87,42 +194,62 @@ export function CustomerAwbsListPage() {
   const {
     page: data,
     error,
-    isLoading,
+    isValidating,
     mutate,
+    refresh,
+    refreshing,
+    refreshError,
   } = useCustomerAwbs({
-    etdStart: appliedQuery.etdStart,
-    etdEnd: appliedQuery.etdEnd,
-    aerolinea: appliedQuery.aerolinea || undefined,
-    awb: appliedQuery.awb || undefined,
-    page: appliedQuery.page,
+    etdStart: applied.etdStart,
+    etdEnd: applied.etdEnd,
+    aerolinea: applied.aerolinea || undefined,
+    awb: applied.awb || undefined,
+    page: applied.page,
   });
 
-  const applyFilters = () => {
-    setAppliedQuery({ etdStart, etdEnd, aerolinea, awb, page: 1 });
-    setPage(1);
-  };
+  const rangeInvalid = Boolean(etdStart && etdEnd && etdStart > etdEnd);
+  const canApply = Boolean(etdStart && etdEnd) && !rangeInvalid;
 
-  const onPage = (delta: number) => {
-    const next = Math.max(1, page + delta);
-    setPage(next);
-    setAppliedQuery({ ...appliedQuery, page: next });
+  const applyFilters = (e: FormEvent) => {
+    e.preventDefault();
+    if (!canApply) return;
+    setApplied({ etdStart, etdEnd, aerolinea: aerolinea.trim(), awb: awb.trim(), page: 1 });
   };
 
   const rows = data?.items ?? [];
   const totals = data?.totals;
 
   return (
-    <Stack spacing={2}>
-      <Paper variant="outlined" sx={{ p: 2 }}>
-        <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="end">
+    <DataTable
+      id="ebf-customer-awbs"
+      columns={COLUMNS}
+      rows={rows}
+      getRowId={(r) => String(r.id)}
+      loading={isValidating || refreshing}
+      error={error ?? refreshError}
+      onRetry={() => (error ? mutate() : refresh())}
+      onRefresh={refresh}
+      onRowClick={(r) => router.push(`/ebf/customer/awbs/${r.id}`)}
+      filters={
+        <Box
+          component="form"
+          onSubmit={applyFilters}
+          sx={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 1.5,
+            alignItems: 'flex-start',
+          }}
+        >
           <TextField
             label="ETD desde"
             type="date"
             size="small"
             value={etdStart}
             onChange={(e) => setEtdStart(e.target.value)}
-            InputLabelProps={{ shrink: true }}
+            slotProps={{ inputLabel: { shrink: true } }}
             required
+            sx={{ width: 160 }}
           />
           <TextField
             label="ETD hasta"
@@ -130,166 +257,57 @@ export function CustomerAwbsListPage() {
             size="small"
             value={etdEnd}
             onChange={(e) => setEtdEnd(e.target.value)}
-            InputLabelProps={{ shrink: true }}
+            slotProps={{ inputLabel: { shrink: true } }}
             required
+            error={rangeInvalid}
+            helperText={rangeInvalid ? 'Debe ser igual o posterior a "desde"' : undefined}
+            sx={{ width: 160 }}
           />
           <TextField
-            label="Aerolínea contiene"
+            label="Aerolínea"
+            placeholder="Contiene…"
             size="small"
             value={aerolinea}
             onChange={(e) => setAerolinea(e.target.value)}
+            sx={{ width: 160 }}
           />
           <TextField
-            label="AWB contiene"
+            label="AWB"
+            placeholder="Contiene…"
             size="small"
             value={awb}
             onChange={(e) => setAwb(e.target.value)}
+            sx={{ width: 160 }}
           />
           <Button
+            type="submit"
             variant="contained"
-            size="small"
             startIcon={<SearchIcon />}
-            onClick={applyFilters}
-            disabled={!etdStart || !etdEnd}
+            disabled={!canApply}
+            sx={{ height: 40 }}
           >
             Filtrar
           </Button>
-        </Stack>
-      </Paper>
-
-      {error && (
-        <Alert severity="error">
-          No se pudo cargar la lista de AWBs: {(error as Error).message}
-        </Alert>
-      )}
-
-      <Stack direction="row" alignItems="center" spacing={1}>
-        <Typography variant="body2" color="text.secondary">
-          {rows.length} resultados — página {data?.page ?? page}
-        </Typography>
-        <IconButton
-          size="small"
-          onClick={() => mutate()}
-          aria-label="Refrescar"
-        >
-          <RefreshIcon fontSize="small" />
-        </IconButton>
-      </Stack>
-
-      {isLoading && !data ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-          <CircularProgress />
         </Box>
-      ) : (
-        <TableContainer component={Paper} variant="outlined">
-          <Table size="small" stickyHeader>
-            <TableHead>
-              <TableRow>
-                <TableCell>Consignee</TableCell>
-                <TableCell>ETD</TableCell>
-                <TableCell>ETA</TableCell>
-                <TableCell>Airline</TableCell>
-                <TableCell>D. AWB</TableCell>
-                <TableCell>D. Final</TableCell>
-                <TableCell>AWB</TableCell>
-                <TableCell align="right">BXS-COO</TableCell>
-                <TableCell align="right">PCS-COO</TableCell>
-                <TableCell align="right">BXS-WH</TableCell>
-                <TableCell align="right">PCS-WH</TableCell>
-                <TableCell align="right">Gross</TableCell>
-                <TableCell align="right">Charge</TableCell>
-                <TableCell align="center">Estado</TableCell>
-                <TableCell align="right" />
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {rows.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={15} align="center">
-                    Sin AWBs para los filtros aplicados.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                rows.map((r: CustomerAwbListItem) => (
-                  <TableRow key={r.id} hover>
-                    <TableCell>{r.consignee ?? '—'}</TableCell>
-                    <TableCell>{r.etd ?? '—'}</TableCell>
-                    <TableCell>{r.eta ?? '—'}</TableCell>
-                    <TableCell>{r.airline ?? '—'}</TableCell>
-                    <TableCell>{r.destinoAwb ?? '—'}</TableCell>
-                    <TableCell>{r.destinoFinal ?? '—'}</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>{r.awbNumber}</TableCell>
-                    <TableCell align="right">{NUM(r.bxsCoo)}</TableCell>
-                    <TableCell align="right">{NUM(r.pcsCoo)}</TableCell>
-                    <TableCell align="right">{NUM(r.bxsWh)}</TableCell>
-                    <TableCell align="right">{NUM(r.pcsWh)}</TableCell>
-                    <TableCell align="right">{NUM(r.grossWeight)}</TableCell>
-                    <TableCell align="right">{NUM(r.chargeWeight)}</TableCell>
-                    <TableCell align="center">
-                      {stateChip(r.state, r.stateLabel)}
-                    </TableCell>
-                    <TableCell align="right">
-                      <IconButton
-                        size="small"
-                        component={Link}
-                        href={`/ebf/customer/awbs/${r.id}`}
-                        aria-label="Ver detalle"
-                      >
-                        <VisibilityIcon fontSize="small" />
-                      </IconButton>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-            {totals && rows.length > 0 && (
-              <TableFooter>
-                <TableRow>
-                  <TableCell colSpan={7} sx={{ fontWeight: 600 }}>
-                    Totales
-                  </TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 600 }}>
-                    {NUM(totals.bxsCoo)}
-                  </TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 600 }}>
-                    {NUM(totals.pcsCoo)}
-                  </TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 600 }}>
-                    {NUM(totals.bxsWh)}
-                  </TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 600 }}>
-                    {NUM(totals.pcsWh)}
-                  </TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 600 }}>
-                    {NUM(totals.grossWeight)}
-                  </TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 600 }}>
-                    {NUM(totals.chargeWeight)}
-                  </TableCell>
-                  <TableCell colSpan={2} />
-                </TableRow>
-              </TableFooter>
-            )}
-          </Table>
-        </TableContainer>
-      )}
-
-      <Stack direction="row" spacing={1} justifyContent="flex-end">
-        <Button
-          size="small"
-          disabled={page <= 1 || isLoading}
-          onClick={() => onPage(-1)}
-        >
-          Anterior
-        </Button>
-        <Button
-          size="small"
-          disabled={!data?.hasNextPage || isLoading}
-          onClick={() => onPage(1)}
-        >
-          Siguiente
-        </Button>
-      </Stack>
-    </Stack>
+      }
+      pagination={{
+        page: data?.page ?? applied.page,
+        hasNextPage: Boolean(data?.hasNextPage),
+        onPageChange: (page) => setApplied((q) => ({ ...q, page })),
+      }}
+      totals={
+        totals
+          ? {
+              bxsCoo: NUM(totals.bxsCoo),
+              pcsCoo: NUM(totals.pcsCoo),
+              bxsWh: NUM(totals.bxsWh),
+              pcsWh: NUM(totals.pcsWh),
+              grossWeight: NUM(totals.grossWeight),
+              chargeWeight: NUM(totals.chargeWeight),
+            }
+          : undefined
+      }
+      emptyMessage="No hay AWBs para los filtros aplicados."
+    />
   );
 }

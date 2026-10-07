@@ -20,6 +20,7 @@ import {
   Typography,
 } from '@mui/material';
 import { Close as CloseIcon } from '@mui/icons-material';
+import { getErrorMessage } from '@/shared/utils';
 import {
   useEditForm,
   useUpdateSubmit,
@@ -177,7 +178,7 @@ export function EditCoordinacionDialog({
       <DialogContent dividers>
         {loadError && (
           <Alert severity="error">
-            No se pudo cargar el form de edición: {(loadError as Error).message}
+            No se pudo cargar la coordinación para editarla. {getErrorMessage(loadError)}
           </Alert>
         )}
         {isLoading && (
@@ -268,30 +269,30 @@ export function EditCoordinacionDialog({
             {/* Inputs numéricos */}
             <Grid container spacing={2}>
               <NumField
-                label="FB"
+                label="Caja full (FB)"
                 value={numeric.fbCoo}
                 disabled={!producto?.isFullBxs}
                 onChange={(v) => setNumeric({ ...numeric, fbCoo: v })}
               />
               <NumField
-                label="HB"
+                label="Media caja (HB, 1/2)"
                 value={numeric.hbCoo}
                 onChange={(v) => setNumeric({ ...numeric, hbCoo: v })}
               />
               <NumField
-                label="QB"
+                label="Cuarto de caja (QB, 1/4)"
                 value={numeric.qbCoo}
                 onChange={(v) => setNumeric({ ...numeric, qbCoo: v })}
               />
               <NumField
-                label="EB"
+                label="Octavo de caja (EB, 1/8)"
                 value={numeric.ebCoo}
                 onChange={(v) => setNumeric({ ...numeric, ebCoo: v })}
               />
               <Grid size={{ xs: 6, md: 3 }}>
                 <TextField
                   size="small"
-                  label={`BXS${calculating ? ' (calc…)' : ''}`}
+                  label={`Cajas equivalentes (BXS)${calculating ? ' · calculando…' : ''}`}
                   value={bxs ?? '—'}
                   fullWidth
                   InputProps={{ readOnly: true }}
@@ -300,7 +301,7 @@ export function EditCoordinacionDialog({
               <Grid size={{ xs: 6, md: 3 }}>
                 <TextField
                   size="small"
-                  label="PCS"
+                  label="Piezas (PCS)"
                   value={pcs ?? '—'}
                   fullWidth
                   InputProps={{ readOnly: true }}
@@ -313,8 +314,8 @@ export function EditCoordinacionDialog({
               <Alert severity={result.ok ? 'success' : 'error'}>
                 <AlertTitle>
                   {result.ok
-                    ? `Guardado (status ${result.status})`
-                    : `Falló (status ${result.status})`}
+                    ? 'Cambios guardados en el portal EBF'
+                    : 'El portal EBF no aceptó los cambios'}
                 </AlertTitle>
                 {result.errors && result.errors.length > 0 && (
                   <ul style={{ margin: 0, paddingLeft: 20 }}>
@@ -326,7 +327,7 @@ export function EditCoordinacionDialog({
               </Alert>
             )}
             {submitError && (
-              <Alert severity="error">{submitError.message}</Alert>
+              <Alert severity="error">{getErrorMessage(submitError)}</Alert>
             )}
           </Stack>
         )}

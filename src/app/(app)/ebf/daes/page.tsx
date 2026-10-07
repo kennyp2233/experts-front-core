@@ -1,23 +1,16 @@
 'use client';
 
-import { Box, Stack, Typography } from '@mui/material';
+import { AppPage } from '@/shared/components/ui';
 import { DaesTable, EbfHealthBadge } from '../../../../features/ebf';
 
 export default function EbfDaesPage() {
   return (
-    <Box sx={{ p: 3 }}>
-      <Stack
-        direction="row"
-        justifyContent="space-between"
-        alignItems="center"
-        sx={{ mb: 3 }}
-      >
-        <Typography variant="h5" fontWeight={600}>
-          DAEs
-        </Typography>
-        <EbfHealthBadge />
-      </Stack>
+    <AppPage
+      title="DAEs"
+      subtitle="Declaraciones Aduaneras de Exportación registradas en el portal EBF. Se marcan las que vencen en los próximos 7 días."
+      actions={<EbfHealthBadge />}
+    >
       <DaesTable />
-    </Box>
+    </AppPage>
   );
 }

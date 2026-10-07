@@ -1,6 +1,9 @@
 'use client';
 
-import { Box, Stack, Typography } from '@mui/material';
+import { Button } from '@mui/material';
+import { ArrowBack } from '@mui/icons-material';
+import Link from 'next/link';
+import { AppPage } from '@/shared/components/ui';
 import {
   EbfHealthBadge,
   NuevaCoordinacionForm,
@@ -8,19 +11,20 @@ import {
 
 export default function EbfNuevaCoordinacionPage() {
   return (
-    <Box sx={{ p: 3 }}>
-      <Stack
-        direction="row"
-        justifyContent="space-between"
-        alignItems="center"
-        sx={{ mb: 3 }}
-      >
-        <Typography variant="h5" fontWeight={600}>
-          Nueva coordinación
-        </Typography>
-        <EbfHealthBadge />
-      </Stack>
+    <AppPage
+      title="Nueva coordinación"
+      subtitle="Registra en el portal EBF las cajas de un exportador para un vuelo y una DAE."
+      maxWidth={1100}
+      actions={
+        <>
+          <EbfHealthBadge />
+          <Button component={Link} href="/ebf/coordinaciones" startIcon={<ArrowBack />} size="small">
+            Coordinaciones
+          </Button>
+        </>
+      }
+    >
       <NuevaCoordinacionForm />
-    </Box>
+    </AppPage>
   );
 }

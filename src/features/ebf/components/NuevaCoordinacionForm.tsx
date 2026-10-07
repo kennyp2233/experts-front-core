@@ -18,6 +18,9 @@ import {
   Typography,
 } from '@mui/material';
 import { Send as SendIcon, Calculate as CalcIcon } from '@mui/icons-material';
+import Link from 'next/link';
+import { useSWRConfig } from 'swr';
+import { formatDate, getErrorMessage } from '@/shared/utils';
 import {
   useCreateForm,
   useCoordinarSubmit,
@@ -33,6 +36,8 @@ import type {
   SelectOption,
 } from '../types/coordinar';
 import { ebfCoordinarService } from '../services/ebf-coordinar.service';
+import { ebfService } from '../services/ebf.service';
+import { coordinacionesKey } from '../hooks/useEbf';
 
 interface Numeric {
   fbCoo: number;
@@ -56,19 +61,61 @@ export function NuevaCoordinacionForm() {
   const [vuelo, setVuelo] = useState<SelectOption | null>(null);
   const [dae, setDae] = useState<SelectOption | null>(null);
 
-  const { exportadores, isLoading: loadingExp } = useExportadores();
+  const {
+    exportadores,
+    isLoading: loadingExp,
+    error: expError,
+    mutate: retryExp,
+  } = useExportadores();
   const expId = toSelectId(exportador);
-  const { marcaciones, isLoading: loadingMarc } = useMarcaciones(expId);
+  const {
+    marcaciones,
+    isLoading: loadingMarc,
+    error: marcError,
+    mutate: retryMarc,
+  } = useMarcaciones(expId);
   const marcId = toSelectId(marcacion);
-  const { vuelos, isLoading: loadingVue } = useVuelos(expId, marcId);
+  const {
+    vuelos,
+    isLoading: loadingVue,
+    error: vueError,
+    mutate: retryVue,
+  } = useVuelos(expId, marcId);
   const vueloId = toSelectId(vuelo);
-  const { daes, isLoading: loadingDae } = useCoordinarDaes(expId, marcId, vueloId);
+  const {
+    daes,
+    isLoading: loadingDae,
+    error: daeError,
+    mutate: retryDae,
+  } = useCoordinarDaes(expId, marcId, vueloId);
   const daeId = toSelectId(dae);
 
-  // Reset downstream cuando cambia un upstream
-  useEffect(() => { setMarcacion(null); setVuelo(null); setDae(null); }, [expId]);
-  useEffect(() => { setVuelo(null); setDae(null); }, [marcId]);
-  useEffect(() => { setDae(null); }, [vueloId]);
+  // Al cambiar un campo se limpian los que dependen de él (en el mismo evento,
+  // así no se piden vuelos/DAEs con una combinación vieja).
+  const changeExportador = (v: SelectOption | null) => {
+    setExportador(v);
+    setMarcacion(null);
+    setVuelo(null);
+    setDae(null);
+  };
+  const changeMarcacion = (v: SelectOption | null) => {
+    setMarcacion(v);
+    setVuelo(null);
+    setDae(null);
+  };
+  const changeVuelo = (v: SelectOption | null) => {
+    setVuelo(v);
+    setDae(null);
+  };
+
+  const cascadeError = expError ?? marcError ?? vueError ?? daeError;
+  const retryCascade = () => {
+    if (expError) retryExp();
+    if (marcError) retryMarc();
+    if (vueError) retryVue();
+    if (daeError) retryDae();
+  };
+  const exportadoresVacios = !loadingExp && !expError && exportadores.length === 0;
 
   const { card } = useVueloCard({
     exportador: expId,
@@ -146,6 +193,7 @@ export function NuevaCoordinacionForm() {
   // === Submit ===
   const { submit, submitting, result, error: submitError, reset } =
     useCoordinarSubmit();
+  const { mutate: globalMutate } = useSWRConfig();
 
   const canSubmit =
     !!spec &&
@@ -179,17 +227,61 @@ export function NuevaCoordinacionForm() {
           }
         : {}),
     };
-    await submit(dto);
+    try {
+      const r = await submit(dto);
+      if (r.ok) {
+        // El back cachea la lista ~2 min: se precarga la página 1 sin caché
+        // para que la coordinación nueva aparezca al ir a la lista.
+        globalMutate(
+          coordinacionesKey({ page: 1 }),
+          ebfService.listCoordinaciones({ page: 1, fresh: true }),
+          { revalidate: false },
+        ).catch(() => undefined);
+      }
+    } catch {
+      // El error ya queda en `submitError` y se muestra abajo.
+    }
   };
 
   return (
     <Stack spacing={3}>
-      {/* === Cascade === */}
+      {/* === Paso 1: selección === */}
       <Card variant="outlined">
         <CardContent>
-          <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 2 }}>
-            1. Selección
+          <Typography variant="subtitle1" fontWeight={600}>
+            1. Vuelo y DAE
           </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Elige en orden: cada campo se habilita al completar el anterior.
+          </Typography>
+
+          {cascadeError ? (
+            <Alert
+              severity="error"
+              sx={{ mb: 2 }}
+              action={
+                <Button color="inherit" size="small" onClick={retryCascade}>
+                  Reintentar
+                </Button>
+              }
+            >
+              No se pudieron cargar las opciones del portal EBF. {getErrorMessage(cascadeError)}
+            </Alert>
+          ) : exportadoresVacios ? (
+            <Alert
+              severity="warning"
+              sx={{ mb: 2 }}
+              action={
+                <Button color="inherit" size="small" onClick={() => retryExp()}>
+                  Reintentar
+                </Button>
+              }
+            >
+              El portal EBF no devolvió exportadores. Puede ser un problema temporal de
+              conexión con el portal; intenta de nuevo en unos segundos.
+            </Alert>
+          ) : null}
+
           <Grid container spacing={2}>
             <Grid size={{ xs: 12, md: 6 }}>
               <Autocomplete
@@ -198,10 +290,30 @@ export function NuevaCoordinacionForm() {
                 getOptionLabel={(o) => o.label}
                 isOptionEqualToValue={(a, b) => a.value === b.value}
                 value={exportador}
-                onChange={(_, v) => setExportador(v)}
+                onChange={(_, v) => changeExportador(v)}
                 loading={loadingExp}
+                loadingText="Cargando exportadores…"
+                noOptionsText={
+                  expError
+                    ? 'No se pudieron cargar los exportadores'
+                    : exportadores.length === 0
+                      ? 'El portal no devolvió exportadores'
+                      : 'Ningún exportador coincide con lo escrito'
+                }
                 renderInput={(p) => (
-                  <TextField {...p} label="Exportador" required />
+                  <TextField
+                    {...p}
+                    label="Exportador"
+                    required
+                    placeholder={loadingExp ? 'Cargando exportadores…' : 'Escribe para buscar'}
+                    helperText={
+                      loadingExp
+                        ? 'Cargando exportadores…'
+                        : exportadores.length > 0
+                          ? `${exportadores.length} exportadores disponibles`
+                          : ' '
+                    }
+                  />
                 )}
               />
             </Grid>
@@ -212,14 +324,27 @@ export function NuevaCoordinacionForm() {
                 getOptionLabel={(o) => o.label}
                 isOptionEqualToValue={(a, b) => a.value === b.value}
                 value={marcacion}
-                onChange={(_, v) => setMarcacion(v)}
+                onChange={(_, v) => changeMarcacion(v)}
                 loading={loadingMarc}
+                loadingText="Cargando marcaciones…"
                 disabled={!expId}
                 renderInput={(p) => (
-                  <TextField {...p} label="Marcación / consignatario" required />
+                  <TextField
+                    {...p}
+                    label="Marcación / consignatario"
+                    required
+                    helperText={dependentHelp({
+                      ready: !!expId,
+                      waiting: 'Elige un exportador para ver sus marcaciones',
+                      loading: loadingMarc,
+                      loadingText: 'Cargando marcaciones…',
+                      empty: !marcError && marcaciones.length === 0,
+                      emptyText: 'Este exportador no tiene marcaciones disponibles',
+                    })}
+                  />
                 )}
                 noOptionsText={
-                  expId ? 'Sin marcaciones para este exportador' : 'Elegí un exportador primero'
+                  expId ? 'Sin marcaciones para este exportador' : 'Elige un exportador primero'
                 }
               />
             </Grid>
@@ -230,14 +355,27 @@ export function NuevaCoordinacionForm() {
                 getOptionLabel={(o) => o.label}
                 isOptionEqualToValue={(a, b) => a.value === b.value}
                 value={vuelo}
-                onChange={(_, v) => setVuelo(v)}
+                onChange={(_, v) => changeVuelo(v)}
                 loading={loadingVue}
+                loadingText="Cargando vuelos…"
                 disabled={!marcId}
                 renderInput={(p) => (
-                  <TextField {...p} label="Vuelo" required />
+                  <TextField
+                    {...p}
+                    label="Vuelo"
+                    required
+                    helperText={dependentHelp({
+                      ready: !!marcId,
+                      waiting: 'Elige una marcación para ver los vuelos disponibles',
+                      loading: loadingVue,
+                      loadingText: 'Cargando vuelos…',
+                      empty: !vueError && vuelos.length === 0,
+                      emptyText: 'No hay vuelos abiertos para esta marcación',
+                    })}
+                  />
                 )}
                 noOptionsText={
-                  marcId ? 'Sin vuelos disponibles' : 'Elegí marcación primero'
+                  marcId ? 'Sin vuelos disponibles' : 'Elige una marcación primero'
                 }
               />
             </Grid>
@@ -250,12 +388,25 @@ export function NuevaCoordinacionForm() {
                 value={dae}
                 onChange={(_, v) => setDae(v)}
                 loading={loadingDae}
+                loadingText="Cargando DAEs…"
                 disabled={!vueloId}
                 renderInput={(p) => (
-                  <TextField {...p} label="DAE" required />
+                  <TextField
+                    {...p}
+                    label="DAE"
+                    required
+                    helperText={dependentHelp({
+                      ready: !!vueloId,
+                      waiting: 'Elige un vuelo para ver las DAEs disponibles',
+                      loading: loadingDae,
+                      loadingText: 'Cargando DAEs…',
+                      empty: !daeError && daes.length === 0,
+                      emptyText: 'No hay DAEs disponibles para este vuelo',
+                    })}
+                  />
                 )}
                 noOptionsText={
-                  vueloId ? 'Sin DAEs disponibles' : 'Elegí vuelo primero'
+                  vueloId ? 'Sin DAEs disponibles' : 'Elige un vuelo primero'
                 }
               />
             </Grid>
@@ -273,7 +424,10 @@ export function NuevaCoordinacionForm() {
             <Grid container spacing={2}>
               <CardField label="Exportador" value={card.exportador} />
               <CardField label="Cliente" value={card.cliente} />
-              <CardField label="Fecha vuelo" value={card.fechaVuelo} />
+              <CardField
+                label="Fecha del vuelo"
+                value={card.fechaVuelo ? formatDate(card.fechaVuelo) : null}
+              />
               <CardField label="Ruta" value={card.ruta} />
               <CardField label="Aerolínea" value={card.aerolinea} />
             </Grid>
@@ -281,22 +435,38 @@ export function NuevaCoordinacionForm() {
         </Card>
       )}
 
-      {/* === Form modal === */}
-      {specError && (
-        <Alert severity="error">
-          No se pudo cargar el form de coordinación: {(specError as Error).message}
-        </Alert>
-      )}
-      {loadingSpec && (
-        <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
-          <CircularProgress size={24} />
-        </Box>
+      {/* === Paso 2: producto y cajas === */}
+      {!spec && (
+        <Card variant="outlined">
+          <CardContent>
+            <Typography variant="subtitle1" fontWeight={600}>
+              2. Producto y cajas
+            </Typography>
+            {specError ? (
+              <Alert severity="error" sx={{ mt: 2 }}>
+                No se pudo cargar el formulario de producto y cajas.{' '}
+                {getErrorMessage(specError)}
+              </Alert>
+            ) : loadingSpec ? (
+              <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 1 }}>
+                <CircularProgress size={16} />
+                <Typography variant="body2" color="text.secondary">
+                  Cargando productos disponibles…
+                </Typography>
+              </Stack>
+            ) : (
+              <Typography variant="body2" color="text.secondary">
+                Completa el paso 1 para elegir el producto y las cajas.
+              </Typography>
+            )}
+          </CardContent>
+        </Card>
       )}
       {spec && (
         <Card variant="outlined">
           <CardContent>
             <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 2 }}>
-              2. Crear Detalle De Coordinación
+              2. Producto y cajas
             </Typography>
 
             <Stack spacing={2}>
@@ -377,30 +547,30 @@ export function NuevaCoordinacionForm() {
 
               <Grid container spacing={2}>
                 <NumericField
-                  label="FB (1/1)"
+                  label="Caja full (FB)"
                   value={numeric.fbCoo}
                   disabled={!producto?.isFullBxs}
                   onChange={(v) => setNumeric({ ...numeric, fbCoo: v })}
                 />
                 <NumericField
-                  label="HB (1/2)"
+                  label="Media caja (HB, 1/2)"
                   value={numeric.hbCoo}
                   onChange={(v) => setNumeric({ ...numeric, hbCoo: v })}
                 />
                 <NumericField
-                  label="QB (1/4)"
+                  label="Cuarto de caja (QB, 1/4)"
                   value={numeric.qbCoo}
                   onChange={(v) => setNumeric({ ...numeric, qbCoo: v })}
                 />
                 <NumericField
-                  label="EB (1/8)"
+                  label="Octavo de caja (EB, 1/8)"
                   value={numeric.ebCoo}
                   onChange={(v) => setNumeric({ ...numeric, ebCoo: v })}
                 />
                 <Grid size={{ xs: 6, md: 3 }}>
                   <TextField
                     size="small"
-                    label="BXS (calculado)"
+                    label="Cajas equivalentes (BXS)"
                     value={bxs ?? '—'}
                     fullWidth
                     InputProps={{
@@ -420,7 +590,7 @@ export function NuevaCoordinacionForm() {
                 <Grid size={{ xs: 6, md: 3 }}>
                   <TextField
                     size="small"
-                    label="PCS (calculado)"
+                    label="Piezas (PCS)"
                     value={pcs ?? '—'}
                     fullWidth
                     InputProps={{ readOnly: true }}
@@ -453,13 +623,19 @@ export function NuevaCoordinacionForm() {
         <Alert severity={result.ok ? 'success' : 'error'}>
           <AlertTitle>
             {result.ok
-              ? `Coordinación creada (status ${result.status})`
-              : `Falló (status ${result.status})`}
+              ? 'Coordinación creada en el portal EBF'
+              : 'El portal EBF no aceptó la coordinación'}
           </AlertTitle>
-          {result.redirectTo && (
-            <Typography variant="caption" component="div">
-              Redirect: <code>{result.redirectTo}</code>
-            </Typography>
+          {result.ok && (
+            <Button
+              component={Link}
+              href="/ebf/coordinaciones"
+              size="small"
+              color="inherit"
+              sx={{ mt: 0.5 }}
+            >
+              Ver coordinaciones
+            </Button>
           )}
           {result.errors && result.errors.length > 0 && (
             <Box sx={{ mt: 1 }}>
@@ -479,12 +655,27 @@ export function NuevaCoordinacionForm() {
       )}
       {submitError && (
         <Alert severity="error">
-          <AlertTitle>Error de red / back</AlertTitle>
-          {submitError.message}
+          <AlertTitle>No se pudo enviar la coordinación</AlertTitle>
+          {getErrorMessage(submitError)}
         </Alert>
       )}
     </Stack>
   );
+}
+
+/** Texto de ayuda de un campo que depende del anterior. */
+function dependentHelp(opts: {
+  ready: boolean;
+  waiting: string;
+  loading: boolean;
+  loadingText: string;
+  empty: boolean;
+  emptyText: string;
+}): string {
+  if (!opts.ready) return opts.waiting;
+  if (opts.loading) return opts.loadingText;
+  if (opts.empty) return opts.emptyText;
+  return ' ';
 }
 
 function CardField({

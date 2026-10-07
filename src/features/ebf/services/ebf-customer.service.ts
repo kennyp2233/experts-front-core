@@ -8,6 +8,7 @@ import type {
   CustomerAwbListQuery,
   CustomerProfile,
 } from '../types/customer-awb';
+import type { EbfFreshOption } from './ebf.service';
 
 const BASE = '/integrations/ebf-portal/customer';
 
@@ -17,7 +18,9 @@ export const ebfCustomerService = {
     return data;
   },
 
-  listAwbs: async (query: CustomerAwbListQuery): Promise<CustomerAwbListPage> => {
+  listAwbs: async (
+    query: CustomerAwbListQuery & EbfFreshOption,
+  ): Promise<CustomerAwbListPage> => {
     const { data } = await api.get<CustomerAwbListPage>(`${BASE}/awbs`, {
       params: {
         etdStart: query.etdStart,
@@ -27,6 +30,7 @@ export const ebfCustomerService = {
         awb: query.awb || undefined,
         page: query.page ?? undefined,
         sort: query.sort || undefined,
+        fresh: query.fresh ? 'true' : undefined,
       },
     });
     return data;

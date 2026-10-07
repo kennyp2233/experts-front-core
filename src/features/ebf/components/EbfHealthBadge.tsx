@@ -2,6 +2,7 @@
 
 import { Chip, Tooltip } from '@mui/material';
 import { CheckCircle, ErrorOutline, HourglassEmpty } from '@mui/icons-material';
+import { getErrorMessage } from '@/shared/utils';
 import { useEbfHealth } from '../hooks/useEbf';
 
 export function EbfHealthBadge() {
@@ -20,7 +21,13 @@ export function EbfHealthBadge() {
 
   if (error || !ok) {
     return (
-      <Tooltip title={(error as Error)?.message ?? 'Sin sesión'}>
+      <Tooltip
+        title={
+          error
+            ? `No hay conexión con el portal EBF. ${getErrorMessage(error)}`
+            : 'No hay sesión activa con el portal EBF.'
+        }
+      >
         <Chip
           icon={<ErrorOutline />}
           label="EBF: sin sesión"

@@ -2,12 +2,12 @@
 
 import { useState } from 'react';
 import {
+  Alert,
   Box,
   Card,
   CardContent,
   Typography,
   Button,
-  TextField,
   Divider,
   CircularProgress,
   Dialog,
@@ -22,6 +22,14 @@ import { useUser, useEnable2FA, useConfirm2FA, useDisable2FA } from '@/features/
 import { useToast } from '@/shared/providers/toast-provider';
 import { useErrorHandler } from '@/shared/hooks';
 import OTPInput from '@/shared/components/OTPInput';
+import { AppPage } from '@/shared/components/ui/AppPage';
+import { roleLabel } from '@/features/dashboard/roles';
+
+const PAGE_TITLE = 'Mi perfil';
+const PAGE_SUBTITLE = 'Tus datos de acceso y la seguridad de tu cuenta.';
+// Formulario de lectura: el título queda alineado con el resto de pantallas
+// y solo el contenido se limita a un ancho cómodo de leer.
+const CONTENT_MAX_WIDTH = 720;
 
 export default function ProfilePage() {
   const { user, isLoading: userLoading } = useUser();
@@ -86,17 +94,21 @@ export default function ProfilePage() {
 
   if (userLoading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-        <CircularProgress />
-      </Box>
+      <AppPage title={PAGE_TITLE} subtitle={PAGE_SUBTITLE}>
+        <Box sx={{ display: 'flex', justifyContent: 'center', p: 4, maxWidth: CONTENT_MAX_WIDTH }}>
+          <CircularProgress />
+        </Box>
+      </AppPage>
     );
   }
 
   if (!user) {
     return (
-      <Box sx={{ p: 3 }}>
-        <Typography color="error">No se pudo cargar el perfil del usuario</Typography>
-      </Box>
+      <AppPage title={PAGE_TITLE} subtitle={PAGE_SUBTITLE}>
+        <Alert severity="error" sx={{ maxWidth: CONTENT_MAX_WIDTH }}>
+          No se pudo cargar el perfil del usuario.
+        </Alert>
+      </AppPage>
     );
   }
 
@@ -105,96 +117,94 @@ export default function ProfilePage() {
   const isAnyLoading = enableLoading || confirmLoading || disableLoading;
 
   return (
-    <Box sx={{ p: 3, maxWidth: 800, mx: 'auto' }}>
-      <Typography variant="h4" gutterBottom>
-        Mi Perfil
-      </Typography>
+    <AppPage title={PAGE_TITLE} subtitle={PAGE_SUBTITLE}>
+      <Box sx={{ maxWidth: CONTENT_MAX_WIDTH }}>
+        {/* User Information */}
+        <Card sx={{ mb: 3 }}>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>
+              Información Personal
+            </Typography>
+            <Divider sx={{ mb: 2 }} />
 
-      {/* User Information */}
-      <Card sx={{ mb: 3 }}>
-        <CardContent>
-          <Typography variant="h6" gutterBottom>
-            Información Personal
-          </Typography>
-          <Divider sx={{ mb: 2 }} />
+            <Stack spacing={2}>
+              <Box>
+                <Typography variant="body2" color="text.secondary">
+                  Nombre
+                </Typography>
+                <Typography variant="body1">
+                  {user.firstName} {user.lastName}
+                </Typography>
+              </Box>
 
-          <Stack spacing={2}>
-            <Box>
-              <Typography variant="body2" color="text.secondary">
-                Nombre
-              </Typography>
-              <Typography variant="body1">
-                {user.firstName} {user.lastName}
-              </Typography>
+              <Box>
+                <Typography variant="body2" color="text.secondary">
+                  Usuario
+                </Typography>
+                <Typography variant="body1">{user.username}</Typography>
+              </Box>
+
+              <Box>
+                <Typography variant="body2" color="text.secondary">
+                  Email
+                </Typography>
+                <Typography variant="body1">{user.email}</Typography>
+              </Box>
+
+              <Box>
+                <Typography variant="body2" color="text.secondary">
+                  Rol
+                </Typography>
+                <Typography variant="body1">{roleLabel(user.role)}</Typography>
+              </Box>
+            </Stack>
+          </CardContent>
+        </Card>
+
+        {/* 2FA Settings */}
+        <Card>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>
+              Autenticación de Dos Factores (2FA)
+            </Typography>
+            <Divider sx={{ mb: 2 }} />
+
+            <Typography variant="body2" color="text.secondary" paragraph>
+              La autenticación de dos factores añade una capa adicional de seguridad a tu cuenta.
+              Necesitarás tu contraseña y un código de tu aplicación de autenticación para iniciar
+              sesión.
+            </Typography>
+
+            <Box mb={3}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={is2FAEnabled}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        handleEnable2FA();
+                      } else {
+                        setShowDisableDialog(true);
+                      }
+                    }}
+                    disabled={isAnyLoading}
+                  />
+                }
+                label={
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">
+                      Autenticación de Dos Factores
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {is2FAEnabled ? 'Habilitado' : 'Deshabilitado'}
+                    </Typography>
+                  </Box>
+                }
+              />
             </Box>
-
-            <Box>
-              <Typography variant="body2" color="text.secondary">
-                Usuario
-              </Typography>
-              <Typography variant="body1">{user.username}</Typography>
-            </Box>
-
-            <Box>
-              <Typography variant="body2" color="text.secondary">
-                Email
-              </Typography>
-              <Typography variant="body1">{user.email}</Typography>
-            </Box>
-
-            <Box>
-              <Typography variant="body2" color="text.secondary">
-                Rol
-              </Typography>
-              <Typography variant="body1">{user.role}</Typography>
-            </Box>
-          </Stack>
-        </CardContent>
-      </Card>
-
-      {/* 2FA Settings */}
-      <Card>
-        <CardContent>
-          <Typography variant="h6" gutterBottom>
-            Autenticación de Dos Factores (2FA)
-          </Typography>
-          <Divider sx={{ mb: 2 }} />
-
-          <Typography variant="body2" color="text.secondary" paragraph>
-            La autenticación de dos factores añade una capa adicional de seguridad a tu cuenta.
-            Necesitarás tu contraseña y un código de tu aplicación de autenticación para iniciar
-            sesión.
-          </Typography>
-
-          <Box mb={3}>
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={is2FAEnabled}
-                  onChange={(e) => {
-                    if (e.target.checked) {
-                      handleEnable2FA();
-                    } else {
-                      setShowDisableDialog(true);
-                    }
-                  }}
-                  disabled={isAnyLoading}
-                />
-              }
-              label={
-                <Box>
-                  <Typography variant="body2" color="text.secondary">
-                    Autenticación de Dos Factores
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {is2FAEnabled ? 'Habilitado' : 'Deshabilitado'}
-                  </Typography>
-                </Box>
-              }
-            />
-          </Box>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </Box>
 
       {/* QR Code Dialog */}
       <Dialog open={showQRDialog} onClose={handleCloseQRDialog} maxWidth="sm" fullWidth>
@@ -270,6 +280,6 @@ export default function ProfilePage() {
           </Button>
         </DialogActions>
       </Dialog>
-    </Box>
+    </AppPage>
   );
 }
