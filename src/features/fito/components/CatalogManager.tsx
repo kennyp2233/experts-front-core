@@ -1,8 +1,7 @@
 import React, { useState, useRef } from 'react';
 import {
     Box, Paper, Typography, Button, Card, CardContent, CardActions,
-    CircularProgress, Alert, Chip, LinearProgress, Divider, Table,
-    TableBody, TableCell, TableHead, TableRow, TableContainer
+    CircularProgress, Alert, LinearProgress, Divider
 } from '@mui/material';
 import {
     CloudUpload as UploadIcon,
@@ -13,13 +12,14 @@ import {
 } from '@mui/icons-material';
 import useSWR from 'swr';
 import api from '../../../shared/services/api';
+import { getErrorMessage } from '../../../shared/utils/errors';
 
 type CatalogType = 'productos' | 'puertos_internacional' | 'puertos_ecuador';
 
 interface CatalogStats {
     valid: boolean;
-    productos: { total: number; recientes: any[] };
-    puertos: { total: number; ecuador: number; internacional: number; recientes: any[] };
+    productos: { total: number; recientes: unknown[] };
+    puertos: { total: number; ecuador: number; internacional: number; recientes: unknown[] };
 }
 
 interface CatalogCardProps {
@@ -54,8 +54,8 @@ const CatalogCard: React.FC<CatalogCardProps> = ({ title, icon, catalogType, des
 
             setResult({ success: true, message: `Cargados ${response.data.loaded || 0} registros`, loaded: response.data.loaded });
             onUploadSuccess();
-        } catch (error: any) {
-            setResult({ success: false, message: error.response?.data?.message || error.message || 'Error al cargar' });
+        } catch (error) {
+            setResult({ success: false, message: getErrorMessage(error, 'No se pudo cargar el catálogo. Revisa el archivo e intenta de nuevo.') });
         } finally {
             setUploading(false);
             if (fileInputRef.current) fileInputRef.current.value = '';
@@ -118,7 +118,7 @@ const StatsPanel: React.FC<{ stats: CatalogStats | undefined; isLoading: boolean
 };
 
 export const CatalogManager: React.FC = () => {
-    const { data: stats, isLoading, mutate } = useSWR<CatalogStats>('/catalogs/stats',
+    const { data: stats, error, isLoading, mutate } = useSWR<CatalogStats>('/catalogs/stats',
         () => api.get<CatalogStats>('/catalogs/stats').then(r => r.data)
     );
 
@@ -138,7 +138,16 @@ export const CatalogManager: React.FC = () => {
                 </Button>
             </Box>
 
-            <StatsPanel stats={stats} isLoading={isLoading} />
+            {error && !stats ? (
+                <Alert
+                    severity="error"
+                    action={<Button color="inherit" size="small" onClick={() => mutate()}>Reintentar</Button>}
+                >
+                    {getErrorMessage(error, 'No se pudieron cargar las estadísticas de catálogos.')}
+                </Alert>
+            ) : (
+                <StatsPanel stats={stats} isLoading={isLoading} />
+            )}
 
             <Divider sx={{ my: 2 }} />
 

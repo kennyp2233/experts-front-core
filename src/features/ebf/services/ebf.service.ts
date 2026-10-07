@@ -8,6 +8,18 @@ import type { DaeListPage } from '../types/dae';
 
 const BASE = '/integrations/ebf-portal';
 
+/**
+ * Opción común de las listas: `fresh: true` le pide al back que ignore su
+ * caché (TTL ~2 min) y vuelva a consultar el portal. Solo se envía cuando el
+ * usuario pulsa "Actualizar" o tras editar/eliminar; las cargas normales usan
+ * la caché.
+ */
+export interface EbfFreshOption {
+  fresh?: boolean;
+}
+
+const freshParam = (fresh?: boolean) => (fresh ? 'true' : undefined);
+
 export const ebfService = {
   health: async (): Promise<{ ok: true }> => {
     const { data } = await api.get<{ ok: true }>(`${BASE}/health`);
@@ -15,7 +27,7 @@ export const ebfService = {
   },
 
   listCoordinaciones: async (
-    query: CoordinacionListQuery = {},
+    query: CoordinacionListQuery & EbfFreshOption = {},
   ): Promise<CoordinacionListPage> => {
     const { data } = await api.get<CoordinacionListPage>(
       `${BASE}/coordinaciones`,
@@ -24,6 +36,7 @@ export const ebfService = {
           page: query.page,
           sort: query.sort,
           historico: query.includeHistorico ? 'true' : undefined,
+          fresh: freshParam(query.fresh),
         },
       },
     );
@@ -38,10 +51,10 @@ export const ebfService = {
   },
 
   listDaes: async (
-    query: { page?: number } = {},
+    query: { page?: number } & EbfFreshOption = {},
   ): Promise<DaeListPage> => {
     const { data } = await api.get<DaeListPage>(`${BASE}/daes`, {
-      params: { page: query.page },
+      params: { page: query.page, fresh: freshParam(query.fresh) },
     });
     return data;
   },

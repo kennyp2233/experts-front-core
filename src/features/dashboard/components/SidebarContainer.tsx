@@ -28,7 +28,12 @@ export default function Sidebar({ open = true, onClose, variant = 'permanent' }:
       <SidebarHeader userRole={user?.role} />
 
       {/* Menu */}
-      <SidebarMenu sections={MENU_SECTIONS} context={sidebarMenuContext} />
+      {/* En el drawer móvil, elegir un destino cierra el menú */}
+      <SidebarMenu
+        sections={MENU_SECTIONS}
+        context={sidebarMenuContext}
+        onNavigate={variant === 'temporary' ? onClose : undefined}
+      />
 
       {/* User Section (at bottom) */}
       <Box sx={{ mt: 'auto' }}>

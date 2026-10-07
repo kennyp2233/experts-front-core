@@ -21,6 +21,7 @@ export * from './hooks/useCoordinar';
 // === Components — manager (despacho/historico/daes) ===
 export * from './components/EbfHealthBadge';
 export * from './components/CoordinacionesTable';
+export * from './components/CoordinacionesListPage';
 export * from './components/CoordinacionDetailView';
 export * from './components/CoordinacionFormPlaceholder';
 export * from './components/DaesTable';

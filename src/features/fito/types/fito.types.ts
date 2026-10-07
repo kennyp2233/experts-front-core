@@ -67,6 +67,36 @@ export interface ProductMapping {
     nombreComun: string;
     matched: boolean;
     confidence: number;
+    /** Subtipo usado para el mapeo; el back lo recuerda junto al código Agrocalidad. */
+    subtipo?: string;
+}
+
+/** Origen del código Agrocalidad de una fila del mapeo. */
+export type ProductMappingSource = 'recordado' | 'auto' | 'manual';
+
+/** Estado de una fila del paso "Productos" del asistente (solo UI). */
+export interface ProductMappingRow extends ProductMapping {
+    /** Subtipo elegido ('' = sin elegir). */
+    subtipo: string;
+    source: ProductMappingSource | null;
+    autoMatching: boolean;
+    /** Se buscó automáticamente con el subtipo y no hubo coincidencias. */
+    notFound: boolean;
+}
+
+/** Respuesta de GET /fito/mapeos: mapeos recordados de generaciones anteriores. */
+export interface RememberedMapping {
+    proCodigo: string;
+    codigoAgrocalidad: string;
+    nombreComun: string | null;
+    subtipo: string | null;
+}
+
+export interface FitoDestino {
+    desCodigo: string;
+    desNombre: string;
+    desAeropuerto: string;
+    desPais: string;
 }
 
 export interface GuiaHijaAgregada {
@@ -114,6 +144,4 @@ export interface ProductMatchResult {
     confidence: number;
     catalogMatch: ProductCatalogItem | null;
 }
-
-
 

@@ -21,30 +21,30 @@ const k = (...parts: (string | number | boolean | undefined | null)[]) =>
   parts.filter((p) => p !== undefined && p !== null && p !== '').join('|');
 
 export const useExportadores = (enabled = true) => {
-  const { data, error, isLoading } = useSWR<SelectOption[]>(
+  const { data, error, isLoading, mutate } = useSWR<SelectOption[]>(
     enabled ? 'ebf/coordinar/exportadores' : null,
     () => ebfCoordinarService.listExportadores(),
     { revalidateOnFocus: false },
   );
-  return { exportadores: data ?? [], error, isLoading };
+  return { exportadores: data ?? [], error, isLoading, mutate };
 };
 
 export const useMarcaciones = (exportador: number | null) => {
-  const { data, error, isLoading } = useSWR<SelectOption[]>(
+  const { data, error, isLoading, mutate } = useSWR<SelectOption[]>(
     exportador ? k('ebf/coordinar/marcaciones', exportador) : null,
     () => ebfCoordinarService.listMarcaciones(exportador!),
   );
-  return { marcaciones: data ?? [], error, isLoading };
+  return { marcaciones: data ?? [], error, isLoading, mutate };
 };
 
 export const useVuelos = (exportador: number | null, marcacion: number | null) => {
-  const { data, error, isLoading } = useSWR<SelectOption[]>(
+  const { data, error, isLoading, mutate } = useSWR<SelectOption[]>(
     exportador && marcacion
       ? k('ebf/coordinar/vuelos', exportador, marcacion)
       : null,
     () => ebfCoordinarService.listVuelos(exportador!, marcacion!),
   );
-  return { vuelos: data ?? [], error, isLoading };
+  return { vuelos: data ?? [], error, isLoading, mutate };
 };
 
 export const useCoordinarDaes = (
@@ -52,13 +52,13 @@ export const useCoordinarDaes = (
   marcacion: number | null,
   vuelo: number | null,
 ) => {
-  const { data, error, isLoading } = useSWR<SelectOption[]>(
+  const { data, error, isLoading, mutate } = useSWR<SelectOption[]>(
     exportador && marcacion && vuelo
       ? k('ebf/coordinar/daes', exportador, marcacion, vuelo)
       : null,
     () => ebfCoordinarService.listDaes(exportador!, marcacion!, vuelo!),
   );
-  return { daes: data ?? [], error, isLoading };
+  return { daes: data ?? [], error, isLoading, mutate };
 };
 
 export const useVueloCard = (params: {

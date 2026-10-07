@@ -1,23 +1,6 @@
-'use client';
+import { redirect } from 'next/navigation';
 
-import { Box, Stack, Typography } from '@mui/material';
-import { CoordinacionesTable, EbfHealthBadge } from '../../../../../features/ebf';
-
+/** Ruta antigua: el histórico ahora es una vista de /ebf/coordinaciones. */
 export default function EbfHistoricoPage() {
-  return (
-    <Box sx={{ p: 3 }}>
-      <Stack
-        direction="row"
-        justifyContent="space-between"
-        alignItems="center"
-        sx={{ mb: 3 }}
-      >
-        <Typography variant="h5" fontWeight={600}>
-          Histórico de coordinaciones
-        </Typography>
-        <EbfHealthBadge />
-      </Stack>
-      <CoordinacionesTable includeHistorico />
-    </Box>
-  );
+  redirect('/ebf/coordinaciones?vista=historico');
 }

@@ -1,69 +1,47 @@
 import { Components, Theme } from '@mui/material/styles';
 
+// Alertas en tono suave: fondo tenue + texto oscuro del mismo color.
+// Los fondos saturados competían con el contenido y cansaban la vista.
+const ALERT_TONES = {
+  light: {
+    success: { bg: '#ECFDF5', fg: '#065F46', border: '#A7F3D0', icon: '#059669' },
+    error: { bg: '#FEF2F2', fg: '#991B1B', border: '#FECACA', icon: '#DC2626' },
+    warning: { bg: '#FFFBEB', fg: '#92400E', border: '#FDE68A', icon: '#D97706' },
+    info: { bg: '#F1F5F9', fg: '#334155', border: '#E2E8F0', icon: '#64748B' },
+  },
+  dark: {
+    success: { bg: 'rgba(16, 185, 129, 0.12)', fg: '#A7F3D0', border: 'rgba(16, 185, 129, 0.3)', icon: '#34D399' },
+    error: { bg: 'rgba(239, 68, 68, 0.12)', fg: '#FECACA', border: 'rgba(239, 68, 68, 0.3)', icon: '#F87171' },
+    warning: { bg: 'rgba(245, 158, 11, 0.12)', fg: '#FDE68A', border: 'rgba(245, 158, 11, 0.3)', icon: '#FBBF24' },
+    info: { bg: 'rgba(148, 163, 184, 0.12)', fg: '#CBD5E1', border: 'rgba(148, 163, 184, 0.25)', icon: '#94A3B8' },
+  },
+} as const;
+
+const alertTone = (mode: 'light' | 'dark', severity: keyof typeof ALERT_TONES.light) => {
+  const t = ALERT_TONES[mode][severity];
+  return {
+    backgroundColor: t.bg,
+    color: t.fg,
+    borderColor: t.border,
+    '& .MuiAlert-icon': { color: t.icon },
+    '& .MuiAlert-action .MuiIconButton-root': { color: t.fg },
+  };
+};
+
 export const createFeedbackComponents = (mode: 'light' | 'dark'): Components<Theme> => ({
   MuiAlert: {
     styleOverrides: {
-      root: ({ theme }) => ({
-        borderRadius: 12,
-        padding: '12px 16px',
-        fontSize: '0.9375rem',
-        border: `1px solid`,
+      root: {
+        borderRadius: 10,
+        padding: '8px 14px',
+        fontSize: '0.875rem',
+        border: '1px solid',
         alignItems: 'center',
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)',
-      }),
-      standardSuccess: ({ theme }) => ({
-        backgroundColor: mode === 'light'
-          ? 'rgba(16, 185, 129, 0.85)'
-          : 'rgba(22, 101, 52, 0.9)',
-        color: mode === 'light' ? '#052e16' : '#bbf7d0',
-        borderColor: theme.palette.success.main,
-        '& .MuiAlert-icon': {
-          color: mode === 'light' ? '#052e16' : '#bbf7d0',
-        },
-        '& .MuiAlert-action .MuiIconButton-root': {
-          color: mode === 'light' ? '#052e16' : '#bbf7d0',
-        },
-      }),
-      standardError: ({ theme }) => ({
-        backgroundColor: mode === 'light'
-          ? 'rgba(239, 68, 68, 0.85)'
-          : 'rgba(127, 29, 29, 0.9)',
-        color: mode === 'light' ? '#450a0a' : '#fecaca',
-        borderColor: theme.palette.error.main,
-        '& .MuiAlert-icon': {
-          color: mode === 'light' ? '#450a0a' : '#fecaca',
-        },
-        '& .MuiAlert-action .MuiIconButton-root': {
-          color: mode === 'light' ? '#450a0a' : '#fecaca',
-        },
-      }),
-      standardWarning: ({ theme }) => ({
-        backgroundColor: mode === 'light'
-          ? 'rgba(245, 158, 11, 0.85)'
-          : 'rgba(120, 53, 15, 0.9)',
-        color: mode === 'light' ? '#451a03' : '#fef3c7',
-        borderColor: theme.palette.warning.main,
-        '& .MuiAlert-icon': {
-          color: mode === 'light' ? '#451a03' : '#fef3c7',
-        },
-        '& .MuiAlert-action .MuiIconButton-root': {
-          color: mode === 'light' ? '#451a03' : '#fef3c7',
-        },
-      }),
-      standardInfo: ({ theme }) => ({
-        backgroundColor: mode === 'light'
-          ? 'rgba(59, 130, 246, 0.85)'
-          : 'rgba(30, 58, 138, 0.9)',
-        color: mode === 'light' ? '#172554' : '#bfdbfe',
-        borderColor: theme.palette.info.main,
-        '& .MuiAlert-icon': {
-          color: mode === 'light' ? '#172554' : '#bfdbfe',
-        },
-        '& .MuiAlert-action .MuiIconButton-root': {
-          color: mode === 'light' ? '#172554' : '#bfdbfe',
-        },
-      }),
+      },
+      standardSuccess: alertTone(mode, 'success'),
+      standardError: alertTone(mode, 'error'),
+      standardWarning: alertTone(mode, 'warning'),
+      standardInfo: alertTone(mode, 'info'),
     },
   },
   MuiSnackbar: {

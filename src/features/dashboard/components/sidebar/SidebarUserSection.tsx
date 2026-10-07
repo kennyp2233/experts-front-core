@@ -1,4 +1,4 @@
-import { Box, Typography, Divider, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Avatar } from '@mui/material';
+import { Box, Typography, Divider, ListItemButton, ListItemIcon, ListItemText, Avatar } from '@mui/material';
 import { Logout as LogoutIcon } from '@mui/icons-material';
 
 interface SidebarUserSectionProps {

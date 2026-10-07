@@ -11,6 +11,7 @@ import {
   DialogContentText,
   DialogTitle,
 } from '@mui/material';
+import { getErrorMessage } from '@/shared/utils';
 import { useDeleteSubmit } from '../hooks/useCoordinar';
 import type { CoordinacionListItem } from '../types/coordinacion';
 
@@ -48,7 +49,7 @@ export function DeleteCoordinacionDialog({ row, onClose, onDeleted }: Props) {
       <DialogTitle>Eliminar coordinación</DialogTitle>
       <DialogContent>
         <DialogContentText>
-          ¿Confirmás eliminar la coordinación{' '}
+          ¿Confirmas eliminar la coordinación{' '}
           {row?.hawb && <strong>{row.hawb}</strong>}
           {row?.awb && ` del AWB ${row.awb}`}? Esta acción es{' '}
           <strong>irreversible</strong>.
@@ -59,15 +60,15 @@ export function DeleteCoordinacionDialog({ row, onClose, onDeleted }: Props) {
             sx={{ mt: 2 }}
           >
             {result.ok
-              ? `Eliminada (status ${result.status})`
-              : `Falló (status ${result.status})${
-                  result.errors?.length ? ': ' + result.errors.join('; ') : ''
+              ? 'Coordinación eliminada.'
+              : `El portal EBF no permitió eliminarla${
+                  result.errors?.length ? ': ' + result.errors.join('; ') : '.'
                 }`}
           </Alert>
         )}
         {error && (
           <Alert severity="error" sx={{ mt: 2 }}>
-            {error.message}
+            {getErrorMessage(error)}
           </Alert>
         )}
       </DialogContent>

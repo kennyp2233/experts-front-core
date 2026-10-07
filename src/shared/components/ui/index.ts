@@ -8,3 +8,5 @@ export * from './CategorySection';
 export * from './MasterDataDialog';
 export * from './PageHeader';
 export * from './FormTabs';
+export * from './DataTable';
+export * from './AppPage';

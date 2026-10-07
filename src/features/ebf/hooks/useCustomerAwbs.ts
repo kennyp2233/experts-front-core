@@ -9,6 +9,7 @@ import type {
   CustomerAwbListQuery,
   CustomerProfile,
 } from '../types/customer-awb';
+import { useFreshRefresh } from './useFreshRefresh';
 
 const k = (...parts: (string | number | boolean | undefined)[]) =>
   parts.filter((p) => p !== undefined && p !== '').join('|');
@@ -35,11 +36,24 @@ export const useCustomerAwbs = (query: CustomerAwbListQuery | null) => {
         query.sort,
       )
     : null;
-  const { data, error, isLoading, mutate } = useSWR<CustomerAwbListPage>(
+  const { data, error, isLoading, isValidating, mutate } =
+    useSWR<CustomerAwbListPage>(key, () => ebfCustomerService.listAwbs(query!));
+  // "Actualizar": misma consulta saltando la caché del back (fresh=true).
+  const { refresh, refreshing, refreshError } = useFreshRefresh(
     key,
-    () => ebfCustomerService.listAwbs(query!),
+    mutate,
+    () => ebfCustomerService.listAwbs({ ...query!, fresh: true }),
   );
-  return { page: data, error, isLoading, mutate };
+  return {
+    page: data,
+    error,
+    isLoading,
+    isValidating,
+    mutate,
+    refresh,
+    refreshing,
+    refreshError,
+  };
 };
 
 export const useCustomerAwbHeader = (id: number | null) => {

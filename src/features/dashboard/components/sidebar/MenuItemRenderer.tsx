@@ -4,120 +4,102 @@ import { Box, ListItem, ListItemButton, ListItemIcon, ListItemText, Collapse, Li
 import { ExpandLess as ExpandLessIcon, ExpandMore as ExpandMoreIcon } from '@mui/icons-material';
 import Link from 'next/link';
 import type { MenuItem, MenuItemContextValue } from './types';
+import { canSeeMenuItem } from './menu.utils';
 
 interface MenuItemRendererProps {
   item: MenuItem;
   context: MenuItemContextValue;
   depth?: number;
   parentKey?: string;
+  /** Se llama al elegir un destino (p. ej. para cerrar el drawer móvil). */
+  onNavigate?: () => void;
 }
+
+const selectedSx = {
+  '&.Mui-selected': {
+    color: 'primary.main',
+    '& .MuiListItemIcon-root': { color: 'primary.main' },
+    '& .MuiListItemText-primary': { fontWeight: 600 },
+  },
+} as const;
 
 export function MenuItemRenderer({
   item,
   context,
   depth = 0,
   parentKey = '',
+  onNavigate,
 }: MenuItemRendererProps) {
-  // Role check
-  if (item.roles && context.user && !item.roles.includes(context.user.role)) {
+  // Defensa extra: SidebarMenu ya filtra por rol antes de pintar.
+  if (!canSeeMenuItem(item, context.user?.role)) {
     return null;
   }
 
   const itemKey = parentKey ? `${parentKey}-${item.label}` : item.label;
-  const isExpanded = context.expandedItems[itemKey];
-  const hasChildren = item.children && item.children.length > 0;
+  const hasChildren = Boolean(item.children && item.children.length > 0);
   const childActive = hasChildren && context.isChildActive(item.children);
+  const isExpanded = Boolean(context.expandedItems[itemKey]);
+  const selfActive = context.isActive(item.href);
 
   return (
-    <Box key={itemKey}>
+    <Box>
       {hasChildren ? (
-        // Collapsible item that can also be a link
+        // Ítem agrupador (puede ser también un enlace)
         <ListItem disablePadding>
           <ListItemButton
             component={item.href ? Link : 'button'}
             href={item.href}
-            onClick={item.href ? undefined : () => context.toggleExpand(itemKey)}
-            selected={item.href ? context.isActive(item.href) : false}
+            onClick={item.href ? onNavigate : () => context.toggleExpand(itemKey)}
+            selected={selfActive}
             sx={{
               pl: 2 + depth * 2,
               py: 1.25,
-              bgcolor: (item.href && context.isActive(item.href)) || childActive ? 'action.hover' : 'transparent',
-              '&.Mui-selected': {
-                bgcolor: 'primary.lighter',
-                color: 'primary.main',
-                '& .MuiListItemIcon-root': { color: 'primary.main' },
-              },
-              '&:hover': {
-                bgcolor: 'action.hover',
-              },
+              bgcolor: !selfActive && childActive ? 'action.hover' : undefined,
+              ...selectedSx,
             }}
           >
             {item.icon && (
-              <ListItemIcon sx={{
-                minWidth: 40,
-                color: (item.href && context.isActive(item.href)) ? 'primary.main' : 'text.primary'
-              }}>
+              <ListItemIcon sx={{ minWidth: 40, color: selfActive ? 'primary.main' : 'text.primary' }}>
                 {item.icon}
               </ListItemIcon>
             )}
-            <ListItemText
-              primary={item.label}
-              primaryTypographyProps={{ variant: 'body2', fontWeight: 500 }}
-            />
+            <ListItemText primary={item.label} slotProps={{ primary: { variant: 'body2', fontWeight: 500 } }} />
             <Box
               component="span"
+              role="button"
+              aria-label={isExpanded ? `Contraer ${item.label}` : `Expandir ${item.label}`}
               onClick={(e: React.MouseEvent) => {
                 e.preventDefault();
                 e.stopPropagation();
                 context.toggleExpand(itemKey);
               }}
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                ml: 1,
-                cursor: 'pointer',
-              }}
+              sx={{ display: 'flex', alignItems: 'center', ml: 1, cursor: 'pointer' }}
             >
               {isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
             </Box>
           </ListItemButton>
         </ListItem>
       ) : (
-        // Regular link item
+        // Enlace simple
         <ListItem disablePadding>
           <ListItemButton
             component={Link}
             href={item.href || '#'}
-            selected={context.isActive(item.href)}
-            sx={{
-              pl: 2 + depth * 2,
-              py: 1.25,
-              '&.Mui-selected': {
-                bgcolor: 'primary.lighter',
-                color: 'primary.main',
-                '& .MuiListItemIcon-root': { color: 'primary.main' },
-              },
-            }}
+            onClick={onNavigate}
+            selected={selfActive}
+            aria-current={selfActive ? 'page' : undefined}
+            sx={{ pl: 2 + depth * 2, py: 1.25, ...selectedSx }}
           >
             {item.icon && (
-              <ListItemIcon
-                sx={{
-                  minWidth: 40,
-                  color: context.isActive(item.href) ? 'primary.main' : 'text.primary',
-                }}
-              >
+              <ListItemIcon sx={{ minWidth: 40, color: selfActive ? 'primary.main' : 'text.primary' }}>
                 {item.icon}
               </ListItemIcon>
             )}
-            <ListItemText
-              primary={item.label}
-              primaryTypographyProps={{ variant: 'body2' }}
-            />
+            <ListItemText primary={item.label} slotProps={{ primary: { variant: 'body2' } }} />
           </ListItemButton>
         </ListItem>
       )}
 
-      {/* Collapsed children */}
       {hasChildren && (
         <Collapse in={isExpanded} timeout="auto" unmountOnExit>
           <List disablePadding>
@@ -128,6 +110,7 @@ export function MenuItemRenderer({
                 context={context}
                 depth={depth + 1}
                 parentKey={itemKey}
+                onNavigate={onNavigate}
               />
             ))}
           </List>

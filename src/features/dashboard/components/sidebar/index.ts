@@ -4,4 +4,5 @@ export { MenuItemRenderer } from './MenuItemRenderer';
 export { SidebarMenu } from './SidebarMenu';
 export { useSidebarMenu } from './useSidebarMenu';
 export { MENU_SECTIONS } from './menu.config';
-export type { MenuItem, MenuSection, MenuItemContextValue } from './types';
+export { canSeeMenuItem, filterMenuItems, filterMenuSections } from './menu.utils';
+export type { MenuItem, MenuSection, MenuItemContextValue, MenuUser } from './types';

@@ -1,10 +1,36 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Box, Tabs, Tab, Paper, Snackbar, Alert, Dialog, DialogTitle, DialogContent, DialogActions, Button, LinearProgress, Typography, Chip } from '@mui/material';
-import { Description as GuiaIcon, FolderOpen as CatalogIcon, Download as DownloadIcon, CheckCircle as CheckIcon, Error as ErrorIcon } from '@mui/icons-material';
+import {
+    Alert, Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, LinearProgress, Paper,
+    Snackbar, Stack, Tab, Tabs, Typography
+} from '@mui/material';
+import {
+    CheckCircle as CheckIcon,
+    Description as GuiaIcon,
+    Download as DownloadIcon,
+    Error as ErrorIcon,
+    FolderOpen as CatalogIcon,
+    LockOutlined as LockIcon
+} from '@mui/icons-material';
+import { AppPage } from '../../../shared/components/ui/AppPage';
+import { getErrorMessage } from '../../../shared/utils/errors';
+import { logger } from '../../../shared/utils/logger';
+import { useAuth } from '../../auth/hooks/useAuth.hook';
 import { FitoGuideTable } from './FitoGuideTable';
 import { CatalogManager } from './CatalogManager';
 import { fitoService } from '../services/fito.service';
 import { FitoXmlConfig, FitoJob, ProductMapping, GuiaHijaAgregada } from '../types/fito.types';
+
+const log = logger.createChild('FITO');
+
+const PAGE_TITLE = 'Certificados FITO';
+const PAGE_SUBTITLE = 'Genera el XML del certificado fitosanitario para Agrocalidad a partir de una guía madre.';
+
+const JOB_STATUS_LABEL: Record<FitoJob['status'], string> = {
+    pending: 'En cola',
+    processing: 'Procesando',
+    completed: 'Completado',
+    failed: 'Error'
+};
 
 interface TabPanelProps {
     children?: React.ReactNode;
@@ -13,12 +39,36 @@ interface TabPanelProps {
 }
 
 const TabPanel: React.FC<TabPanelProps> = ({ children, value, index }) => (
-    <Box role="tabpanel" hidden={value !== index} sx={{ pt: 2 }}>
+    <Box role="tabpanel" hidden={value !== index} sx={{ pt: 2.5 }}>
         {value === index && children}
     </Box>
 );
 
+/** Sección solo para administradores (el back también lo exige en /fito y /catalogs). */
 export const FitoPage: React.FC = () => {
+    const { user } = useAuth();
+
+    if (user?.role !== 'ADMIN') {
+        return (
+            <AppPage title={PAGE_TITLE}>
+                <Paper variant="outlined" sx={{ p: { xs: 3, md: 5 }, textAlign: 'center' }}>
+                    <LockIcon sx={{ fontSize: 40, color: 'text.secondary' }} />
+                    <Typography variant="subtitle1" fontWeight={600} sx={{ mt: 1 }}>
+                        No tienes permisos para esta sección
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                        La generación de certificados FITO está disponible solo para administradores.
+                        Si necesitas acceso, pídeselo a un administrador.
+                    </Typography>
+                </Paper>
+            </AppPage>
+        );
+    }
+
+    return <FitoWorkspace />;
+};
+
+const FitoWorkspace: React.FC = () => {
     const [tab, setTab] = useState(0);
     const [generating, setGenerating] = useState(false);
     const [message, setMessage] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
@@ -27,7 +77,7 @@ export const FitoPage: React.FC = () => {
     const [currentJobId, setCurrentJobId] = useState<string | null>(null);
     const [jobStatus, setJobStatus] = useState<FitoJob | null>(null);
     const [progressDialogOpen, setProgressDialogOpen] = useState(false);
-    const pollingRef = useRef<NodeJS.Timeout | null>(null);
+    const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     // Cleanup polling on unmount
     useEffect(() => {
@@ -36,29 +86,32 @@ export const FitoPage: React.FC = () => {
         };
     }, []);
 
+    const stopPolling = () => {
+        if (pollingRef.current) {
+            clearInterval(pollingRef.current);
+            pollingRef.current = null;
+        }
+    };
+
     const pollJobStatus = async (jobId: string) => {
         try {
             const status = await fitoService.getJobStatus(jobId);
             setJobStatus(status);
 
             if (status?.status === 'completed' || status?.status === 'failed') {
-                if (pollingRef.current) {
-                    clearInterval(pollingRef.current);
-                    pollingRef.current = null;
-                }
+                stopPolling();
                 setGenerating(false);
 
                 if (status.status === 'completed') {
                     setMessage({ type: 'success', text: '¡Generación completada! El archivo XML está listo.' });
                     // Auto-download when completed
-                    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-                    window.open(`${baseUrl}/api/v1/fito/download/${jobId}`, '_blank');
+                    void downloadJob(jobId);
                 } else {
-                    setMessage({ type: 'error', text: 'La generación falló. Revise los detalles.' });
+                    setMessage({ type: 'error', text: 'La generación falló. Revisa el detalle en la ventana de progreso.' });
                 }
             }
         } catch (error) {
-            console.error('Error polling job status:', error);
+            log.error('Error consultando el estado de la generación', error);
         }
     };
 
@@ -70,56 +123,52 @@ export const FitoPage: React.FC = () => {
             const result = await fitoService.generate({ guias: [docNumero], config, productMappings, guiasHijas });
             setCurrentJobId(result.jobId);
             setProgressDialogOpen(true);
-            setMessage({ type: 'info', text: 'Generación iniciada...' });
+            setMessage({ type: 'info', text: 'Generación iniciada…' });
 
             // Start polling
+            stopPolling();
             pollJobStatus(result.jobId);
             pollingRef.current = setInterval(() => pollJobStatus(result.jobId), 2000);
-
-        } catch (error: any) {
-            console.error('Error generating XML:', error);
-            setMessage({ type: 'error', text: error.message || 'Error al generar el archivo FITO' });
+        } catch (error) {
+            log.error('Error al generar el XML', error);
+            setMessage({ type: 'error', text: getErrorMessage(error, 'No se pudo generar el archivo FITO.') });
             setGenerating(false);
         }
     };
 
-    const handleDownload = () => {
-        if (currentJobId) {
-            // Open download URL in new tab
-            const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-            window.open(`${baseUrl}/api/v1/fito/download/${currentJobId}`, '_blank');
+    const downloadJob = async (jobId: string) => {
+        try {
+            const count = await fitoService.downloadXmls(jobId);
+            if (count === 0) {
+                setMessage({ type: 'error', text: 'No se encontró el XML generado para descargar.' });
+            }
+        } catch (error) {
+            log.error('Error descargando el XML', error);
+            setMessage({ type: 'error', text: getErrorMessage(error, 'No se pudo descargar el archivo XML.') });
         }
+    };
+
+    const handleDownload = () => {
+        if (currentJobId) void downloadJob(currentJobId);
     };
 
     const handleCloseProgress = () => {
         setProgressDialogOpen(false);
-        if (pollingRef.current) {
-            clearInterval(pollingRef.current);
-            pollingRef.current = null;
-        }
+        stopPolling();
+        // Si se cierra antes de terminar, no dejar el botón "Generar" bloqueado.
+        setGenerating(false);
     };
 
-    const progress = jobStatus ? (jobStatus.processedCount / jobStatus.totalCount) * 100 : 0;
+    const progress = jobStatus && jobStatus.totalCount > 0 ? (jobStatus.processedCount / jobStatus.totalCount) * 100 : 0;
 
     return (
-        <Box>
-            <Paper variant="outlined" sx={{ mb: 2 }}>
-                <Tabs
-                    value={tab}
-                    onChange={(_, v) => setTab(v)}
-                    variant="fullWidth"
-                    sx={{
-                        '& .MuiTab-root': {
-                            minWidth: { xs: 0, sm: 160 },
-                            fontSize: { xs: '0.75rem', sm: '0.875rem' },
-                            px: { xs: 1, sm: 2 },
-                        }
-                    }}
-                >
-                    <Tab icon={<GuiaIcon />} iconPosition="start" label="Generación de Guías" />
-                    <Tab icon={<CatalogIcon />} iconPosition="start" label="Catálogos" />
+        <AppPage title={PAGE_TITLE} subtitle={PAGE_SUBTITLE}>
+            <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+                <Tabs value={tab} onChange={(_, v) => setTab(v)} aria-label="Secciones de certificados FITO">
+                    <Tab icon={<GuiaIcon fontSize="small" />} iconPosition="start" label="Generación" sx={{ minHeight: 48 }} />
+                    <Tab icon={<CatalogIcon fontSize="small" />} iconPosition="start" label="Catálogos" sx={{ minHeight: 48 }} />
                 </Tabs>
-            </Paper>
+            </Box>
 
             <TabPanel value={tab} index={0}>
                 <FitoGuideTable onGenerate={handleGenerate} disabled={generating} />
@@ -131,17 +180,17 @@ export const FitoPage: React.FC = () => {
 
             {/* Progress Dialog */}
             <Dialog open={progressDialogOpen} maxWidth="sm" fullWidth>
-                <DialogTitle>Generando Archivo FITO</DialogTitle>
+                <DialogTitle>Generando archivo FITO</DialogTitle>
                 <DialogContent>
-                    <Box sx={{ mb: 2 }}>
+                    <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
                         {jobStatus?.status === 'completed' ? (
-                            <Chip icon={<CheckIcon />} label="Completado" color="success" />
+                            <Chip icon={<CheckIcon />} label={JOB_STATUS_LABEL.completed} color="success" />
                         ) : jobStatus?.status === 'failed' ? (
-                            <Chip icon={<ErrorIcon />} label="Error" color="error" />
+                            <Chip icon={<ErrorIcon />} label={JOB_STATUS_LABEL.failed} color="error" />
                         ) : (
-                            <Chip label={jobStatus?.status || 'Iniciando...'} color="info" variant="outlined" />
+                            <Chip label={jobStatus ? JOB_STATUS_LABEL[jobStatus.status] ?? jobStatus.status : 'Iniciando…'} color="info" variant="outlined" />
                         )}
-                    </Box>
+                    </Stack>
 
                     <LinearProgress
                         variant={jobStatus ? 'determinate' : 'indeterminate'}
@@ -150,7 +199,7 @@ export const FitoPage: React.FC = () => {
                     />
 
                     <Typography variant="body2" color="text.secondary">
-                        {jobStatus ? `${jobStatus.processedCount} de ${jobStatus.totalCount} procesados` : 'Iniciando...'}
+                        {jobStatus ? `${jobStatus.processedCount} de ${jobStatus.totalCount} procesados` : 'Iniciando…'}
                     </Typography>
 
                     {jobStatus?.error && (
@@ -158,7 +207,7 @@ export const FitoPage: React.FC = () => {
                     )}
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={handleCloseProgress}>Cerrar</Button>
+                    <Button onClick={handleCloseProgress} color="inherit">Cerrar</Button>
                     <Button
                         variant="contained"
                         startIcon={<DownloadIcon />}
@@ -175,6 +224,6 @@ export const FitoPage: React.FC = () => {
                     {message?.text}
                 </Alert>
             </Snackbar>
-        </Box>
+        </AppPage>
     );
 };

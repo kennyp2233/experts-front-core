@@ -1,58 +1,51 @@
 'use client';
 
 import {
-  Dashboard as DashboardIcon,
-  People as PeopleIcon,
-  Storage as StorageIcon,
-  Hub as HubIcon,
-  FlightTakeoff as FlightIcon,
-  History as HistoryIcon,
-  Description as DescriptionIcon,
-  AddCircleOutline as AddCircleIcon,
-  Inventory2 as AwbsIcon,
+  HomeOutlined as HomeIcon,
+  Hub as CoordinacionesIcon,
+  Inventory2Outlined as AwbsIcon,
+  DescriptionOutlined as DaesIcon,
+  FactCheckOutlined as FitoIcon,
   CompareArrows as SyncIcon,
+  PersonOutline as ProfileIcon,
 } from '@mui/icons-material';
 import type { MenuSection } from './types';
 
+/**
+ * Menú lateral. Las secciones cuyos ítems quedan todos ocultos por rol no se
+ * pintan (ver `filterMenuSections`).
+ *
+ * Coordinaciones no tiene hijos: "Vigentes / Histórico" es un selector dentro
+ * de la pantalla y "Nueva" es un botón de la misma. El ítem sigue marcado como
+ * activo en /ebf/coordinaciones/nueva y /ebf/coordinaciones/[id] porque
+ * `isActive` compara por prefijo.
+ */
 export const MENU_SECTIONS: MenuSection[] = [
   {
+    items: [{ label: 'Inicio', icon: <HomeIcon />, href: '/dashboard' }],
+  },
+  {
+    title: 'Operación',
     items: [
-      { label: 'Dashboard', icon: <DashboardIcon />, href: '/dashboard' },
+      { label: 'Coordinaciones', icon: <CoordinacionesIcon />, href: '/ebf/coordinaciones' },
+      { label: 'AWBs', icon: <AwbsIcon />, href: '/ebf/customer/awbs' },
+      { label: 'DAEs', icon: <DaesIcon />, href: '/ebf/daes' },
     ],
   },
   {
-    title: 'Administración',
+    title: 'Agrocalidad',
     items: [
-      { label: 'Certificados FITO', icon: <StorageIcon />, href: '/admin/fito', roles: ['ADMIN'] },
+      { label: 'Certificados FITO', icon: <FitoIcon />, href: '/admin/fito', roles: ['ADMIN'] },
     ],
   },
   {
-    title: 'EBF',
+    title: 'Sistema',
     items: [
-      {
-        label: 'Coordinaciones (manager)',
-        icon: <HubIcon />,
-        href: '/ebf/coordinaciones',
-        children: [
-          { label: 'Vigentes', icon: <FlightIcon />, href: '/ebf/coordinaciones' },
-          { label: 'Histórico', icon: <HistoryIcon />, href: '/ebf/coordinaciones/historico' },
-          { label: 'Nueva', icon: <AddCircleIcon />, href: '/ebf/coordinaciones/nueva' },
-        ],
-      },
-      { label: 'AWBs (cliente)', icon: <AwbsIcon />, href: '/ebf/customer/awbs' },
-      { label: 'DAEs', icon: <DescriptionIcon />, href: '/ebf/daes' },
+      { label: 'Sincronización', icon: <SyncIcon />, href: '/sync/ebf-access' },
     ],
   },
   {
-    title: 'Sync',
-    items: [
-      { label: 'EBF ↔ Access', icon: <SyncIcon />, href: '/sync/ebf-access' },
-    ],
-  },
-  {
-    title: 'Ajustes',
-    items: [
-      { label: 'Mi Perfil', icon: <PeopleIcon />, href: '/profile' },
-    ],
+    title: 'Cuenta',
+    items: [{ label: 'Mi perfil', icon: <ProfileIcon />, href: '/profile' }],
   },
 ];
