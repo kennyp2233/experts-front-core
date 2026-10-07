@@ -21,10 +21,10 @@ export const fitoService = {
         return data;
     },
 
-    /** Mapeos producto -> código Agrocalidad recordados de generaciones anteriores. */
-    getMapeos: async (codigos: string[]): Promise<RememberedMapping[]> => {
+    /** Mapeo recomendado por producto: recordado de generaciones anteriores o sugerido por el catálogo. */
+    getSugerencias: async (codigos: string[]): Promise<RememberedMapping[]> => {
         const { data } = await api.get<RememberedMapping[]>(
-            `/fito/mapeos?codigos=${encodeURIComponent(codigos.join(','))}`
+            `/fito/mapeos/sugerencias?codigos=${encodeURIComponent(codigos.join(','))}`
         );
         return Array.isArray(data) ? data : [];
     },

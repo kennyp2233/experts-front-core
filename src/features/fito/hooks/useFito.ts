@@ -43,14 +43,14 @@ export const useFitoGuiasHijas = (docNumero: number | null) => {
 };
 
 /**
- * Mapeos recordados para los códigos de producto dados. Si el endpoint falla
- * devuelve [] sin error: el usuario simplemente mapea a mano.
+ * Mapeo recomendado (recordado o sugerido) para los códigos de producto dados.
+ * Si el endpoint falla devuelve [] sin error: el usuario simplemente mapea a mano.
  */
 export const useRememberedMappings = (codigos: string[], enabled: boolean) => {
-    const key = enabled && codigos.length > 0 ? ['/fito/mapeos', codigos.join(',')] : null;
+    const key = enabled && codigos.length > 0 ? ['/fito/mapeos/sugerencias', codigos.join(',')] : null;
     const { data, isLoading } = useSWR<RememberedMapping[]>(
         key,
-        () => fitoService.getMapeos(codigos).catch(() => NO_MAPEOS),
+        () => fitoService.getSugerencias(codigos).catch(() => NO_MAPEOS),
         { shouldRetryOnError: false, revalidateOnFocus: false }
     );
 

@@ -1,7 +1,7 @@
 import React, { useMemo, useRef, useState } from 'react';
 import {
     Alert, Autocomplete, Box, Button, Chip, CircularProgress, Divider, FormControl, LinearProgress,
-    MenuItem, Paper, Select, SelectChangeEvent, Stack, TextField, Typography
+    MenuItem, Paper, Select, SelectChangeEvent, Stack, TextField, Tooltip, Typography
 } from '@mui/material';
 import {
     AutoFixHigh as AutoMatchIcon,
@@ -39,6 +39,13 @@ const StatusChip: React.FC<{ row: ProductMappingRow }> = ({ row }) => {
     if (row.codigoAgrocalidad) {
         if (row.source === 'recordado') {
             return <Chip size="small" color="success" variant="outlined" icon={<RememberedIcon />} label="Recordado" />;
+        }
+        if (row.source === 'sugerido') {
+            return (
+                <Tooltip title="Coincidencia en el catálogo Agrocalidad. Revísala; al generar se recuerda tu decisión.">
+                    <Chip size="small" color="info" variant="outlined" icon={<AutoMatchIcon />} label="Sugerido" />
+                </Tooltip>
+            );
         }
         return (
             <Chip
@@ -203,6 +210,11 @@ export const ProductMappingStep: React.FC<ProductMappingStepProps> = ({ rows, re
     const allMapped = total > 0 && readyCount === total;
     const pendingRows = rows.filter(r => !r.codigoAgrocalidad);
     const rememberedCount = rows.filter(r => r.source === 'recordado' && r.codigoAgrocalidad).length;
+    const suggestedCount = rows.filter(r => r.source === 'sugerido' && r.codigoAgrocalidad).length;
+    const recommendationText = [
+        rememberedCount > 0 ? `${rememberedCount} recordado${rememberedCount === 1 ? '' : 's'}` : '',
+        suggestedCount > 0 ? `${suggestedCount} sugerido${suggestedCount === 1 ? '' : 's'} por el catálogo (revísalos)` : '',
+    ].filter(Boolean).join(' · ');
     const globalTargets = pendingRows.length > 0 ? pendingRows : rows;
 
     // Busca el producto por su código original dentro del subtipo y toma el primer resultado.
@@ -306,11 +318,7 @@ export const ProductMappingStep: React.FC<ProductMappingStepProps> = ({ rows, re
                         {readyCount} de {total} listos
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
-                        {loadingRemembered
-                            ? 'Buscando mapeos recordados…'
-                            : rememberedCount > 0
-                                ? `${rememberedCount} recordado${rememberedCount === 1 ? '' : 's'} de generaciones anteriores`
-                                : ''}
+                        {loadingRemembered ? 'Buscando recomendaciones…' : recommendationText}
                     </Typography>
                 </Stack>
                 <LinearProgress

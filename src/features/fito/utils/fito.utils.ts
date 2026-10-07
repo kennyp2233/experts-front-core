@@ -94,9 +94,9 @@ export function rememberedMappingRow(m: RememberedMapping): ProductMappingRow {
         codigoAgrocalidad: m.codigoAgrocalidad,
         nombreComun: m.nombreComun ?? '',
         matched: true,
-        confidence: 1,
+        confidence: m.fuente === 'sugerido' ? 0.9 : 1,
         subtipo: m.subtipo ?? '',
-        source: 'recordado',
+        source: m.fuente === 'sugerido' ? 'sugerido' : 'recordado',
         autoMatching: false,
         notFound: false
     };

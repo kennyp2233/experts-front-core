@@ -72,7 +72,7 @@ export interface ProductMapping {
 }
 
 /** Origen del código Agrocalidad de una fila del mapeo. */
-export type ProductMappingSource = 'recordado' | 'auto' | 'manual';
+export type ProductMappingSource = 'recordado' | 'sugerido' | 'auto' | 'manual';
 
 /** Estado de una fila del paso "Productos" del asistente (solo UI). */
 export interface ProductMappingRow extends ProductMapping {
@@ -84,12 +84,16 @@ export interface ProductMappingRow extends ProductMapping {
     notFound: boolean;
 }
 
-/** Respuesta de GET /fito/mapeos: mapeos recordados de generaciones anteriores. */
+/**
+ * Respuesta de GET /fito/mapeos/sugerencias: por código, lo que un usuario
+ * eligió antes (recordado) o la coincidencia exacta en el catálogo (sugerido).
+ */
 export interface RememberedMapping {
     proCodigo: string;
     codigoAgrocalidad: string;
     nombreComun: string | null;
     subtipo: string | null;
+    fuente?: 'recordado' | 'sugerido';
 }
 
 export interface FitoDestino {
