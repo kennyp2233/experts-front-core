@@ -2,12 +2,16 @@
 
 import {
   HomeOutlined as HomeIcon,
-  Hub as CoordinacionesIcon,
+  FlightTakeoffOutlined as CoordinacionesIcon,
+  Hub as EbfCoordinacionesIcon,
   Inventory2Outlined as AwbsIcon,
   DescriptionOutlined as DaesIcon,
   FactCheckOutlined as FitoIcon,
   CompareArrows as SyncIcon,
   PersonOutline as ProfileIcon,
+  StorageOutlined as MaestrosIcon,
+  ConfirmationNumberOutlined as StockIcon,
+  RuleOutlined as ValidacionIcon,
 } from '@mui/icons-material';
 import type { MenuSection } from './types';
 
@@ -15,10 +19,9 @@ import type { MenuSection } from './types';
  * Menú lateral. Las secciones cuyos ítems quedan todos ocultos por rol no se
  * pintan (ver `filterMenuSections`).
  *
- * Coordinaciones no tiene hijos: "Vigentes / Histórico" es un selector dentro
- * de la pantalla y "Nueva" es un botón de la misma. El ítem sigue marcado como
- * activo en /ebf/coordinaciones/nueva y /ebf/coordinaciones/[id] porque
- * `isActive` compara por prefijo.
+ * "Operación" es el sistema nuevo (reemplazo del sistema viejo de Access);
+ * "Integraciones · EBF" es el portal externo EBF (sus coordinaciones son otra
+ * cosa: las del agente EBF, no las propias).
  */
 export const MENU_SECTIONS: MenuSection[] = [
   {
@@ -27,9 +30,9 @@ export const MENU_SECTIONS: MenuSection[] = [
   {
     title: 'Operación',
     items: [
-      { label: 'Coordinaciones', icon: <CoordinacionesIcon />, href: '/ebf/coordinaciones' },
-      { label: 'AWBs', icon: <AwbsIcon />, href: '/ebf/customer/awbs' },
-      { label: 'DAEs', icon: <DaesIcon />, href: '/ebf/daes' },
+      { label: 'Coordinaciones', icon: <CoordinacionesIcon />, href: '/operacion/coordinaciones', roles: ['ADMIN', 'USER'] },
+      { label: 'Stock de guías', icon: <StockIcon />, href: '/operacion/guias', roles: ['ADMIN', 'USER'] },
+      { label: 'Validación', icon: <ValidacionIcon />, href: '/operacion/validacion', roles: ['ADMIN'] },
     ],
   },
   {
@@ -39,9 +42,18 @@ export const MENU_SECTIONS: MenuSection[] = [
     ],
   },
   {
+    title: 'Integraciones · EBF',
+    items: [
+      { label: 'Coordinaciones EBF', icon: <EbfCoordinacionesIcon />, href: '/ebf/coordinaciones' },
+      { label: 'AWBs', icon: <AwbsIcon />, href: '/ebf/customer/awbs' },
+      { label: 'DAEs', icon: <DaesIcon />, href: '/ebf/daes' },
+    ],
+  },
+  {
     title: 'Sistema',
     items: [
-      { label: 'Sincronización', icon: <SyncIcon />, href: '/sync/ebf-access' },
+      { label: 'Datos maestros', icon: <MaestrosIcon />, href: '/maestros', roles: ['ADMIN', 'USER'] },
+      { label: 'Sincronización EBF', icon: <SyncIcon />, href: '/sync/ebf-access' },
     ],
   },
   {
