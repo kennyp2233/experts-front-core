@@ -44,7 +44,7 @@ import { operacionService } from '../../services/operacion.service';
 import type { GuiaDeIngreso, GuiaMadreFila, IngresoDetalle } from '../../types/coordinacion';
 import { formatoAwb, nombreCorto, textoIngreso } from '../../utils/formato';
 import { OrigenChip } from '../EstadoCoordinacionChip';
-import { FichaCampos } from '../FichaCampos';
+import { type CampoFicha, FichaCampos } from '../FichaCampos';
 import { MoverGuiaDialog, type MovimientoGuia } from '../stock/MoverGuiaDialog';
 import { EstadoIngresoChip, ETIQUETA_INGRESO, SituacionGuiaTexto } from './EstadosGuias';
 import { IngresoGuiasDialog } from './IngresoGuiasDialog';
@@ -271,7 +271,9 @@ export function IngresoGuiasDetallePage({ id }: { id: number }) {
             ),
           ],
           ['Registrado', [i.auditoria.creadoPor, formatDateTime(i.auditoria.creadoEn, '')].filter(Boolean).join(' · ')],
-          ['Modificado', [i.auditoria.actualizadoPor, formatDateTime(i.auditoria.actualizadoEn, '')].filter(Boolean).join(' · ')],
+          ...(i.auditoria.actualizadoEn
+            ? [['Modificado', [i.auditoria.actualizadoPor, formatDateTime(i.auditoria.actualizadoEn, '')].filter(Boolean).join(' · ')] as CampoFicha]
+            : []),
         ]}
         nota={i.nota}
       />

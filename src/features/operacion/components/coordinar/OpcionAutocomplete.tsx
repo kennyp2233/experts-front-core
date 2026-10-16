@@ -31,6 +31,13 @@ interface Props {
   idAerolinea?: number | null;
 }
 
+/** Las props de la opción sin su `key` (MUI la arma con la etiqueta; se usa el id). */
+const sinKey = <T extends object>(props: T): Omit<T, 'key'> => {
+  const resto = { ...props } as T & { key?: unknown };
+  delete resto.key;
+  return resto;
+};
+
 const etiqueta = (o: Opcion, conCodigo: boolean) => (conCodigo && o.codigo ? `${o.codigo} · ${o.nombre}` : o.nombre);
 
 /**
@@ -104,8 +111,9 @@ export function OpcionAutocomplete({
       getOptionLabel={(o) => etiqueta(o, conCodigo)}
       isOptionEqualToValue={(a, b) => a.id === b.id}
       noOptionsText={q || tipo === 'guias' ? sinResultados : 'Escribe para buscar'}
-      renderOption={({ key, ...props }, o) => (
-        <Box component="li" key={key} {...props}>
+      // Clave por id: dos opciones pueden llamarse igual (p. ej. agencias con el mismo nombre).
+      renderOption={(props, o) => (
+        <Box component="li" {...sinKey(props)} key={o.id}>
           <Box sx={{ minWidth: 0 }}>
             <Typography variant="body2" noWrap>
               {etiqueta(o, conCodigo)}

@@ -347,7 +347,6 @@ export function CoordinacionesListPage() {
               <OpcionAutocomplete
                 tipo="aerolineas"
                 label="Aerolínea"
-                conCodigo
                 value={filtros.idAerolinea ?? null}
                 onChange={(id) => actualizar({ aerolinea: id ? String(id) : undefined })}
               />
