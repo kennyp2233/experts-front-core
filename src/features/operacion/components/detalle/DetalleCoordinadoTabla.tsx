@@ -1,7 +1,6 @@
 'use client';
 
 import {
-  Chip,
   Paper,
   Table,
   TableBody,
@@ -20,26 +19,34 @@ const nums = { fontVariantNumeric: 'tabular-nums' } as const;
 
 type Fila = LineaGuiaHija & { guia: GuiaHija };
 
-/** Quién registró la línea (la finca por la web, una transferencia o la oficina); la fecha, en el tooltip. */
-function Registro({ l }: { l: LineaGuiaHija }) {
-  if (!l.usuario && !l.fechaRegistro) return null;
+/** "12/10 09:55": la fecha y hora en que se registró la línea, corta. */
+function fechaCorta(iso: string | null | undefined) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const dos = (n: number) => String(n).padStart(2, '0');
+  return `${dos(d.getDate())}/${dos(d.getMonth() + 1)} ${dos(d.getHours())}:${dos(d.getMinutes())}`;
+}
+
+/** Usuario que registró la línea: la finca por la web (en azul), una transferencia o la oficina. */
+function Usuario({ l }: { l: LineaGuiaHija }) {
+  if (!l.usuario) return null;
   const web = l.origen === 'E';
   const quien = web ? 'La registró la finca por la web' : l.origen === 'I' ? 'Transferencia interna' : 'La registró la oficina';
   return (
     <Tooltip title={`${quien} · ${formatDateTime(l.fechaRegistro, '')}`}>
-      <Typography variant="caption" color="text.secondary" component="div" noWrap sx={{ maxWidth: 130 }}>
-        {web && <Chip label="web" size="small" color="info" variant="outlined" sx={{ mr: 0.5, height: 18, fontSize: 11 }} />}
-        {l.usuario ?? ''}
+      <Typography variant="body2" noWrap color={web ? 'info.main' : 'text.secondary'} sx={{ maxWidth: 96, fontSize: 'inherit' }}>
+        {l.usuario}
       </Typography>
     </Tooltip>
   );
 }
 
 /**
- * Detalle coordinado, como la grilla del sistema viejo: una fila por línea,
- * ordenadas por finca y fecha de registro, con la nota y quién la registró (la
- * finca por la web o la oficina). Una línea en 0 con nota es una novedad ("no
- * llegó 1.5", "va a KAM").
+ * "Detalle de Coordinación" como la grilla del sistema viejo: una fila por
+ * línea, ordenadas por finca y fecha de registro, con las columnas en el mismo
+ * orden (Plantación · Producto · FULLs · PCS · Kgs · DAE · Fecha · Guía Hija ·
+ * Factura · VALOR · Stems · Observaciones · Usuario). Una línea en 0 con nota es
+ * una novedad ("no llegó 1.5", "va a KAM").
  */
 export function DetalleCoordinadoTabla({ guias }: { guias: GuiaHija[] }) {
   const filas: Fila[] = guias
@@ -55,8 +62,9 @@ export function DetalleCoordinadoTabla({ guias }: { guias: GuiaHija[] }) {
       cajas: a.cajas + l.cantidadCajas,
       kg: a.kg + (l.pesoKg ?? 0),
       valor: a.valor + (l.valor ?? 0),
+      tallos: a.tallos + (l.tallos ?? 0),
     }),
-    { fulls: 0, cajas: 0, kg: 0, valor: 0 },
+    { fulls: 0, cajas: 0, kg: 0, valor: 0, tallos: 0 },
   );
 
   if (filas.length === 0) {
@@ -69,7 +77,16 @@ export function DetalleCoordinadoTabla({ guias }: { guias: GuiaHija[] }) {
 
   return (
     <TableContainer component={Paper} variant="outlined">
-      <Table size="small" sx={{ '& td': { verticalAlign: 'top' } }}>
+      <Table
+        size="small"
+        // "&&" para ganarle al padding y a las mayúsculas del tema (MuiTable).
+        sx={{
+          '&& .MuiTableCell-root': { px: 0.75, py: 0.5, fontSize: 13 },
+          // Encabezados en minúscula: en mayúsculas espaciadas ensanchan las columnas de números.
+          '&& .MuiTableCell-head': { textTransform: 'none', letterSpacing: 0, fontSize: 12.5 },
+          '& td': { verticalAlign: 'top' },
+        }}
+      >
         <TableHead>
           <TableRow>
             <TableCell>Finca</TableCell>
@@ -78,57 +95,61 @@ export function DetalleCoordinadoTabla({ guias }: { guias: GuiaHija[] }) {
             <TableCell align="right">Cajas</TableCell>
             <TableCell align="right">Kg</TableCell>
             <TableCell>DAE</TableCell>
+            <TableCell>Fecha</TableCell>
             <TableCell>Guía hija</TableCell>
             <TableCell>Factura</TableCell>
-            <TableCell align="right">Valor $</TableCell>
-            <TableCell sx={{ minWidth: 160 }}>Nota</TableCell>
-            <TableCell>Registró</TableCell>
+            <TableCell align="right">Valor</TableCell>
+            <TableCell align="right">Tallos</TableCell>
+            <TableCell sx={{ minWidth: 170 }}>Nota</TableCell>
+            <TableCell>Usuario</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
           {filas.map((l, i) => {
             const nuevaFinca = i === 0 || filas[i - 1].guia.finca?.id !== l.guia.finca?.id;
             const novedad = l.cantidadCajas === 0;
-            const cero = (v: number | null, d = 2) => (novedad && !v ? '' : num(v, d));
+            // Vacío (no "—") cuando no hay dato, y en las novedades tampoco los ceros: la grilla queda limpia.
+            const cero = (v: number | null, d = 2) => (v === null || v === undefined || (novedad && !v) ? '' : num(v, d));
+            // En las novedades el sistema viejo guarda "0" en DAE y factura: no se muestran.
+            const dae = l.dae ?? l.guia.dae ?? '';
             return (
-                <TableRow key={l.id} sx={{ bgcolor: novedad ? 'action.hover' : undefined, '& td': nuevaFinca && i > 0 ? { borderTop: 2, borderTopColor: 'divider' } : {} }}>
-                  <TableCell>
-                    {nuevaFinca ? (
-                      <Tooltip title={l.guia.finca?.nombre ?? ''}>
-                        <Typography variant="body2" fontWeight={600} noWrap sx={{ maxWidth: 170 }}>
-                          {nombreCorto(l.guia.finca)}
-                        </Typography>
-                      </Tooltip>
-                    ) : null}
-                  </TableCell>
-                  <TableCell sx={{ whiteSpace: 'nowrap' }}>{l.codigoProducto ?? l.producto?.nombre ?? '—'}</TableCell>
-                  <TableCell align="right" sx={nums}>{cero(l.fulls)}</TableCell>
-                  <TableCell align="right" sx={nums}>{cero(l.cantidadCajas, 0)}</TableCell>
-                  <TableCell align="right" sx={nums}>{cero(l.pesoKg)}</TableCell>
-                  <TableCell sx={{ ...nums, whiteSpace: 'nowrap' }}>{l.dae ?? l.guia.dae ?? ''}</TableCell>
-                  <TableCell sx={{ ...nums, fontWeight: 600 }}>{l.guia.numeroGuiaHija}</TableCell>
-                  <TableCell sx={nums}>{novedad && l.factura === '0' ? '' : (l.factura ?? '')}</TableCell>
-                  <TableCell align="right" sx={nums}>{cero(l.valor)}</TableCell>
-                  <TableCell>
-                    <Typography variant="body2" fontWeight={novedad ? 700 : undefined}>
-                      {l.nota ?? ''}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Registro l={l} />
-                  </TableCell>
-                </TableRow>
+              <TableRow key={l.id} hover sx={{ bgcolor: novedad ? 'action.hover' : undefined }}>
+                <TableCell>
+                  {nuevaFinca ? (
+                    <Tooltip title={l.guia.finca?.nombre ?? ''}>
+                      <Typography variant="body2" fontWeight={600} noWrap sx={{ maxWidth: 135, fontSize: 'inherit' }}>
+                        {nombreCorto(l.guia.finca)}
+                      </Typography>
+                    </Tooltip>
+                  ) : null}
+                </TableCell>
+                <TableCell sx={{ whiteSpace: 'nowrap' }}>{l.codigoProducto ?? l.producto?.nombre ?? '—'}</TableCell>
+                <TableCell align="right" sx={nums}>{cero(l.fulls)}</TableCell>
+                <TableCell align="right" sx={nums}>{cero(l.cantidadCajas, 0)}</TableCell>
+                <TableCell align="right" sx={nums}>{cero(l.pesoKg)}</TableCell>
+                <TableCell sx={{ ...nums, whiteSpace: 'nowrap' }}>{novedad && dae === '0' ? '' : dae}</TableCell>
+                <TableCell sx={{ ...nums, whiteSpace: 'nowrap', color: 'text.secondary' }}>{fechaCorta(l.fechaRegistro)}</TableCell>
+                <TableCell sx={{ ...nums, fontWeight: 600 }}>{l.guia.numeroGuiaHija}</TableCell>
+                <TableCell sx={nums}>{novedad && l.factura === '0' ? '' : (l.factura ?? '')}</TableCell>
+                <TableCell align="right" sx={nums}>{cero(l.valor)}</TableCell>
+                <TableCell align="right" sx={nums}>{cero(l.tallos, 0)}</TableCell>
+                <TableCell sx={{ fontWeight: novedad ? 700 : undefined }}>{l.nota ?? ''}</TableCell>
+                <TableCell>
+                  <Usuario l={l} />
+                </TableCell>
+              </TableRow>
             );
           })}
-          <TableRow sx={{ '& td': { fontWeight: 600, borderBottom: 'none' } }}>
+          <TableRow sx={{ '& td': { fontWeight: 700, borderBottom: 'none', bgcolor: 'action.hover' } }}>
             <TableCell colSpan={2}>
-              Total ({plural(new Set(guias.map((g) => g.finca?.id)).size, 'finca')}, {plural(filas.length, 'línea')})
+              Total · {plural(new Set(guias.map((g) => g.finca?.id)).size, 'finca')}, {plural(filas.length, 'línea')}
             </TableCell>
             <TableCell align="right" sx={nums}>{num(tot.fulls)}</TableCell>
             <TableCell align="right" sx={nums}>{num(tot.cajas, 0)}</TableCell>
             <TableCell align="right" sx={nums}>{num(tot.kg)}</TableCell>
-            <TableCell colSpan={3} />
+            <TableCell colSpan={4} />
             <TableCell align="right" sx={nums}>{num(tot.valor)}</TableCell>
+            <TableCell align="right" sx={nums}>{num(tot.tallos, 0)}</TableCell>
             <TableCell colSpan={2} />
           </TableRow>
         </TableBody>

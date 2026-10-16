@@ -31,10 +31,13 @@ export interface CoordinacionResumen {
   totalKgs: number | null;
   guiasHijas: number;
   liqTotal: number | null;
+  /** Peso cobrable que da la aerolínea ("VOL." en la lista vieja). */
   pesoCobrable: number | null;
   corteExtra: boolean;
   /** Nota de la coordinación (p. ej. el termógrafo). */
   nota: string | null;
+  /** Manifiesto aduanero, ej. "CEC-2026-5Y-050786-0043". */
+  codigoManifiesto: string | null;
 }
 
 export interface CoordinacionPagina {

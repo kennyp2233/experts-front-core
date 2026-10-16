@@ -97,6 +97,9 @@ export function GuiasHijasTabla({ guias }: { guias: GuiaHija[] }) {
         <TableBody>
           {guias.map((g) => {
             const abierta = !!abiertas[g.id];
+            // Guía hija solo con novedades (0 cajas): el sistema viejo deja DAE "0"; se muestra la nota.
+            const soloNota = g.totalPiezas === 0 && g.totalFulls === 0;
+            const nota = soloNota ? g.lineas.map((l) => l.nota).filter(Boolean).join(' · ') : '';
             return (
               <Fragment key={g.id}>
                 <TableRow
@@ -120,10 +123,21 @@ export function GuiasHijasTabla({ guias }: { guias: GuiaHija[] }) {
                       </Typography>
                     )}
                   </TableCell>
-                  <TableCell sx={nums}>{g.dae ?? '—'}</TableCell>
-                  <TableCell align="right" sx={nums}>{num(g.totalPiezas, 0)}</TableCell>
-                  <TableCell align="right" sx={nums}>{num(g.totalFulls)}</TableCell>
-                  <TableCell align="right" sx={nums}>{num(g.pesoBruto)}</TableCell>
+                  {soloNota ? (
+                    <TableCell colSpan={4}>
+                      <Typography variant="body2" color="text.secondary">
+                        Novedad{nota ? ': ' : ''}
+                        <strong>{nota}</strong>
+                      </Typography>
+                    </TableCell>
+                  ) : (
+                    <>
+                      <TableCell sx={nums}>{g.dae ?? '—'}</TableCell>
+                      <TableCell align="right" sx={nums}>{num(g.totalPiezas, 0)}</TableCell>
+                      <TableCell align="right" sx={nums}>{num(g.totalFulls)}</TableCell>
+                      <TableCell align="right" sx={nums}>{num(g.pesoBruto)}</TableCell>
+                    </>
+                  )}
                 </TableRow>
                 {abierta && (
                   <TableRow>
