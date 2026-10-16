@@ -33,7 +33,8 @@ export interface LineaForm {
   alto: string;
   nota: string;
   factura: string;
-  auto: { fulls: boolean; cajas: boolean; pesoKg: boolean; tallos: boolean; valor: boolean; medidas: boolean };
+  /** En cursiva = lo propuso el sistema; se recalcula hasta que el usuario lo escribe. `dae`: del registro de DAEs. */
+  auto: { fulls: boolean; cajas: boolean; pesoKg: boolean; tallos: boolean; valor: boolean; medidas: boolean; dae: boolean };
 }
 
 export interface CabeceraForm {
@@ -128,7 +129,7 @@ export const lineaVacia = (base?: Partial<LineaForm>): LineaForm => ({
   alto: '',
   nota: '',
   factura: '',
-  auto: { fulls: true, cajas: true, pesoKg: true, tallos: true, valor: true, medidas: true },
+  auto: { fulls: true, cajas: true, pesoKg: true, tallos: true, valor: true, medidas: true, dae: true },
   ...base,
 });
 
@@ -370,7 +371,7 @@ export function desdeDetalle(c: CoordinacionDetalle): FormCoordinar {
           alto: texto(l.alto),
           nota: l.nota ?? '',
           factura: l.factura ?? '',
-          auto: { fulls: false, cajas: false, pesoKg: false, tallos: false, valor: false, medidas: false },
+          auto: { fulls: false, cajas: false, pesoKg: false, tallos: false, valor: false, medidas: false, dae: false },
         }),
       ),
     ),

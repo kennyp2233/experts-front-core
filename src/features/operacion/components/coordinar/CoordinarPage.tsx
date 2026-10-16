@@ -256,6 +256,44 @@ export function CoordinarPage({ id }: { id?: number }) {
     });
   };
 
+  // DAE del registro (el F2 "Obtiene FUE" del viejo): para cada finca de una fila
+  // con la DAE propuesta (no escrita a mano), la vigente para el destino final y
+  // la fecha de vuelo. Si cambia la fecha o el destino, se vuelven a proponer.
+  const [daesRegistro, setDaesRegistro] = useState<Record<number, { dae: string; hasta: string } | null>>({});
+  const idDestinoDae = form ? (form.cabecera.idDestinoFinalDocs ?? form.cabecera.idDestinoAwb) : null;
+  const fechaDae = form?.cabecera.fechaVuelo ?? '';
+  const fincasDae = form
+    ? [...new Set(form.lineas.filter((l) => l.auto.dae && l.idFinca).map((l) => l.idFinca!))].sort((a, b) => a - b).join(',')
+    : '';
+  useEffect(() => {
+    if (!idDestinoDae || !fechaDae || !fincasDae) return;
+    let vigente = true;
+    const t = setTimeout(async () => {
+      try {
+        const r = await operacionService.daesVigentes(fincasDae.split(',').map(Number), idDestinoDae, fechaDae);
+        if (!vigente) return;
+        setDaesRegistro((prev) => ({ ...prev, ...r }));
+        setForm((f) => {
+          if (!f) return f;
+          let cambio = false;
+          const lineas = f.lineas.map((l) => {
+            const s = l.auto.dae && l.idFinca ? r[l.idFinca] : undefined;
+            if (!s || s.dae === l.dae) return l;
+            cambio = true;
+            return { ...l, dae: s.dae };
+          });
+          return cambio ? { ...f, lineas } : f;
+        });
+      } catch {
+        // Sin registro: la DAE se escribe a mano, como siempre.
+      }
+    }, 300);
+    return () => {
+      vigente = false;
+      clearTimeout(t);
+    };
+  }, [idDestinoDae, fechaDae, fincasDae]);
+
   /** Fila nueva: copia producto, tipo de caja y el comienzo de la DAE de la última (o duplica una fila). */
   const agregarLinea = (duplicarKey?: string) => {
     setTocado(true);
@@ -498,6 +536,7 @@ export function CoordinarPage({ id }: { id?: number }) {
           onQuitar={quitarLinea}
           onRepartirPeso={repartirPeso}
           errores={errores}
+          daesRegistro={daesRegistro}
         />
 
         <LiquidacionEditor

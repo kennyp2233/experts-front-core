@@ -85,6 +85,14 @@ export const operacionService = {
   opciones: async (tipo: TipoOpcion, q: string, ids?: number[], idAerolinea?: number | null, limite?: number): Promise<Opcion[]> =>
     (await api.get(`/operacion/opciones/${tipo}`, { params: params({ q, ids: ids?.join(','), idAerolinea, limite }) })).data,
 
+  /** DAE vigente de cada finca para el destino y la fecha de vuelo (registro de DAEs, como el F2 del viejo). */
+  daesVigentes: async (
+    fincas: number[],
+    idDestino: number,
+    fecha: string,
+  ): Promise<Record<number, { dae: string; desde: string; hasta: string } | null>> =>
+    (await api.get('/operacion/opciones/daes', { params: { fincas: fincas.join(','), idDestino, fecha } })).data,
+
   sugerenciaConsignatario: async (id: number): Promise<SugerenciaConsignatario> =>
     (await api.get(`/operacion/opciones/consignatarios/${id}/sugerencia`)).data,
 
