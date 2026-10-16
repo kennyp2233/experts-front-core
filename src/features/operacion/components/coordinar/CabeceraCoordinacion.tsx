@@ -65,7 +65,6 @@ export function CabeceraCoordinacion({ valor: c, onChange, onConsignatario, erro
           <OpcionAutocomplete
             tipo="aerolineas"
             label="Aerolínea"
-            conCodigo
             value={c.idAerolinea}
             helperText="Propone su primera guía libre"
             onChange={(id) => onChange(id === c.idAerolinea ? {} : { idAerolinea: id, idGuiaMadre: null })}

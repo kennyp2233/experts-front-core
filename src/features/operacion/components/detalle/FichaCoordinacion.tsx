@@ -1,35 +1,14 @@
 'use client';
 
-import { Box, IconButton, Paper, Tooltip, Typography } from '@mui/material';
-import { alpha } from '@mui/material/styles';
+import { Box, IconButton, Tooltip, Typography } from '@mui/material';
 import { ContentCopy as CopiarIcon } from '@mui/icons-material';
 import { useToast } from '@/shared/providers';
 import { formatDate } from '@/shared/utils';
 import type { CoordinacionDetalle } from '../../types/coordinacion';
 import { formatoAwb, kg, nombreCorto, nombreRef, textoIngreso } from '../../utils/formato';
+import { type CampoFicha, FichaCampos } from '../FichaCampos';
 
 const nums = { fontVariantNumeric: 'tabular-nums' } as const;
-
-/** Etiqueta y valor; vacío → "—" en gris. */
-function Campo({ label, children }: { label: string; children: React.ReactNode }) {
-  const vacio = children === null || children === undefined || children === '';
-  return (
-    <>
-      <Typography component="dt" variant="body2" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
-        {label}
-      </Typography>
-      <Typography
-        component="dd"
-        variant="body2"
-        fontWeight={vacio ? 400 : 500}
-        color={vacio ? 'text.disabled' : undefined}
-        sx={{ m: 0, minWidth: 0, overflowWrap: 'anywhere' }}
-      >
-        {vacio ? '—' : children}
-      </Typography>
-    </>
-  );
-}
 
 /**
  * La cabecera del documento como en la ventana vieja: los mismos campos, en
@@ -57,7 +36,7 @@ export function FichaCoordinacion({ c }: { c: CoordinacionDetalle }) {
     }
   };
 
-  const izquierda: Array<[string, React.ReactNode]> = [
+  const izquierda: CampoFicha[] = [
     ['Consignatario', c.consignatario?.nombre],
     ['Embarcador', c.cliente?.nombre],
     ['Aerolínea', c.aerolinea ? nombreCorto(c.aerolinea) : null],
@@ -82,7 +61,7 @@ export function FichaCoordinacion({ c }: { c: CoordinacionDetalle }) {
     ['Tipo de embarque', c.tipoEmbarque?.nombre],
     ['Referencia', c.referencia],
   ];
-  const derecha: Array<[string, React.ReactNode]> = [
+  const derecha: CampoFicha[] = [
     ['Agencia IATA', c.agencia ? nombreRef(c.agencia) : null],
     ['Destino', destino],
     ['Fecha de vuelo', formatDate(c.fechaVuelo)],
@@ -91,35 +70,5 @@ export function FichaCoordinacion({ c }: { c: CoordinacionDetalle }) {
     ['Pago', c.pago === 'COLLECT' ? 'Collect' : 'Prepaid'],
   ];
 
-  const lista = (campos: Array<[string, React.ReactNode]>) => (
-    <Box
-      component="dl"
-      sx={{ display: 'grid', gridTemplateColumns: 'max-content minmax(0, 1fr)', columnGap: 2, rowGap: 0.75, m: 0, alignContent: 'start' }}
-    >
-      {campos.map(([k, v]) => (
-        <Campo key={k} label={k}>
-          {v}
-        </Campo>
-      ))}
-    </Box>
-  );
-
-  return (
-    <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, columnGap: 4, rowGap: 0.75 }}>
-        {lista(izquierda)}
-        {lista(derecha)}
-      </Box>
-      {c.nota && (
-        <Box sx={{ mt: 1.5, px: 1.5, py: 1, borderRadius: 1, bgcolor: (t) => alpha(t.palette.warning.main, 0.08), border: 1, borderColor: 'warning.light' }}>
-          <Typography variant="body2">
-            <Box component="span" sx={{ color: 'text.secondary', mr: 1 }}>
-              Nota
-            </Box>
-            <strong>{c.nota}</strong>
-          </Typography>
-        </Box>
-      )}
-    </Paper>
-  );
+  return <FichaCampos izquierda={izquierda} derecha={derecha} nota={c.nota} />;
 }

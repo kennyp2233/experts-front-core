@@ -321,6 +321,9 @@ export interface IngresoDetalle extends IngresoResumen {
   verificado: boolean;
   editable: boolean;
   auditoria: { creadoPor: string | null; creadoEn: string | null; actualizadoPor: string | null; actualizadoEn: string | null };
+  /** Documento anterior / siguiente por N° (Anterior y Siguiente del sistema viejo). */
+  anterior: { id: number; numero: number } | null;
+  siguiente: { id: number; numero: number } | null;
 }
 
 export interface IngresosPagina {

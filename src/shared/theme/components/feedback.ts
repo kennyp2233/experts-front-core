@@ -109,12 +109,18 @@ export const createFeedbackComponents = (mode: 'light' | 'dark'): Components<The
   },
   MuiBackdrop: {
     styleOverrides: {
-      root: {
-        backdropFilter: 'blur(4px)',
-        backgroundColor: mode === 'light'
-          ? 'rgba(0, 0, 0, 0.5)'
-          : 'rgba(0, 0, 0, 0.7)',
-      },
+      // Oscurecer y desenfocar solo detrás de diálogos y del menú móvil. Los
+      // menús, selects y listas desplegables usan un backdrop invisible: ahí
+      // la página tiene que seguir viéndose igual.
+      root: ({ ownerState }) =>
+        ownerState.invisible
+          ? {}
+          : {
+              backdropFilter: 'blur(4px)',
+              backgroundColor: mode === 'light'
+                ? 'rgba(0, 0, 0, 0.5)'
+                : 'rgba(0, 0, 0, 0.7)',
+            },
     },
   },
   MuiCircularProgress: {
