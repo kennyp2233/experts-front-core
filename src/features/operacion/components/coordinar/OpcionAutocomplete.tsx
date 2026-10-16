@@ -27,6 +27,8 @@ interface Props {
   mostrarDetalle?: boolean;
   /** Qué decir cuando la búsqueda no trae nada (default "Sin resultados"). */
   sinResultados?: React.ReactNode;
+  /** Solo guías: las libres de esta aerolínea (como el combo del sistema viejo). */
+  idAerolinea?: number | null;
 }
 
 const etiqueta = (o: Opcion, conCodigo: boolean) => (conCodigo && o.codigo ? `${o.codigo} · ${o.nombre}` : o.nombre);
@@ -52,6 +54,7 @@ export function OpcionAutocomplete({
   id,
   mostrarDetalle = false,
   sinResultados = 'Sin resultados',
+  idAerolinea,
 }: Props) {
   const [texto, setTexto] = useState('');
   const [q, setQ] = useState('');
@@ -63,8 +66,8 @@ export function OpcionAutocomplete({
   }, [texto]);
 
   const { data: opciones, isLoading } = useSWR(
-    disabled ? null : ['operacion/opciones', tipo, q],
-    () => operacionService.opciones(tipo, q),
+    disabled ? null : ['operacion/opciones', tipo, q, idAerolinea ?? null],
+    () => operacionService.opciones(tipo, q, undefined, idAerolinea),
     { keepPreviousData: true, revalidateOnFocus: false },
   );
 

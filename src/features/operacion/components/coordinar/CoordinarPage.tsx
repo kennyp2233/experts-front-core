@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
@@ -41,6 +41,7 @@ import {
   LineaForm,
   LiquidacionForm,
   lineaVacia,
+  numero,
   prefijoDae,
   recalcularLinea,
   texto,
@@ -213,6 +214,8 @@ export function CoordinarPage({ id }: { id?: number }) {
             if ((c[k] === null || c[k] === '') && v !== null && v !== undefined) c[k] = v;
           };
           proponer('idDestinoFinalDocs', s.idDestinoFinalDocs);
+          // Como el viejo: después del consignatario va la aerolínea (la de su última guía).
+          if (!c.idGuiaMadre) proponer('idAerolinea', s.ultima?.idAerolinea);
           proponer('idDestinoAwb', s.ultima?.idDestinoAwb);
           proponer('idAgenciaIata', s.ultima?.idAgenciaIata);
           proponer('idTipoEmbarque', s.ultima?.idTipoEmbarque);
@@ -263,7 +266,7 @@ export function CoordinarPage({ id }: { id?: number }) {
       const base = duplicarKey ? f.lineas.find((l) => l.key === duplicarKey) : undefined;
       const ultima = f.lineas[f.lineas.length - 1];
       const nueva = base
-        ? { ...base, key: nuevaKey, auto: { ...base.auto } }
+        ? { ...base, key: nuevaKey, idLinea: undefined, registro: undefined, auto: { ...base.auto } }
         : lineaVacia({
             key: nuevaKey,
             ...(ultima ? { idProducto: ultima.idProducto, idTipoCaja: ultima.idTipoCaja, dae: prefijoDae(ultima.dae) } : {}),
@@ -275,6 +278,38 @@ export function CoordinarPage({ id }: { id?: number }) {
     });
     // La fila nueva queda lista para elegir la finca.
     if (!duplicarKey) setTimeout(() => document.getElementById(ID_CAMPO.fila(nuevaKey, 'finca'))?.focus(), 0);
+  };
+
+  /**
+   * "Ingreso Peso Neto" del sistema viejo: reparte el peso de la báscula entre
+   * las filas con cajas, según su peso actual (o sus cajas), en kilos enteros;
+   * el resto va a la fila más grande. Devuelve el problema, si lo hay.
+   */
+  const repartirPeso = (total: number): string | null => {
+    if (!form) return null;
+    const conCajas = form.lineas.filter((l) => (numero(l.cajas) ?? 0) > 0);
+    if (conCajas.length === 0) return 'No hay filas con cajas para repartir el peso.';
+    const porKg = conCajas.every((l) => (numero(l.pesoKg) ?? 0) > 0);
+    const peso = (l: LineaForm) => (porKg ? numero(l.pesoKg)! : numero(l.cajas)!);
+    const suma = conCajas.reduce((a, l) => a + peso(l), 0);
+    const reparto = new Map(conCajas.map((l) => [l.key, Math.floor((total * peso(l)) / suma)]));
+    const resto = Math.round(total) - [...reparto.values()].reduce((a, b) => a + b, 0);
+    const mayor = conCajas.reduce((a, l) => (peso(l) > peso(a) ? l : a));
+    reparto.set(mayor.key, reparto.get(mayor.key)! + resto);
+    if ([...reparto.values()].some((kg) => kg <= 0)) {
+      return 'Con ese peso alguna finca queda en 0 kg: realiza el ajuste de pesos manualmente.';
+    }
+    setTocado(true);
+    setForm(
+      (f) =>
+        f && {
+          ...f,
+          lineas: f.lineas.map((l) =>
+            reparto.has(l.key) ? recalcularLinea({ ...l, pesoKg: texto(reparto.get(l.key)!, 0), auto: { ...l.auto, pesoKg: false } }, parametros) : l,
+          ),
+        },
+    );
+    return null;
   };
 
   const quitarLinea = (key: string) => {
@@ -312,6 +347,32 @@ export function CoordinarPage({ id }: { id?: number }) {
       return { ...f, liquidacion: liq, liqAuto: true };
     });
   };
+
+  // Al elegir la aerolínea (sin guía todavía) se propone su primera guía libre: la virtual
+  // de menor número y, si no hay, la normal más antigua (Proc_6FFB80 del sistema viejo).
+  // Una sola vez por aerolínea: si después borra la guía para buscar otra, no se vuelve a proponer.
+  const aerolineaSinGuia = !id && form?.cabecera.idAerolinea && !form.cabecera.idGuiaMadre ? form.cabecera.idAerolinea : null;
+  const guiaPropuestaPara = useRef<number | null>(null);
+  useEffect(() => {
+    if (!aerolineaSinGuia || guiaPropuestaPara.current === aerolineaSinGuia) return;
+    guiaPropuestaPara.current = aerolineaSinGuia;
+    let vigente = true;
+    operacionService
+      .opciones('guias', '', undefined, aerolineaSinGuia, 1)
+      .then((ops) => {
+        const g = ops[0];
+        if (!vigente || !g) return;
+        setForm((f) =>
+          f && !f.cabecera.idGuiaMadre && f.cabecera.idAerolinea === aerolineaSinGuia
+            ? { ...f, cabecera: { ...f.cabecera, idGuiaMadre: g.id } }
+            : f,
+        );
+      })
+      .catch(() => undefined);
+    return () => {
+      vigente = false;
+    };
+  }, [aerolineaSinGuia]);
 
   // Las filas recalculan sus valores sugeridos cuando llegan los parámetros.
   useEffect(() => {
@@ -408,6 +469,12 @@ export function CoordinarPage({ id }: { id?: number }) {
       actions={<Button onClick={cancelar}>Cancelar</Button>}
     >
       <Stack spacing={2} sx={{ pb: 12 }}>
+        {!id && (
+          <Alert severity="info" variant="outlined">
+            Las fincas todavía cargan su detalle por la web del sistema viejo: en una coordinación nueva, el detalle se
+            escribe aquí.
+          </Alert>
+        )}
         <CabeceraCoordinacion
           valor={form.cabecera}
           onChange={cambiarCabecera}
@@ -429,6 +496,7 @@ export function CoordinarPage({ id }: { id?: number }) {
           onCambiar={cambiarLinea}
           onAgregar={agregarLinea}
           onQuitar={quitarLinea}
+          onRepartirPeso={repartirPeso}
           errores={errores}
         />
 

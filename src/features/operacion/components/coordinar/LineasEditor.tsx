@@ -2,8 +2,13 @@
 
 import { useState } from 'react';
 import {
+  Alert,
   Box,
   Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   FormControlLabel,
   IconButton,
   MenuItem,
@@ -24,7 +29,9 @@ import {
   Add as AddIcon,
   ContentCopy as DuplicarIcon,
   DeleteOutline as BorrarIcon,
+  Scale as BasculaIcon,
 } from '@mui/icons-material';
+import { formatDateTime } from '@/shared/utils';
 import type { CoordinacionArmada, Opcion, ParametrosCoordinacion } from '../../types/coordinacion';
 import { num, plural } from '../../utils/formato';
 import { formatearDae, ID_CAMPO, LineaForm, numero, PATRON_DAE } from './formulario';
@@ -40,6 +47,8 @@ interface Props {
   onCambiar: (key: string, cambios: Partial<LineaForm>, finca?: Opcion | null) => void;
   onAgregar: (duplicarKey?: string) => void;
   onQuitar: (key: string) => void;
+  /** "Ingreso Peso Neto" del sistema viejo: reparte el peso de la báscula entre las filas. */
+  onRepartirPeso: (totalKg: number) => string | null;
   /** Ids de los campos que faltan (se marcan en rojo después de intentar grabar). */
   errores: Set<string>;
 }
@@ -91,15 +100,22 @@ function guiaHijaDe(l: LineaForm, armada: CoordinacionArmada | undefined) {
   return armada.guiasHijas.find((g) => g.idFinca === l.idFinca && g.lineas.some((x) => x.idProducto === l.idProducto));
 }
 
+/** "UTOPIA (web) · 12/10/2026 09:55": quién registró la línea. */
+const textoRegistro = (r: NonNullable<LineaForm['registro']>) =>
+  [r.usuario ? `${r.usuario}${r.origen === 'E' ? ' (web)' : ''}` : null, formatDateTime(r.fecha, '')].filter(Boolean).join(' · ');
+
 /**
- * Detalle por finca: una fila por finca + producto + tipo de caja. Fulls, kg,
- * tallos y valor se proponen (en cursiva) y se pueden corregir; las medidas
- * salen de la caja de la finca. El sistema agrupa las filas en guías hijas
- * (una por marca + finca + producto).
+ * Detalle coordinado (la grilla del sistema viejo): una fila por finca +
+ * producto, en el orden Fulls → Cajas → Kg → DAE → Nota. Fulls y cajas se
+ * calculan entre sí, el peso se propone (en cursiva) y se corrige; una fila con
+ * 0 y una nota es una novedad ("no llegó 1.5"). El sistema agrupa las filas en
+ * guías hijas (una por marca + finca + producto).
  */
-export function LineasEditor({ lineas, parametros, armada, onCambiar, onAgregar, onQuitar, errores }: Props) {
-  // Tallos, valor y medidas casi siempre son los sugeridos: se ocultan por defecto.
+export function LineasEditor({ lineas, parametros, armada, onCambiar, onAgregar, onQuitar, onRepartirPeso, errores }: Props) {
+  // Tipo de caja, tallos, valor, factura y medidas casi siempre son los sugeridos o no se usan.
   const [mas, setMas] = useState(false);
+  const [bascula, setBascula] = useState<string | null>(null);
+  const [errorBascula, setErrorBascula] = useState<string | null>(null);
   const tot = lineas.reduce(
     (a, l) => ({
       cajas: a.cajas + (numero(l.cajas) ?? 0),
@@ -114,9 +130,20 @@ export function LineasEditor({ lineas, parametros, armada, onCambiar, onAgregar,
 
   const editarNumero = (l: LineaForm, campo: CampoNumerico) => (v: string) => {
     const auto = { ...l.auto };
-    if (campo === 'fulls' || campo === 'pesoKg' || campo === 'tallos' || campo === 'valor') auto[campo] = false;
+    if (campo === 'fulls' || campo === 'cajas' || campo === 'pesoKg' || campo === 'tallos' || campo === 'valor') auto[campo] = false;
     if (campo === 'largo' || campo === 'ancho' || campo === 'alto') auto.medidas = false;
     onCambiar(l.key, { [campo]: v, auto });
+  };
+
+  const repartir = () => {
+    const total = numero(bascula ?? '');
+    if (total === undefined || total <= 0) {
+      setErrorBascula('Escribe el peso de la báscula en kg.');
+      return;
+    }
+    const problema = onRepartirPeso(total);
+    if (problema) setErrorBascula(problema);
+    else setBascula(null);
   };
 
   const totalCelda = { pr: '12px !important' } as const;
@@ -126,18 +153,17 @@ export function LineasEditor({ lineas, parametros, armada, onCambiar, onAgregar,
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }} spacing={1}>
         <Box>
           <Typography variant="subtitle1" fontWeight={600}>
-            Detalle por finca
+            Detalle coordinado
           </Typography>
           <Typography variant="caption" color="text.secondary">
-            Los valores en cursiva son sugeridos ({parametros?.lineas.cajasPorFull ?? 2} cajas × {parametros?.lineas.kgPorCaja ?? 22} kg por full,{' '}
-            {parametros?.lineas.tallosPorFull ?? 700} tallos por full, $ {parametros?.lineas.valorPorCaja ?? 140} por caja); al
-            escribir encima quedan fijos.
+            Fulls y cajas se calculan entre sí; en cursiva lo sugerido ({parametros?.lineas.cajasPorFull ?? 2} cajas ×{' '}
+            {parametros?.lineas.kgPorCaja ?? 22} kg por full). Una fila en 0 con nota es una novedad.
           </Typography>
         </Box>
         <FormControlLabel
           sx={{ flexShrink: 0 }}
           control={<Switch size="small" checked={mas} onChange={(e) => setMas(e.target.checked)} />}
-          label={<Typography variant="body2">Tallos, valor y medidas</Typography>}
+          label={<Typography variant="body2">Caja, tallos, valor, factura y medidas</Typography>}
         />
       </Stack>
 
@@ -151,23 +177,25 @@ export function LineasEditor({ lineas, parametros, armada, onCambiar, onAgregar,
             '& .MuiOutlinedInput-input': { px: 1 },
             tableLayout: 'fixed',
             // Debajo de este ancho se desplaza; a 1366 entra con el menú plegado.
-            minWidth: mas ? 1220 : 900,
+            minWidth: mas ? 1400 : 940,
           }}
         >
           {/* Anchos fijos: la finca se lleva el espacio que sobra. */}
           <colgroup>
             <col style={{ width: 28 }} />
             <col />
-            <col style={{ width: 160 }} />
-            <col style={{ width: 84 }} />
+            <col style={{ width: 130 }} />
             <col style={{ width: 66 }} />
-            <col style={{ width: 200 }} />
+            <col style={{ width: 62 }} />
             <col style={{ width: 70 }} />
-            <col style={{ width: 74 }} />
+            <col style={{ width: 196 }} />
+            <col style={{ width: 170 }} />
+            {mas && <col style={{ width: 80 }} />}
             {mas && <col style={{ width: 72 }} />}
-            {mas && <col style={{ width: 82 }} />}
+            {mas && <col style={{ width: 80 }} />}
+            {mas && <col style={{ width: 96 }} />}
             {mas && <col style={{ width: 170 }} />}
-            <col style={{ width: 92 }} />
+            <col style={{ width: 88 }} />
             <col style={{ width: 72 }} />
           </colgroup>
           <TableHead>
@@ -175,13 +203,15 @@ export function LineasEditor({ lineas, parametros, armada, onCambiar, onAgregar,
               <TableCell>#</TableCell>
               <TableCell>Finca</TableCell>
               <TableCell>Producto</TableCell>
-              <TableCell>Tipo caja</TableCell>
-              <TableCell align="right">Cajas</TableCell>
-              <TableCell>DAE</TableCell>
               <TableCell align="right">Fulls</TableCell>
+              <TableCell align="right">Cajas</TableCell>
               <TableCell align="right">Kg</TableCell>
+              <TableCell>DAE</TableCell>
+              <TableCell>Nota</TableCell>
+              {mas && <TableCell>Tipo caja</TableCell>}
               {mas && <TableCell align="right">Tallos</TableCell>}
               {mas && <TableCell align="right">Valor $</TableCell>}
+              {mas && <TableCell>Factura</TableCell>}
               {mas && <TableCell>Medidas cm (L × A × H)</TableCell>}
               <TableCell>Guía hija</TableCell>
               <TableCell />
@@ -191,8 +221,9 @@ export function LineasEditor({ lineas, parametros, armada, onCambiar, onAgregar,
             {lineas.map((l, i) => {
               const daeMal = !!l.dae.trim() && !PATRON_DAE.test(l.dae.trim());
               const gh = guiaHijaDe(l, armada);
+              const novedad = numero(l.cajas) === 0 && !!l.nota.trim();
               return (
-                <TableRow key={l.key} sx={{ verticalAlign: 'top' }}>
+                <TableRow key={l.key} sx={{ verticalAlign: 'top', bgcolor: novedad ? 'action.hover' : undefined }}>
                   <TableCell sx={{ pt: 1.5 }}>
                     <Typography variant="caption" color="text.secondary">
                       {i + 1}
@@ -206,6 +237,7 @@ export function LineasEditor({ lineas, parametros, armada, onCambiar, onAgregar,
                       label="Finca"
                       error={errores.has(ID_CAMPO.fila(l.key, 'finca'))}
                       value={l.idFinca}
+                      helperText={l.registro ? textoRegistro(l.registro) : undefined}
                       onChange={(id, o) => onCambiar(l.key, { idFinca: id }, o)}
                     />
                   </TableCell>
@@ -220,39 +252,27 @@ export function LineasEditor({ lineas, parametros, armada, onCambiar, onAgregar,
                       onChange={(id) => onCambiar(l.key, { idProducto: id })}
                     />
                   </TableCell>
-                  <TableCell>
-                    <TextField
-                      select
-                      size="small"
-                      value={l.idTipoCaja ?? ''}
-                      onChange={(e) =>
-                        onCambiar(l.key, {
-                          idTipoCaja: e.target.value === '' ? null : Number(e.target.value),
-                          auto: { ...l.auto, fulls: e.target.value !== '' ? true : l.auto.fulls },
-                        })
-                      }
-                      fullWidth
-                      slotProps={{ htmlInput: { 'aria-label': 'Tipo de caja' } }}
-                    >
-                      <MenuItem value="">
-                        <em>mixta</em>
-                      </MenuItem>
-                      {parametros?.tiposCaja.map((t) => (
-                        <MenuItem key={t.id} value={t.id}>
-                          <Tooltip title={`${t.nombre}: ${t.factorFull} full`} placement="right">
-                            <span>{t.codigo ?? t.nombre}</span>
-                          </Tooltip>
-                        </MenuItem>
-                      ))}
-                    </TextField>
+                  <TableCell align="right">
+                    <Numero label="Fulls" value={l.fulls} auto={l.auto.fulls} onChange={editarNumero(l, 'fulls')} />
                   </TableCell>
                   <TableCell align="right">
                     <Numero
                       id={ID_CAMPO.fila(l.key, 'cajas')}
                       label="Cajas"
                       value={l.cajas}
+                      auto={l.auto.cajas}
                       error={errores.has(ID_CAMPO.fila(l.key, 'cajas'))}
                       onChange={editarNumero(l, 'cajas')}
+                    />
+                  </TableCell>
+                  <TableCell align="right">
+                    <Numero
+                      id={ID_CAMPO.fila(l.key, 'kg')}
+                      label="Kg"
+                      value={l.pesoKg}
+                      auto={l.auto.pesoKg}
+                      error={errores.has(ID_CAMPO.fila(l.key, 'kg'))}
+                      onChange={editarNumero(l, 'pesoKg')}
                     />
                   </TableCell>
                   <TableCell>
@@ -272,19 +292,48 @@ export function LineasEditor({ lineas, parametros, armada, onCambiar, onAgregar,
                       sx={{ '& input': { fontVariantNumeric: 'tabular-nums' } }}
                     />
                   </TableCell>
-                  <TableCell align="right">
-                    <Numero label="Fulls" value={l.fulls} auto={l.auto.fulls} onChange={editarNumero(l, 'fulls')} />
+                  <TableCell>
+                    <Tooltip title={l.nota.length > 22 ? l.nota : ''} placement="top">
+                      <TextField
+                        size="small"
+                        fullWidth
+                        value={l.nota}
+                        placeholder="no llegó 1.5…"
+                        onChange={(e) => onCambiar(l.key, { nota: e.target.value })}
+                        slotProps={{ htmlInput: { 'aria-label': 'Nota', maxLength: 120 } }}
+                        sx={{ '& input': { fontWeight: novedad ? 600 : undefined } }}
+                      />
+                    </Tooltip>
                   </TableCell>
-                  <TableCell align="right">
-                    <Numero
-                      id={ID_CAMPO.fila(l.key, 'kg')}
-                      label="Kg"
-                      value={l.pesoKg}
-                      auto={l.auto.pesoKg}
-                      error={errores.has(ID_CAMPO.fila(l.key, 'kg'))}
-                      onChange={editarNumero(l, 'pesoKg')}
-                    />
-                  </TableCell>
+                  {mas && (
+                    <TableCell>
+                      <TextField
+                        select
+                        size="small"
+                        value={l.idTipoCaja ?? ''}
+                        onChange={(e) =>
+                          onCambiar(l.key, {
+                            idTipoCaja: e.target.value === '' ? null : Number(e.target.value),
+                            // Si las cajas las escribió él, los fulls se recalculan con el nuevo factor.
+                            auto: { ...l.auto, fulls: l.auto.cajas ? l.auto.fulls : true },
+                          })
+                        }
+                        fullWidth
+                        slotProps={{ htmlInput: { 'aria-label': 'Tipo de caja' } }}
+                      >
+                        <MenuItem value="">
+                          <em>—</em>
+                        </MenuItem>
+                        {parametros?.tiposCaja.map((t) => (
+                          <MenuItem key={t.id} value={t.id}>
+                            <Tooltip title={`${t.nombre}: ${t.factorFull} full`} placement="right">
+                              <span>{t.codigo ?? t.nombre}</span>
+                            </Tooltip>
+                          </MenuItem>
+                        ))}
+                      </TextField>
+                    </TableCell>
+                  )}
                   {mas && (
                     <TableCell align="right">
                       <Numero label="Tallos" value={l.tallos} auto={l.auto.tallos} onChange={editarNumero(l, 'tallos')} />
@@ -293,6 +342,17 @@ export function LineasEditor({ lineas, parametros, armada, onCambiar, onAgregar,
                   {mas && (
                     <TableCell align="right">
                       <Numero label="Valor" value={l.valor} auto={l.auto.valor} onChange={editarNumero(l, 'valor')} />
+                    </TableCell>
+                  )}
+                  {mas && (
+                    <TableCell>
+                      <TextField
+                        size="small"
+                        fullWidth
+                        value={l.factura}
+                        onChange={(e) => onCambiar(l.key, { factura: e.target.value })}
+                        slotProps={{ htmlInput: { 'aria-label': 'Factura', maxLength: 20 } }}
+                      />
                     </TableCell>
                   )}
                   {mas && (
@@ -336,7 +396,7 @@ export function LineasEditor({ lineas, parametros, armada, onCambiar, onAgregar,
             })}
             <TableRow sx={{ '& td': { fontWeight: 600, pt: 1 } }}>
               <TableCell />
-              <TableCell colSpan={3}>
+              <TableCell colSpan={2}>
                 <Button id={ID_CAMPO.fincas} startIcon={<AddIcon />} onClick={() => onAgregar()} size="small" sx={{ mr: 2 }}>
                   Agregar finca
                 </Button>
@@ -344,12 +404,18 @@ export function LineasEditor({ lineas, parametros, armada, onCambiar, onAgregar,
                   Total ({plural(fincas, 'finca')})
                 </Typography>
               </TableCell>
-              <TableCell align="right" sx={totalCelda}>{num(tot.cajas, 0)}</TableCell>
-              <TableCell />
               <TableCell align="right" sx={totalCelda}>{num(tot.fulls, 4)}</TableCell>
+              <TableCell align="right" sx={totalCelda}>{num(tot.cajas, 0)}</TableCell>
               <TableCell align="right" sx={totalCelda}>{num(tot.kg)}</TableCell>
+              <TableCell colSpan={2}>
+                <Button size="small" startIcon={<BasculaIcon />} onClick={() => setBascula('')}>
+                  Ingreso peso neto
+                </Button>
+              </TableCell>
+              {mas && <TableCell />}
               {mas && <TableCell align="right" sx={totalCelda}>{num(tot.tallos, 0)}</TableCell>}
               {mas && <TableCell align="right" sx={totalCelda}>{num(tot.valor)}</TableCell>}
+              {mas && <TableCell />}
               {mas && <TableCell />}
               <TableCell colSpan={2}>
                 {armada && (
@@ -362,6 +428,51 @@ export function LineasEditor({ lineas, parametros, armada, onCambiar, onAgregar,
           </TableBody>
         </Table>
       </TableContainer>
+
+      <Dialog
+        open={bascula !== null}
+        onClose={() => setBascula(null)}
+        maxWidth="xs"
+        fullWidth
+        slotProps={{
+          paper: {
+            component: 'form',
+            onSubmit: (e: React.FormEvent) => {
+              e.preventDefault();
+              repartir();
+            },
+          },
+        }}
+      >
+        <DialogTitle>Ingreso peso neto</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            El peso de la báscula se reparte entre las fincas según lo que tiene cada una (o sus cajas), en kilos enteros.
+          </Typography>
+          <TextField
+            autoFocus
+            fullWidth
+            label="Peso de la báscula (kg)"
+            value={bascula ?? ''}
+            onChange={(e) => {
+              setBascula(e.target.value);
+              setErrorBascula(null);
+            }}
+            slotProps={{ htmlInput: { inputMode: 'decimal' } }}
+          />
+          {errorBascula && (
+            <Alert severity="warning" sx={{ mt: 2 }}>
+              {errorBascula}
+            </Alert>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setBascula(null)}>Cancelar</Button>
+          <Button type="submit" variant="contained">
+            Repartir
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Paper>
   );
 }

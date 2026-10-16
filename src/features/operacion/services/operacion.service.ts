@@ -81,8 +81,9 @@ export const operacionService = {
 
   // ----- Coordinar -----
 
-  opciones: async (tipo: TipoOpcion, q: string, ids?: number[]): Promise<Opcion[]> =>
-    (await api.get(`/operacion/opciones/${tipo}`, { params: params({ q, ids: ids?.join(',') }) })).data,
+  /** `idAerolinea` (solo guías): las libres de esa aerolínea. */
+  opciones: async (tipo: TipoOpcion, q: string, ids?: number[], idAerolinea?: number | null, limite?: number): Promise<Opcion[]> =>
+    (await api.get(`/operacion/opciones/${tipo}`, { params: params({ q, ids: ids?.join(','), idAerolinea, limite }) })).data,
 
   sugerenciaConsignatario: async (id: number): Promise<SugerenciaConsignatario> =>
     (await api.get(`/operacion/opciones/consignatarios/${id}/sugerencia`)).data,

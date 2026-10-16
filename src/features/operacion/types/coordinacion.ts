@@ -33,10 +33,14 @@ export interface CoordinacionResumen {
   liqTotal: number | null;
   pesoCobrable: number | null;
   corteExtra: boolean;
+  /** Nota de la coordinación (p. ej. el termógrafo). */
+  nota: string | null;
 }
 
 export interface CoordinacionPagina {
   items: CoordinacionResumen[];
+  /** Totales de todo el filtro, como el pie de la lista vieja. */
+  totales: { fulls: number; cajas: number; kgs: number; pesoCobrable: number };
   total: number;
   page: number;
   pageSize: number;
@@ -109,6 +113,9 @@ export interface LineaGuiaHija {
   ancho: number | null;
   alto: number | null;
   nota: string | null;
+  factura: string | null;
+  /** "E" = la registró la finca por la web; "I" = transferencia interna; null = la oficina. */
+  origen: string | null;
   usuario: string | null;
   fechaRegistro: string | null;
 }
@@ -396,6 +403,8 @@ export type ValoresLiquidacion = Partial<
 >;
 
 export interface LineaCoordinacionDto {
+  /** Línea que ya existía: conserva quién y cuándo la registró. */
+  idLinea?: number;
   idFinca: number;
   idProducto: number;
   idConsignatario?: number;
@@ -410,6 +419,7 @@ export interface LineaCoordinacionDto {
   ancho?: number;
   alto?: number;
   nota?: string;
+  factura?: string;
 }
 
 export interface GuardarCoordinacionDto {
