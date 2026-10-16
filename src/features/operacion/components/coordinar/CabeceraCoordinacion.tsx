@@ -10,6 +10,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
+import Link from 'next/link';
 import { ExpandMore as AbrirIcon } from '@mui/icons-material';
 import type { Opcion } from '../../types/coordinacion';
 import { type CabeceraForm, ID_CAMPO } from './formulario';
@@ -54,6 +55,11 @@ export function CabeceraCoordinacion({ valor: c, onChange, onConsignatario, bloq
             disabled={bloquearGuia}
             placeholder="Número o aerolínea (KL, 8469…)"
             mostrarDetalle
+            sinResultados={
+              <span>
+                No hay guías libres. Se ingresan en <Link href="/operacion/guias/ingresos">Ingreso de guías</Link>.
+              </span>
+            }
             onChange={(id, o: Opcion | null) =>
               onChange({ idGuiaMadre: id, idAerolinea: (o?.extra?.idAerolinea as number | null | undefined) ?? null })
             }

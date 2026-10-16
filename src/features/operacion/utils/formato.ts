@@ -40,3 +40,6 @@ export function formatoAwb(numero: string | null | undefined): string {
 /** "1 finca" / "3 fincas". */
 export const plural = (n: number, singular: string, pluralTxt = `${singular}s`) =>
   `${num(n, 0)} ${n === 1 ? singular : pluralTxt}`;
+
+/** N° del ingreso de guías como lo imprime el sistema viejo: "CGU-0003871". */
+export const textoIngreso = (n: number | null | undefined): string => (n ? `CGU-${String(n).padStart(7, '0')}` : '—');

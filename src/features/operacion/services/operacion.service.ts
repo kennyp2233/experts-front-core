@@ -12,8 +12,11 @@ import type {
   CoordinacionPagina,
   GuiasMadreFiltros,
   GuiasMadrePagina,
-  IngresoLoteDto,
-  PrevisualizacionLote,
+  GuardarIngresoDto,
+  IngresoDetalle,
+  IngresosFiltros,
+  IngresosPagina,
+  PrevisualizacionIngreso,
   ReporteValidacion,
   ResumenStockAerolinea,
   ValidacionCoordinacion,
@@ -36,18 +39,39 @@ export const operacionService = {
   resumenStock: async (): Promise<ResumenStockAerolinea[]> =>
     (await api.get('/operacion/guias-madre/resumen')).data,
 
-  // Recorre todas las coordinaciones: puede tardar más que el timeout normal.
-  previsualizarLote: async (dto: IngresoLoteDto): Promise<PrevisualizacionLote> =>
-    (await api.post('/operacion/guias-madre/lotes/previsualizar', dto)).data,
+  // ----- Ingreso de guías (documentos CGU) -----
 
-  ingresarLote: async (dto: IngresoLoteDto): Promise<{ lote: { id: number }; guias: number }> =>
-    (await api.post('/operacion/guias-madre/lotes', dto)).data,
+  listarIngresos: async (filtros: IngresosFiltros): Promise<IngresosPagina> =>
+    (await api.get('/operacion/guias-madre/ingresos', { params: params(filtros) })).data,
+
+  ingreso: async (id: number): Promise<IngresoDetalle> => (await api.get(`/operacion/guias-madre/ingresos/${id}`)).data,
+
+  /** Revisa formato, verificador y repetidas (aquí y en el sistema viejo). `id` al modificar. */
+  previsualizarIngreso: async (dto: GuardarIngresoDto, id?: number): Promise<PrevisualizacionIngreso> =>
+    (await api.post('/operacion/guias-madre/ingresos/previsualizar', dto, { params: params({ id }) })).data,
+
+  crearIngreso: async (dto: GuardarIngresoDto): Promise<{ id: number; numero: number }> =>
+    (await api.post('/operacion/guias-madre/ingresos', dto)).data,
+
+  actualizarIngreso: async (id: number, dto: GuardarIngresoDto): Promise<{ id: number; numero: number }> =>
+    (await api.put(`/operacion/guias-madre/ingresos/${id}`, dto)).data,
+
+  anularIngreso: async (id: number) => (await api.delete(`/operacion/guias-madre/ingresos/${id}`)).data,
+
+  corregirEstadoIngreso: async (id: number): Promise<IngresoDetalle> =>
+    (await api.post(`/operacion/guias-madre/ingresos/${id}/corregir-estado`)).data,
+
+  // ----- Administración de guías -----
 
   prestarGuia: async (id: number, dto: { fecha?: string; observaciones?: string }) =>
     (await api.post(`/operacion/guias-madre/${id}/prestamo`, dto)).data,
 
+  quitarPrestamo: async (id: number) => (await api.delete(`/operacion/guias-madre/${id}/prestamo`)).data,
+
   devolverGuia: async (id: number, dto: { fecha?: string; observaciones?: string }) =>
     (await api.post(`/operacion/guias-madre/${id}/devolucion`, dto)).data,
+
+  verificarGuia: async (id: number) => (await api.post(`/operacion/guias-madre/${id}/verificar`)).data,
 
   reporteValidacion: async (fresco = false): Promise<ReporteValidacion> =>
     (await api.get('/operacion/validacion', { params: fresco ? { fresco: true } : {}, timeout: 300_000 })).data,

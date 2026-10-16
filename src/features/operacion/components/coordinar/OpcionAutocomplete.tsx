@@ -25,6 +25,8 @@ interface Props {
   id?: string;
   /** Debajo del campo, el detalle de la opción elegida (p. ej. el cliente de la marca). */
   mostrarDetalle?: boolean;
+  /** Qué decir cuando la búsqueda no trae nada (default "Sin resultados"). */
+  sinResultados?: React.ReactNode;
 }
 
 const etiqueta = (o: Opcion, conCodigo: boolean) => (conCodigo && o.codigo ? `${o.codigo} · ${o.nombre}` : o.nombre);
@@ -49,6 +51,7 @@ export function OpcionAutocomplete({
   sinEtiqueta = false,
   id,
   mostrarDetalle = false,
+  sinResultados = 'Sin resultados',
 }: Props) {
   const [texto, setTexto] = useState('');
   const [q, setQ] = useState('');
@@ -97,7 +100,7 @@ export function OpcionAutocomplete({
       }}
       getOptionLabel={(o) => etiqueta(o, conCodigo)}
       isOptionEqualToValue={(a, b) => a.id === b.id}
-      noOptionsText={q ? 'Sin resultados' : 'Escribe para buscar'}
+      noOptionsText={q || tipo === 'guias' ? sinResultados : 'Escribe para buscar'}
       renderOption={({ key, ...props }, o) => (
         <Box component="li" key={key} {...props}>
           <Box sx={{ minWidth: 0 }}>
