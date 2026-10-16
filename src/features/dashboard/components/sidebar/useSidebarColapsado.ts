@@ -7,7 +7,12 @@ const CLAVE = 'experts.sidebar.colapsado';
 const EVENTO = 'experts:sidebar-colapsado';
 
 /** Pantallas anchas de trabajo: el menú arranca plegado si el usuario no eligió otra cosa. */
-const RUTAS_ANCHAS = [/^\/operacion\/coordinaciones\/nueva$/, /^\/operacion\/coordinaciones\/\d+\/editar$/];
+const RUTAS_ANCHAS = [
+  /^\/operacion\/coordinaciones$/,
+  /^\/operacion\/coordinaciones\/nueva$/,
+  /^\/operacion\/coordinaciones\/\d+$/,
+  /^\/operacion\/coordinaciones\/\d+\/editar$/,
+];
 
 /** Respaldo en memoria si el navegador no deja guardar. */
 let enMemoria: 'si' | 'no' | null = null;
@@ -33,7 +38,8 @@ function suscribir(cb: () => void) {
 /**
  * Menú lateral plegado a íconos (para ganar ancho en pantallas de 1366 px).
  * La elección se recuerda en el navegador; sin elección, se pliega solo en las
- * pantallas de coordinar.
+ * pantallas de coordinaciones (lista, ver, coordinar), que son anchas como la
+ * ventana del sistema viejo.
  */
 export function useSidebarColapsado() {
   const pathname = usePathname();

@@ -3,19 +3,34 @@
 import { useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Box, Button, IconButton, InputAdornment, Stack, Tab, Tabs, TextField, Tooltip, Typography } from '@mui/material';
+import {
+  Box,
+  Button,
+  CircularProgress,
+  IconButton,
+  InputAdornment,
+  Stack,
+  Tab,
+  Tabs,
+  TextField,
+  Tooltip,
+  Typography,
+} from '@mui/material';
 import {
   Add as AddIcon,
   ChevronLeft as AnteriorIcon,
   ChevronRight as SiguienteIcon,
+  FileDownloadOutlined as DescargarIcon,
   StickyNote2Outlined as NotaIcon,
   Search as SearchIcon,
 } from '@mui/icons-material';
+import { useToast } from '@/shared/providers';
 import { AppPage, DataTable, type DataTableColumn } from '@/shared/components/ui';
-import { formatDate, toIsoDate } from '@/shared/utils';
+import { formatDate, getErrorMessage, toIsoDate } from '@/shared/utils';
 import { useCoordinaciones } from '../hooks/useCoordinaciones';
 import type { CoordinacionResumen, EstadoCoordinacion } from '../types/coordinacion';
-import { formatoAwb, kg, nombreCorto, num, usd } from '../utils/formato';
+import { operacionService } from '../services/operacion.service';
+import { formatoAwb, kg, nombreCorto, num, ordenDelDia, usd } from '../utils/formato';
 import { OpcionAutocomplete } from './coordinar/OpcionAutocomplete';
 import { ETIQUETA_ESTADO, EstadoCoordinacionChip } from './EstadoCoordinacionChip';
 
@@ -39,22 +54,34 @@ const otroDia = (dia: string, n: number) => {
   return toIsoDate(d);
 };
 
+/**
+ * Columnas en el orden de la lista vieja (Doc. · Manifiesto · Fecha · Marcación ·
+ * Cliente · Aerolínea · Guía · Fulls · PCS · KGS · VOL. · Nota), con la guía
+ * adelante porque es como se busca.
+ */
 const columnas: DataTableColumn<CoordinacionResumen>[] = [
+  {
+    key: 'numero',
+    label: 'N°',
+    description: 'N° de coordinación (Doc. en el sistema viejo)',
+    value: (c) => c.codigoAccess ?? c.id,
+    render: (c) => (
+      <Typography variant="body2" color="text.secondary" sx={nums}>
+        {c.codigoAccess ?? c.id}
+      </Typography>
+    ),
+    mobile: 'hidden',
+  },
   {
     key: 'guia',
     label: 'Guía madre',
     pinned: true,
     mobile: 'title',
-    value: (c) => `${formatoAwb(c.numeroGuia)} N° ${c.codigoAccess ?? c.id}`,
+    value: (c) => formatoAwb(c.numeroGuia),
     render: (c) => (
-      <Stack spacing={0}>
-        <Typography variant="body2" fontWeight={600} sx={{ ...nums, whiteSpace: 'nowrap' }}>
-          {formatoAwb(c.numeroGuia)}
-        </Typography>
-        <Typography variant="caption" color="text.secondary" sx={nums}>
-          N° {c.codigoAccess ?? c.id}
-        </Typography>
-      </Stack>
+      <Typography variant="body2" fontWeight={600} sx={{ ...nums, whiteSpace: 'nowrap' }}>
+        {formatoAwb(c.numeroGuia)}
+      </Typography>
     ),
   },
   {
@@ -66,20 +93,24 @@ const columnas: DataTableColumn<CoordinacionResumen>[] = [
   { key: 'vuelo', label: 'Fecha vuelo', value: (c) => formatDate(c.fechaVuelo), mobile: 'subtitle' },
   {
     key: 'aerolinea',
-    label: 'Aerol.',
-    description: 'Aerolínea (código)',
-    value: (c) => c.aerolinea?.codigo ?? (c.aerolinea ? nombreCorto(c.aerolinea) : null),
-    render: (c) =>
-      c.aerolinea ? (
-        <Tooltip title={nombreCorto(c.aerolinea)}>
-          <span>{c.aerolinea.codigo ?? nombreCorto(c.aerolinea)}</span>
-        </Tooltip>
-      ) : (
-        '—'
-      ),
+    label: 'Aerolínea',
+    value: (c) => (c.aerolinea ? nombreCorto(c.aerolinea) : null),
+    maxWidth: 110,
   },
-  { key: 'consignatario', label: 'Consignatario', value: (c) => c.consignatario?.nombre, maxWidth: 170 },
-  { key: 'cliente', label: 'Cliente', value: (c) => c.cliente?.nombre, maxWidth: 120 },
+  { key: 'consignatario', label: 'Consignatario', value: (c) => c.consignatario?.nombre, maxWidth: 160 },
+  { key: 'cliente', label: 'Cliente', value: (c) => c.cliente?.nombre, maxWidth: 110 },
+  {
+    key: 'manifiesto',
+    label: 'Manifiesto',
+    description: 'Manifiesto aduanero (CEC-año-…); llega después del corte',
+    value: (c) => c.codigoManifiesto,
+    // "CEC-2026-" se repite en todas: se muestra lo que cambia y el código completo al pasar el mouse.
+    render: (c) => (
+      <Typography variant="body2" color="text.secondary" sx={{ ...nums, whiteSpace: 'nowrap' }}>
+        {c.codigoManifiesto?.replace(/^[A-Z]{3}-\d{4}-/, '') ?? ''}
+      </Typography>
+    ),
+  },
   {
     key: 'nota',
     label: 'Nota',
@@ -115,7 +146,13 @@ const columnas: DataTableColumn<CoordinacionResumen>[] = [
   { key: 'fulls', label: 'Fulls', align: 'right', value: (c) => num(c.totalFulls) },
   { key: 'cajas', label: 'Cajas', align: 'right', value: (c) => num(c.totalCajas, 0) },
   { key: 'kgs', label: 'Kg', align: 'right', value: (c) => num(c.totalKgs) },
-  { key: 'cobrable', label: 'Cobrable', description: 'Peso cobrable (kg)', align: 'right', value: (c) => num(c.pesoCobrable) },
+  {
+    key: 'cobrable',
+    label: 'Peso cobrable',
+    description: 'Peso cobrable que da la aerolínea (VOL. en el sistema viejo)',
+    align: 'right',
+    value: (c) => num(c.pesoCobrable),
+  },
   {
     key: 'total',
     label: 'Cobro $',
@@ -176,6 +213,19 @@ export function CoordinacionesListPage() {
   }, [texto]);
 
   const { pagina, error, isLoading, isValidating, mutate } = useCoordinaciones(filtros);
+  const toast = useToast();
+  const [bajando, setBajando] = useState<'programacion' | 'antinarcoticos' | null>(null);
+  const descargar = async (tipo: 'programacion' | 'antinarcoticos') => {
+    if (!dia) return;
+    setBajando(tipo);
+    try {
+      await operacionService.descargarReporteDia(tipo, dia, filtros.idAerolinea);
+    } catch (e) {
+      toast.error(getErrorMessage(e, 'No se pudo generar el reporte.'));
+    } finally {
+      setBajando(null);
+    }
+  };
   const total = pagina?.total ?? 0;
   const page = filtros.page;
   const hoy = toIsoDate(new Date());
@@ -185,11 +235,7 @@ export function CoordinacionesListPage() {
   const filas = useMemo(() => {
     const items = pagina?.items ?? [];
     if (!dia) return items;
-    return [...items].sort(
-      (a, b) =>
-        (a.aerolinea?.codigo ?? '').localeCompare(b.aerolinea?.codigo ?? '') ||
-        (a.consignatario?.nombre ?? '').localeCompare(b.consignatario?.nombre ?? ''),
-    );
+    return [...items].sort(ordenDelDia);
   }, [pagina, dia]);
 
   const t = pagina?.totales;
@@ -277,6 +323,7 @@ export function CoordinacionesListPage() {
         onRefresh={() => mutate()}
         onRowClick={(c) => router.push(`/operacion/coordinaciones/${c.id}`)}
         emptyMessage={dia ? `No hay coordinaciones con vuelo el ${formatDate(dia)}.` : 'No hay coordinaciones con esos filtros.'}
+        dense
         totals={totales}
         filters={
           <Stack direction="row" flexWrap="wrap" useFlexGap spacing={1} sx={{ width: '100%' }}>
@@ -284,8 +331,8 @@ export function CoordinacionesListPage() {
               size="small"
               value={texto}
               onChange={(e) => setTexto(e.target.value)}
-              placeholder="Guía, guía hija, DAE, N°, marca o finca"
-              sx={{ minWidth: 240, flex: '1 1 240px' }}
+              placeholder="Guía, guía hija, DAE, N°, marca, finca"
+              sx={{ minWidth: 220, flex: '1 1 220px' }}
               slotProps={{
                 input: {
                   startAdornment: (
@@ -313,6 +360,30 @@ export function CoordinacionesListPage() {
                 onChange={(id) => actualizar({ consignatario: id ? String(id) : undefined })}
               />
             </Box>
+            {/* Los dos botones de la lista vieja: salen para el día elegido (y la aerolínea, si se filtró). */}
+            <Stack direction="row" spacing={1} alignItems="center" sx={{ ml: 'auto' }}>
+              {(
+                [
+                  ['programacion', 'Programación', 'Programación de vuelo (Excel): por guía, fulls, peso, peso cobrable y promedios del día'],
+                  ['antinarcoticos', 'Antinarcóticos', 'Reporte antinarcóticos (Excel) para la Policía: una fila por finca de cada guía del día'],
+                ] as const
+              ).map(([tipo, texto, ayuda]) => (
+                <Tooltip key={tipo} title={dia ? ayuda : 'Elija un día de vuelo'}>
+                  <span>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      disabled={!dia || bajando !== null || total === 0}
+                      startIcon={bajando === tipo ? <CircularProgress size={14} color="inherit" /> : <DescargarIcon />}
+                      onClick={() => descargar(tipo)}
+                      sx={{ whiteSpace: 'nowrap', height: 40 }}
+                    >
+                      {texto}
+                    </Button>
+                  </span>
+                </Tooltip>
+              ))}
+            </Stack>
           </Stack>
         }
         pagination={{

@@ -6,7 +6,6 @@ import {
   Alert,
   Box,
   Button,
-  Divider,
   Paper,
   Skeleton,
   Stack,
@@ -25,30 +24,18 @@ import { useAuth } from '@/features/auth';
 import { AppPage } from '@/shared/components/ui';
 import { formatDate, formatDateTime, getErrorMessage } from '@/shared/utils';
 import { useCoordinacion } from '../hooks/useCoordinaciones';
-import type { CoordinacionDetalle } from '../types/coordinacion';
-import { formatoAwb, kg, nombreCorto, nombreRef, num, usd } from '../utils/formato';
+import type { CoordinacionDetalle, TramoRuta } from '../types/coordinacion';
+import { formatoAwb, kg, num } from '../utils/formato';
 import { EstadoCoordinacionChip, OrigenChip } from './EstadoCoordinacionChip';
 import { AccionesCoordinacion } from './detalle/AccionesCoordinacion';
 import { DetalleCoordinadoTabla } from './detalle/DetalleCoordinadoTabla';
+import { FichaCoordinacion } from './detalle/FichaCoordinacion';
 import { GuiasHijasTabla } from './detalle/GuiasHijasTabla';
 import { LiquidacionPanel } from './detalle/LiquidacionPanel';
+import { NavegacionDia } from './detalle/NavegacionDia';
 import { ValidacionTab } from './detalle/ValidacionTab';
 
 const nums = { fontVariantNumeric: 'tabular-nums' } as const;
-
-/** Un dato de la franja de totales: "220 kg" grande y lo que es, chico. */
-function Total({ valor, label }: { valor: string; label: string }) {
-  return (
-    <Box sx={{ px: 2, py: 1 }}>
-      <Typography variant="subtitle1" fontWeight={700} sx={{ ...nums, lineHeight: 1.3 }}>
-        {valor}
-      </Typography>
-      <Typography variant="caption" color="text.secondary">
-        {label}
-      </Typography>
-    </Box>
-  );
-}
 
 const ESTADO_GUIA: Record<string, string> = { INGRESADA: 'libre', COORDINADA: 'coordinada', PRESTADA: 'prestada' };
 
@@ -77,70 +64,87 @@ function Campos({ filas }: { filas: Array<[string, React.ReactNode]> }) {
   );
 }
 
-/** Tramos como en el sistema viejo (From / To / By): el "By" es la aerolínea. */
-const TRAMO: Record<string, string> = {
-  ORIGEN: 'Origen (From)',
-  DESTINO1: 'Destino (To)',
-  VIA1: 'Aerolínea (By)',
-  DESTINO2: 'Destino 2 (To)',
-  VIA2: 'Aerolínea 2 (By)',
-  DESTINO3: 'Destino 3 (To)',
-  VIA3: 'Aerolínea 3 (By)',
-};
+const fechaHora = (iso: string | null, tipo: string | null) => (iso ? `${formatDateTime(iso)} ${tipo ?? ''}`.trim() : '');
 
+/**
+ * "Ruta, Vuelos, Manifiesto" como la pestaña vieja: desde dónde sale (From) y
+ * hasta tres tramos (To / By, con vuelo, salida y llegada); abajo el manifiesto.
+ */
 function RutaPanel({ c }: { c: CoordinacionDetalle }) {
-  if (c.rutas.length === 0) return <Typography color="text.secondary">Sin ruta registrada.</Typography>;
-  return (
-    <TableContainer component={Paper} variant="outlined">
-      <Table size="small">
-        <TableHead>
-          <TableRow>
-            <TableCell>Tramo</TableCell>
-            <TableCell>Aeropuerto o aerolínea</TableCell>
-            <TableCell>N° de vuelo</TableCell>
-            <TableCell>Salida</TableCell>
-            <TableCell>Llegada</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {c.rutas.map((r) => (
-            <TableRow key={`${r.tipoRuta}-${r.orden}`}>
-              <TableCell>{TRAMO[r.tipoRuta] ?? r.tipoRuta}</TableCell>
-              <TableCell sx={{ fontWeight: 600 }}>{r.codigo ?? '—'}</TableCell>
-              <TableCell>{r.vuelo ?? ''}</TableCell>
-              <TableCell sx={nums}>
-                {r.fechaHoraSalida ? `${formatDateTime(r.fechaHoraSalida)} ${r.salidaTipo ?? ''}` : ''}
-              </TableCell>
-              <TableCell sx={nums}>
-                {r.fechaHoraLlegada ? `${formatDateTime(r.fechaHoraLlegada)} ${r.llegadaTipo ?? ''}` : ''}
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </TableContainer>
-  );
-}
-
-function ManifiestoPanel({ c }: { c: CoordinacionDetalle }) {
+  const por = (tipo: string): TramoRuta | undefined => c.rutas.find((r) => r.tipoRuta === tipo);
+  const tramos = [1, 2, 3]
+    .map((n) => ({ n, to: por(`DESTINO${n}`), by: por(`VIA${n}`) }))
+    .filter((t) => t.to?.codigo || t.by?.codigo);
   const m = c.manifiesto;
-  if (!m) return <Typography color="text.secondary">Sin manifiesto registrado.</Typography>;
   return (
-    <Paper variant="outlined" sx={{ p: 2 }}>
-      <Campos
-        filas={[
-          ['Referencia', <span key="r" style={{ fontVariantNumeric: 'tabular-nums' }}>{m.referencia}</span>],
-          ['Número de manifiesto', m.numero],
-          ['Secuencial', m.secuencial],
-          ['Aduana', m.aduana],
-          ['Año', m.anio],
-          ['Transportista', m.tipo],
-          ['Origen', m.origen],
-          ['N° de vuelo', m.vuelo],
-          ['Arribo', [formatDate(m.fechaArribo, ''), m.horaArribo].filter(Boolean).join(' ')],
-        ]}
-      />
-    </Paper>
+    <Stack spacing={2}>
+      <Paper variant="outlined">
+        <Stack direction="row" spacing={1} sx={{ px: 2, pt: 1.5, pb: 1 }}>
+          <Typography variant="body2" color="text.secondary">
+            Sale de (From)
+          </Typography>
+          <Typography variant="body2" fontWeight={700}>
+            {por('ORIGEN')?.codigo ?? '—'}
+          </Typography>
+        </Stack>
+        {tramos.length === 0 ? (
+          <Typography color="text.secondary" sx={{ px: 2, pb: 2 }}>
+            Sin vuelos registrados.
+          </Typography>
+        ) : (
+          <TableContainer>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell>Tramo</TableCell>
+                  <TableCell>Hasta (To)</TableCell>
+                  <TableCell>Aerolínea (By)</TableCell>
+                  <TableCell>Vuelo</TableCell>
+                  <TableCell>Salida</TableCell>
+                  <TableCell>Llegada</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {tramos.map(({ n, to, by }) => (
+                  <TableRow key={n}>
+                    <TableCell>{n}</TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>{to?.codigo ?? '—'}</TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>{by?.codigo ?? '—'}</TableCell>
+                    <TableCell sx={nums}>{by?.vuelo ?? to?.vuelo ?? ''}</TableCell>
+                    <TableCell sx={nums}>
+                      {fechaHora(by?.fechaHoraSalida ?? to?.fechaHoraSalida ?? null, by?.salidaTipo ?? to?.salidaTipo ?? null)}
+                    </TableCell>
+                    <TableCell sx={nums}>
+                      {fechaHora(by?.fechaHoraLlegada ?? to?.fechaHoraLlegada ?? null, by?.llegadaTipo ?? to?.llegadaTipo ?? null)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )}
+      </Paper>
+      <Paper variant="outlined" sx={{ p: 2 }}>
+        <Typography variant="subtitle2" gutterBottom>
+          Manifiesto
+        </Typography>
+        {m ? (
+          <Campos
+            filas={[
+              ['Manifiesto', <span key="r" style={nums}>{m.referencia}</span>],
+              ['Aduana · año · transportista', [m.aduana, m.anio, m.tipo].filter(Boolean).join(' · ')],
+              ['Número · secuencial', [m.numero, m.secuencial].filter(Boolean).join(' · ')],
+              ['N° de vuelo', m.vuelo],
+              ['Arribo', [formatDate(m.fechaArribo, ''), m.horaArribo].filter(Boolean).join(' ')],
+            ]}
+          />
+        ) : (
+          <Typography variant="body2" color="text.secondary">
+            Todavía no tiene manifiesto (llega después del corte).
+          </Typography>
+        )}
+      </Paper>
+    </Stack>
   );
 }
 
@@ -151,10 +155,6 @@ function MasDatosPanel({ c, admin }: { c: CoordinacionDetalle; admin: boolean })
       <Paper variant="outlined" sx={{ p: 2 }}>
         <Campos
           filas={[
-            ['Agencia IATA', nombreRef(c.agencia)],
-            ['Tipo de embarque', nombreRef(c.tipoEmbarque)],
-            ['Pago', c.pago === 'COLLECT' ? 'Collect (CC)' : 'Prepaid (PP)'],
-            ['Fecha de coordinación', formatDate(c.fechaAsignacion)],
             [
               'Guía madre',
               [formatoAwb(c.guiaMadre.numero), ESTADO_GUIA[c.guiaMadre.estado ?? ''], c.guiaMadre.virtual ? 'virtual' : null]
@@ -167,11 +167,10 @@ function MasDatosPanel({ c, admin }: { c: CoordinacionDetalle; admin: boolean })
                 ? `N° ${c.guiaMadre.lote.codigoAccess ?? c.guiaMadre.lote.id} (${formatDate(c.guiaMadre.lote.fecha)})`
                 : null,
             ],
+            ['Guías hijas', num(c.guias.length, 0)],
             ['Volumen', c.totalVolumen !== null ? `${num(c.totalVolumen)} kg vol.` : null],
-            ['Cupo de fulls', c.cupoFulls ? num(c.cupoFulls) : null],
+            ['Reserva (cupo de fulls)', c.cupoFulls ? num(c.cupoFulls) : null],
             ['Certificado de origen', c.certificadoOrigen],
-            ['Referencia', c.referencia],
-            ['Nota', c.nota],
             ['Otros consignatarios', c.marcas.map((m) => m.consignatario?.nombre ?? '—').join(', ')],
             ['Creada por', [c.auditoria.creadoPor, formatDateTime(c.auditoria.creadoEn, '')].filter(Boolean).join(' · ')],
             ['Modificada por', [c.auditoria.actualizadoPor, formatDateTime(c.auditoria.actualizadoEn, '')].filter(Boolean).join(' · ')],
@@ -217,8 +216,13 @@ function MasDatosPanel({ c, admin }: { c: CoordinacionDetalle; admin: boolean })
   );
 }
 
-type Pestana = 'detalle' | 'guias' | 'liquidacion' | 'ruta' | 'manifiesto' | 'mas' | 'validacion';
+type Pestana = 'detalle' | 'valores' | 'ruta' | 'guias' | 'mas' | 'validacion';
 
+/**
+ * Una coordinación, como el documento de la ventana vieja: la cabecera
+ * (ficha) arriba y debajo las pestañas en el mismo orden (Detalle de
+ * Coordinación · Valores · Ruta, Vuelos, Manifiesto), más las guías hijas.
+ */
 export function CoordinacionDetallePage({ id }: { id: number }) {
   const { coordinacion: c, error, isLoading, mutate } = useCoordinacion(id);
   const [tab, setTab] = useState<Pestana>('detalle');
@@ -226,8 +230,13 @@ export function CoordinacionDetallePage({ id }: { id: number }) {
   const admin = user?.role === 'ADMIN';
 
   const volver = (
-    <Button component={Link} href="/operacion/coordinaciones" startIcon={<VolverIcon />} variant="text">
-      Coordinaciones
+    <Button
+      component={Link}
+      href={c ? `/operacion/coordinaciones?dia=${c.fechaVuelo}` : '/operacion/coordinaciones'}
+      startIcon={<VolverIcon />}
+      variant="text"
+    >
+      {c ? 'Lista del día' : 'Coordinaciones'}
     </Button>
   );
 
@@ -243,75 +252,45 @@ export function CoordinacionDetallePage({ id }: { id: number }) {
   if (isLoading || !c) {
     return (
       <AppPage title="Coordinación" actions={volver}>
-        <Skeleton variant="rounded" height={88} sx={{ mb: 2 }} />
+        <Skeleton variant="rounded" height={170} sx={{ mb: 2 }} />
         <Skeleton variant="rounded" height={320} />
       </AppPage>
     );
   }
 
-  const destino = [c.destino?.codigo, c.destinoFinal?.codigo !== c.destino?.codigo ? c.destinoFinal?.codigo : null]
-    .filter(Boolean)
-    .join(' → ');
-
   return (
     <AppPage
-      title={`Coordinación N° ${c.codigoAccess ?? c.id} · guía ${formatoAwb(c.numeroGuia)}`}
+      title={`Coordinación N° ${c.codigoAccess ?? c.id} · ${formatoAwb(c.numeroGuia)}`}
       subtitle={
         <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
           <EstadoCoordinacionChip estado={c.estado} />
           <OrigenChip origen={c.origen} />
-          <span>
-            {[
-              c.aerolinea ? nombreCorto(c.aerolinea) : null,
-              `vuelo ${formatDate(c.fechaVuelo)}`,
-              destino,
-              c.consignatario?.nombre,
-              c.cliente ? `cliente ${c.cliente.nombre}` : null,
-            ]
-              .filter(Boolean)
-              .join(' · ')}
-          </span>
+          <span>Coordinada el {formatDate(c.fechaAsignacion)}</span>
         </Stack>
       }
       actions={
         <>
+          <NavegacionDia c={c} />
           <AccionesCoordinacion c={c} onCambio={() => mutate()} />
           {volver}
         </>
       }
     >
-      <Paper variant="outlined" sx={{ mb: 2 }}>
-        <Stack direction="row" flexWrap="wrap" divider={<Divider orientation="vertical" flexItem />}>
-          <Total valor={num(c.guias.length, 0)} label={c.guias.length === 1 ? 'guía hija' : 'guías hijas'} />
-          <Total valor={num(c.totalFulls)} label="fulls" />
-          <Total valor={num(c.totalCajas, 0)} label="cajas" />
-          <Total valor={kg(c.totalKgs)} label="peso" />
-          <Total valor={kg(c.liquidacion.pesoCobrable)} label="peso cobrable" />
-          <Total valor={usd(c.liquidacion.total)} label={c.corteExtra ? 'cobro al cliente' : 'total guía madre'} />
-        </Stack>
-      </Paper>
-
-      {c.nota && (
-        <Alert severity="info" icon={false} sx={{ mb: 2 }}>
-          <strong>Nota:</strong> {c.nota}
-        </Alert>
-      )}
+      <FichaCoordinacion c={c} />
 
       <Tabs value={tab} onChange={(_, v) => setTab(v)} variant="scrollable" sx={{ mb: 2, borderBottom: 1, borderColor: 'divider' }}>
-        <Tab value="detalle" label="Detalle coordinado" />
+        <Tab value="detalle" label="Detalle de coordinación" />
+        <Tab value="valores" label="Valores" />
+        <Tab value="ruta" label="Ruta, vuelos y manifiesto" />
         <Tab value="guias" label={`Guías hijas (${c.guias.length})`} />
-        <Tab value="liquidacion" label="Liquidación" />
-        <Tab value="ruta" label="Ruta y vuelo" />
-        <Tab value="manifiesto" label="Manifiesto" />
         <Tab value="mas" label="Más datos" />
         {admin && c.origen === 'ACCESS' && <Tab value="validacion" label="Validación" />}
       </Tabs>
 
       {tab === 'detalle' && <DetalleCoordinadoTabla guias={c.guias} />}
-      {tab === 'guias' && <GuiasHijasTabla guias={c.guias} />}
-      {tab === 'liquidacion' && <LiquidacionPanel c={c} />}
+      {tab === 'valores' && <LiquidacionPanel c={c} />}
       {tab === 'ruta' && <RutaPanel c={c} />}
-      {tab === 'manifiesto' && <ManifiestoPanel c={c} />}
+      {tab === 'guias' && <GuiasHijasTabla guias={c.guias} />}
       {tab === 'mas' && <MasDatosPanel c={c} admin={admin} />}
       {tab === 'validacion' && admin && <ValidacionTab id={c.id} />}
     </AppPage>

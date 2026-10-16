@@ -43,3 +43,14 @@ export const plural = (n: number, singular: string, pluralTxt = `${singular}s`) 
 
 /** N° del ingreso de guías como lo imprime el sistema viejo: "CGU-0003871". */
 export const textoIngreso = (n: number | null | undefined): string => (n ? `CGU-${String(n).padStart(7, '0')}` : '—');
+
+/**
+ * Orden dentro de un día de vuelo, como la lista vieja ("extFechaDespacho DESC,
+ * aerAlias, marAlias"): por aerolínea y después por consignatario.
+ */
+export const ordenDelDia = (
+  a: { aerolinea: { nombre: string; alias?: string | null } | null; consignatario: { nombre: string } | null },
+  b: { aerolinea: { nombre: string; alias?: string | null } | null; consignatario: { nombre: string } | null },
+) =>
+  nombreCorto(a.aerolinea).localeCompare(nombreCorto(b.aerolinea)) ||
+  (a.consignatario?.nombre ?? '').localeCompare(b.consignatario?.nombre ?? '');

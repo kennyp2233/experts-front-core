@@ -103,6 +103,8 @@ export interface DataTableProps<T> {
   maxHeight?: number | string;
   /** Oculta la barra superior (búsqueda, conteo, columnas). */
   hideToolbar?: boolean;
+  /** Celdas más angostas, para tablas con muchas columnas (entra en 1366 px con el menú abierto). */
+  dense?: boolean;
 }
 
 // Columnas ocultas por tabla, recordadas por navegador (localStorage).
@@ -219,6 +221,7 @@ export function DataTable<T>({
   emptyMessage = 'No hay registros para mostrar.',
   maxHeight = 'calc(100vh - 280px)',
   hideToolbar = false,
+  dense = false,
 }: DataTableProps<T>) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -457,7 +460,7 @@ export function DataTable<T>({
           {loading && rows.length > 0 && (
             <LinearProgress sx={{ position: 'sticky', top: 0, left: 0, zIndex: 4, height: 3, borderRadius: 0 }} />
           )}
-          <Table size="small" stickyHeader>
+          <Table size="small" stickyHeader sx={dense ? { '&& .MuiTableCell-root': { px: 1, py: 0.75 } } : undefined}>
             <TableHead>
               <TableRow>
                 {visibleColumns.map((c) => (

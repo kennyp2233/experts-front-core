@@ -120,4 +120,22 @@ export const operacionService = {
     a.click();
     URL.revokeObjectURL(url);
   },
+
+  /** Excel del día de vuelo, como los botones de la lista vieja. */
+  descargarReporteDia: async (
+    tipo: 'programacion' | 'antinarcoticos',
+    dia: string,
+    idAerolinea?: number,
+  ): Promise<void> => {
+    const r = await api.get(`/operacion/coordinaciones/reportes/${tipo}`, {
+      params: params({ dia, idAerolinea }),
+      responseType: 'blob',
+    });
+    const url = URL.createObjectURL(r.data as Blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${tipo}-${dia}.xlsx`;
+    a.click();
+    URL.revokeObjectURL(url);
+  },
 };
