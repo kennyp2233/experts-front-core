@@ -4,9 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import {
   Alert,
-  Box,
   Button,
-  Chip,
   Dialog,
   DialogActions,
   DialogContent,
@@ -32,6 +30,8 @@ import {
 import {
   ArrowBack as VolverIcon,
   CheckCircleOutline as VerificadoIcon,
+  ChevronLeft as AnteriorIcon,
+  ChevronRight as SiguienteIcon,
   DeleteOutline as AnularIcon,
   Edit as ModificarIcon,
   MoreVert as AccionesIcon,
@@ -41,11 +41,12 @@ import { useToast } from '@/shared/providers';
 import { formatDate, formatDateTime, getErrorMessage } from '@/shared/utils';
 import { useIngreso, useResumenStock } from '../../hooks/useStockGuias';
 import { operacionService } from '../../services/operacion.service';
-import type { GuiaDeIngreso, GuiaMadreFila } from '../../types/coordinacion';
+import type { GuiaDeIngreso, GuiaMadreFila, IngresoDetalle } from '../../types/coordinacion';
 import { formatoAwb, nombreCorto, textoIngreso } from '../../utils/formato';
 import { OrigenChip } from '../EstadoCoordinacionChip';
+import { FichaCampos } from '../FichaCampos';
 import { MoverGuiaDialog, type MovimientoGuia } from '../stock/MoverGuiaDialog';
-import { EstadoIngresoChip, ETIQUETA_INGRESO, SituacionGuiaChip } from './EstadosGuias';
+import { EstadoIngresoChip, ETIQUETA_INGRESO, SituacionGuiaTexto } from './EstadosGuias';
 import { IngresoGuiasDialog } from './IngresoGuiasDialog';
 
 const nums = { fontVariantNumeric: 'tabular-nums' } as const;
@@ -84,6 +85,29 @@ function AccionesGuia({ g, onAccion }: { g: GuiaDeIngreso; onAccion: (a: Movimie
         ))}
       </Menu>
     </>
+  );
+}
+
+/** Anterior / siguiente por N°, como los botones del sistema viejo. */
+function Navegacion({ i }: { i: IngresoDetalle }) {
+  const boton = (v: IngresoDetalle['anterior'], label: string, icono: React.ReactNode) =>
+    v ? (
+      <Tooltip title={`${label}: ${textoIngreso(v.numero)}`}>
+        <IconButton size="small" component={Link} href={`/operacion/guias/ingresos/${v.id}`} aria-label={label}>
+          {icono}
+        </IconButton>
+      </Tooltip>
+    ) : (
+      <IconButton size="small" disabled aria-label={label}>
+        {icono}
+      </IconButton>
+    );
+  if (!i.anterior && !i.siguiente) return null;
+  return (
+    <Stack direction="row" alignItems="center">
+      {boton(i.anterior, 'Ingreso anterior', <AnteriorIcon fontSize="small" />)}
+      {boton(i.siguiente, 'Ingreso siguiente', <SiguienteIcon fontSize="small" />)}
+    </Stack>
   );
 }
 
@@ -183,16 +207,11 @@ export function IngresoGuiasDetallePage({ id }: { id: number }) {
         <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
           <EstadoIngresoChip estado={i.estado} />
           <OrigenChip origen={i.origen} />
-          {i.estado !== 'ANULADO' &&
-            (i.verificado ? (
-              <Tooltip title="El estado del documento coincide con sus guías.">
-                <Chip size="small" icon={<VerificadoIcon />} label="Stock verificado" color="success" variant="outlined" />
-              </Tooltip>
-            ) : null)}
         </Stack>
       }
       actions={
         <>
+          <Navegacion i={i} />
           {i.editable && i.estado !== 'ANULADO' && (
             <>
               <Tooltip title={puedeModificar ? '' : 'Un ingreso cancelado (todas sus guías usadas) no se modifica.'}>
@@ -231,62 +250,65 @@ export function IngresoGuiasDetallePage({ id }: { id: number }) {
         </Alert>
       )}
 
-      <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
-        <Box
-          component="dl"
-          sx={{
-            display: 'grid',
-            gridTemplateColumns: { xs: '1fr', sm: 'max-content 1fr max-content 1fr' },
-            columnGap: 3,
-            rowGap: 1,
-            m: 0,
-            '& dt': { color: 'text.secondary', typography: 'body2' },
-            '& dd': { m: 0, typography: 'body2', fontWeight: 500 },
-          }}
-        >
-          <dt>Fecha</dt>
-          <dd>{formatDate(i.fecha)}</dd>
-          <dt>Aerolínea</dt>
-          <dd>{i.aerolinea ? [i.aerolinea.codigo, nombreCorto(i.aerolinea)].filter(Boolean).join(' · ') : '—'}</dd>
-          <dt>Referencia</dt>
-          <dd>{i.agencia ? `${i.agencia.nombre}${i.agencia.codigo ? ` (${i.agencia.codigo})` : ''}` : (i.referencia ?? '—')}</dd>
-          <dt>Tipo de stock</dt>
-          <dd>{i.tipoStock === 'NORMAL' ? 'Normal' : i.tipoStock === 'VIRTUAL' ? 'Virtual' : '—'}</dd>
-          <dt>Nota</dt>
-          <dd>{i.nota ?? '—'}</dd>
-          <dt>Registrado</dt>
-          <dd>
-            {[i.auditoria.creadoPor, formatDateTime(i.auditoria.creadoEn, '')].filter(Boolean).join(' · ') || '—'}
-          </dd>
-        </Box>
-      </Paper>
+      {/* La cabecera de la ventana vieja: Fecha · Aerolínea · Referencia · Tipo de Stock | Estado · Stock verificado. */}
+      <FichaCampos
+        izquierda={[
+          ['Fecha', formatDate(i.fecha)],
+          ['Aerolínea', i.aerolinea ? nombreCorto(i.aerolinea) : null],
+          ['Referencia', [i.agencia?.nombre, i.referencia].filter(Boolean).join(' · ')],
+          ['Tipo de stock', i.tipoStock === 'NORMAL' ? 'Normal' : i.tipoStock === 'VIRTUAL' ? 'Virtual' : null],
+        ]}
+        derecha={[
+          [
+            'Stock verificado',
+            i.estado === 'ANULADO' ? null : i.verificado ? (
+              <Stack component="span" direction="row" spacing={0.5} alignItems="center">
+                <VerificadoIcon color="success" sx={{ fontSize: 16 }} />
+                <span>Sí, el estado coincide con sus guías</span>
+              </Stack>
+            ) : (
+              'No: el estado no coincide con sus guías'
+            ),
+          ],
+          ['Registrado', [i.auditoria.creadoPor, formatDateTime(i.auditoria.creadoEn, '')].filter(Boolean).join(' · ')],
+          ['Modificado', [i.auditoria.actualizadoPor, formatDateTime(i.auditoria.actualizadoEn, '')].filter(Boolean).join(' · ')],
+        ]}
+        nota={i.nota}
+      />
 
       <Typography variant="body2" color="text.secondary" sx={{ mb: 1, ...nums }}>
         Total guías: <strong>{c.total}</strong> · Coordinadas: <strong>{c.coordinadas}</strong> · Préstamos:{' '}
         <strong>{c.prestamos}</strong> · Devoluciones: <strong>{c.devoluciones}</strong> · Libres: <strong>{c.libres}</strong>
         {c.anuladas > 0 && i.estado !== 'ANULADO' ? ` · Anuladas: ${c.anuladas}` : ''}
       </Typography>
+      {/* "Secuencia de Guías" del viejo: Número · Coordinación · Préstamo · Observaciones · Devolución. */}
       <TableContainer component={Paper} variant="outlined">
-        <Table size="small">
+        <Table
+          size="small"
+          sx={{
+            '&& .MuiTableCell-root': { px: 1, py: 0.5, fontSize: 13 },
+            '&& .MuiTableCell-head': { textTransform: 'none', letterSpacing: 0, fontSize: 12.5 },
+          }}
+        >
           <TableHead>
             <TableRow>
               <TableCell>Número de guía</TableCell>
               <TableCell>Situación</TableCell>
               <TableCell>Coordinación</TableCell>
-              <TableCell>Fecha préstamo</TableCell>
-              <TableCell>Fecha devolución</TableCell>
+              <TableCell>Préstamo</TableCell>
               <TableCell>Observaciones</TableCell>
+              <TableCell>Devolución</TableCell>
               {i.editable && <TableCell width={48} />}
             </TableRow>
           </TableHead>
           <TableBody>
             {guias.map((g) => (
-              <TableRow key={g.id}>
+              <TableRow key={g.id} hover>
                 <TableCell sx={{ ...nums, fontWeight: 600, whiteSpace: 'nowrap' }}>{formatoAwb(g.numero)}</TableCell>
                 <TableCell>
-                  <SituacionGuiaChip guia={g} />
+                  <SituacionGuiaTexto guia={g} />
                 </TableCell>
-                <TableCell>
+                <TableCell sx={{ whiteSpace: 'nowrap' }}>
                   {g.coordinacion ? (
                     g.coordinacion.id ? (
                       <MuiLink component={Link} href={`/operacion/coordinaciones/${g.coordinacion.id}`}>
@@ -301,8 +323,8 @@ export function IngresoGuiasDetallePage({ id }: { id: number }) {
                   )}
                 </TableCell>
                 <TableCell sx={nums}>{formatDate(g.fechaPrestamo, '')}</TableCell>
-                <TableCell sx={nums}>{formatDate(g.fechaDevolucion, '')}</TableCell>
                 <TableCell>{g.observaciones ?? ''}</TableCell>
+                <TableCell sx={nums}>{formatDate(g.fechaDevolucion, '')}</TableCell>
                 {i.editable && (
                   <TableCell>
                     {i.estado !== 'ANULADO' && !trabajando && <AccionesGuia g={g} onAccion={(a) => accion(g, a)} />}

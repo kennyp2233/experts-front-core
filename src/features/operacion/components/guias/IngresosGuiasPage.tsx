@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { Box, Button, InputAdornment, Link as MuiLink, Stack, Tab, Tabs, TextField, Typography } from '@mui/material';
+import { Box, Button, InputAdornment, Link as MuiLink, Stack, Tab, Tabs, TextField, Tooltip, Typography } from '@mui/material';
 import { Add as AddIcon, Search as SearchIcon } from '@mui/icons-material';
 import { AppPage, DataTable, type DataTableColumn } from '@/shared/components/ui';
 import { useToast } from '@/shared/providers';
@@ -12,7 +12,7 @@ import { useIngresos, useResumenStock } from '../../hooks/useStockGuias';
 import type { IngresoResumen, PestanaIngreso } from '../../types/coordinacion';
 import { formatoAwb, nombreCorto, textoIngreso } from '../../utils/formato';
 import { OpcionAutocomplete } from '../coordinar/OpcionAutocomplete';
-import { EstadoIngresoChip, ETIQUETA_INGRESO, SituacionGuiaChip } from './EstadosGuias';
+import { EstadoIngresoChip, ETIQUETA_INGRESO, situacionGuia, SituacionGuiaTexto } from './EstadosGuias';
 import { IngresoGuiasDialog } from './IngresoGuiasDialog';
 
 const PAGE_SIZE = 50;
@@ -25,40 +25,48 @@ const PESTANAS: Array<{ valor: PestanaIngreso; label: string }> = [
   { valor: 'anulados', label: 'Anulados' },
 ];
 
-/** Las guías del ingreso con su situación; casi siempre es una sola. */
+/**
+ * La guía del ingreso (96 % trae una sola) en una línea: número, situación y la
+ * coordinación que la usa; si hay más, "+N" con todas en el globo.
+ */
 function GuiasCelda({ i }: { i: IngresoResumen }) {
   const vigentes = i.estado === 'ANULADO' ? i.guias : i.guias.filter((g) => g.estado !== 'ANULADA');
-  const muestra = vigentes.slice(0, 2);
+  const g = vigentes[0];
+  if (!g) return null;
+  const resto = vigentes.length - 1;
   return (
-    <Stack spacing={0.5}>
-      {muestra.map((g) => (
-        <Stack key={g.id} direction="row" spacing={1} alignItems="center">
-          <Typography variant="body2" fontWeight={600} sx={{ ...nums, whiteSpace: 'nowrap' }}>
-            {formatoAwb(g.numero)}
+    <Stack direction="row" spacing={1} alignItems="center" sx={{ whiteSpace: 'nowrap' }}>
+      <Typography variant="body2" fontWeight={600} sx={nums}>
+        {formatoAwb(g.numero)}
+      </Typography>
+      <SituacionGuiaTexto guia={g} />
+      {g.coordinacion &&
+        (g.coordinacion.id ? (
+          <MuiLink
+            component={Link}
+            href={`/operacion/coordinaciones/${g.coordinacion.id}`}
+            onClick={(e) => e.stopPropagation()}
+            variant="body2"
+          >
+            N° {g.coordinacion.numero}
+          </MuiLink>
+        ) : (
+          <Typography variant="body2" color="text.secondary">
+            N° {g.coordinacion.numero}
           </Typography>
-          <SituacionGuiaChip guia={g} />
-          {g.coordinacion &&
-            (g.coordinacion.id ? (
-              <MuiLink
-                component={Link}
-                href={`/operacion/coordinaciones/${g.coordinacion.id}`}
-                onClick={(e) => e.stopPropagation()}
-                variant="caption"
-                sx={{ whiteSpace: 'nowrap' }}
-              >
-                N° {g.coordinacion.numero}
-              </MuiLink>
-            ) : (
-              <Typography variant="caption" color="text.secondary">
-                N° {g.coordinacion.numero}
-              </Typography>
-            ))}
-        </Stack>
-      ))}
-      {vigentes.length > muestra.length && (
-        <Typography variant="caption" color="text.secondary">
-          y {vigentes.length - muestra.length} más
-        </Typography>
+        ))}
+      {resto > 0 && (
+        <Tooltip
+          title={vigentes
+            .slice(1)
+            .map((x) => `${formatoAwb(x.numero)} · ${situacionGuia(x).label}`)
+            .join('\n')}
+          slotProps={{ tooltip: { sx: { whiteSpace: 'pre-line' } } }}
+        >
+          <Typography variant="body2" color="text.secondary" sx={{ cursor: 'help' }}>
+            +{resto} {resto === 1 ? 'guía' : 'guías'}
+          </Typography>
+        </Tooltip>
       )}
     </Stack>
   );
@@ -78,12 +86,7 @@ const columnas: DataTableColumn<IngresoResumen>[] = [
     ),
   },
   { key: 'fecha', label: 'Fecha', value: (i) => formatDate(i.fecha), mobile: 'subtitle' },
-  {
-    key: 'aerolinea',
-    label: 'Aerolínea',
-    maxWidth: 170,
-    value: (i) => (i.aerolinea ? [i.aerolinea.codigo, nombreCorto(i.aerolinea)].filter(Boolean).join(' · ') : null),
-  },
+  { key: 'aerolinea', label: 'Aerolínea', maxWidth: 170, value: (i) => (i.aerolinea ? nombreCorto(i.aerolinea) : null) },
   {
     key: 'guias',
     label: 'Guía',
@@ -94,9 +97,17 @@ const columnas: DataTableColumn<IngresoResumen>[] = [
   {
     key: 'referencia',
     label: 'Referencia',
-    description: 'Agencia IATA con la que se reservó la guía',
-    maxWidth: 160,
-    value: (i) => (i.agencia ? i.agencia.codigo || i.agencia.nombre : i.referencia),
+    description: 'Agencia IATA con la que se reservó la guía (su código IATA, como en el sistema viejo)',
+    maxWidth: 200,
+    value: (i) => i.agencia?.nombre ?? i.referencia,
+    render: (i) =>
+      i.agencia ? (
+        <Tooltip title={i.referencia ?? ''}>
+          <span>{i.agencia.nombre}</span>
+        </Tooltip>
+      ) : (
+        (i.referencia ?? '')
+      ),
   },
   { key: 'tipo', label: 'Tipo de stock', value: (i) => (i.tipoStock === 'NORMAL' ? 'Normal' : i.tipoStock === 'VIRTUAL' ? 'Virtual' : '—') },
   {
@@ -183,6 +194,7 @@ export function IngresosGuiasPage() {
         onRefresh={() => mutate()}
         onRowClick={(i) => router.push(`/operacion/guias/ingresos/${i.id}`)}
         emptyMessage="No hay ingresos con esos filtros."
+        dense
         filters={
           <Stack direction="row" flexWrap="wrap" useFlexGap spacing={1} sx={{ width: '100%' }}>
             <TextField

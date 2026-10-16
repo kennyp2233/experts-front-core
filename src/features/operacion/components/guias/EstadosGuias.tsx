@@ -1,6 +1,6 @@
 'use client';
 
-import { Chip, Tooltip } from '@mui/material';
+import { Chip, Tooltip, Typography } from '@mui/material';
 import type { EstadoIngreso, GuiaDeIngreso } from '../../types/coordinacion';
 
 const INGRESO: Record<EstadoIngreso, { label: string; color: 'info' | 'warning' | 'success' | 'error'; ayuda: string }> = {
@@ -46,4 +46,21 @@ export function situacionGuia(g: Pick<GuiaDeIngreso, 'estado' | 'devuelta'>): Si
 export function SituacionGuiaChip({ guia }: { guia: Pick<GuiaDeIngreso, 'estado' | 'devuelta'> }) {
   const s = situacionGuia(guia);
   return <Chip size="small" variant="outlined" color={s.color} label={s.label} />;
+}
+
+const COLOR_TEXTO: Record<Situacion['color'], string> = {
+  success: 'success.main',
+  default: 'text.secondary',
+  warning: 'warning.dark',
+  error: 'error.main',
+};
+
+/** La situación como texto de color, para grillas compactas (sin el borde del chip). */
+export function SituacionGuiaTexto({ guia }: { guia: Pick<GuiaDeIngreso, 'estado' | 'devuelta'> }) {
+  const s = situacionGuia(guia);
+  return (
+    <Typography component="span" variant="body2" fontWeight={500} color={COLOR_TEXTO[s.color]} sx={{ fontSize: 'inherit', whiteSpace: 'nowrap' }}>
+      {s.label}
+    </Typography>
+  );
 }
