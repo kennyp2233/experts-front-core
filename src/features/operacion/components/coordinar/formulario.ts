@@ -42,6 +42,13 @@ export interface CabeceraForm {
   fechaVuelo: string;
   referencia: string;
   nota: string;
+  /** Vuelo y manifiesto: los da la aerolínea; pueden llegar después de coordinar. */
+  vuelo: string;
+  /** "YYYY-MM-DDTHH:mm" en hora local (input datetime-local). */
+  salida: string;
+  llegada: string;
+  numeroManifiesto: string;
+  secuencial: string;
 }
 
 export type LiquidacionForm = Partial<Record<keyof ValoresLiquidacion, string>>;
@@ -116,6 +123,11 @@ export const formVacio = (): FormCoordinar => ({
     fechaVuelo: hoy(),
     referencia: '',
     nota: '',
+    vuelo: '',
+    salida: '',
+    llegada: '',
+    numeroManifiesto: '',
+    secuencial: '',
   },
   lineas: [lineaVacia()],
   liquidacion: {},
@@ -180,10 +192,31 @@ export function aDto(f: FormCoordinar): GuardarCoordinacionDto | null {
     fechaVuelo: c.fechaVuelo,
     referencia: c.referencia.trim() || undefined,
     nota: c.nota.trim() || undefined,
+    vuelo: vueloDto(c),
     lineas,
     liquidacion,
     cobroCliente: f.conCliente ? cobroCliente(f) : undefined,
   };
+}
+
+/** "2026-10-20T10:11" (hora local) ↔ ISO. */
+const aIso = (local: string) => (local ? new Date(local).toISOString() : undefined);
+const aLocal = (iso: string | null | undefined) => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+};
+
+function vueloDto(c: CabeceraForm): GuardarCoordinacionDto['vuelo'] {
+  const v = {
+    vuelo: c.vuelo.trim().toUpperCase() || undefined,
+    salida: aIso(c.salida),
+    llegada: aIso(c.llegada),
+    numeroManifiesto: c.numeroManifiesto.replace(/\D/g, '') || undefined,
+    secuencial: c.secuencial.replace(/\D/g, '') || undefined,
+  };
+  return Object.values(v).some(Boolean) ? v : undefined;
 }
 
 function valoresDe(form: LiquidacionForm): ValoresLiquidacion {
@@ -227,6 +260,7 @@ export function faltantes(f: FormCoordinar): string[] {
 
 /** Coordinación guardada → formulario (para editar). */
 export function desdeDetalle(c: CoordinacionDetalle): FormCoordinar {
+  const via = c.rutas.find((r) => r.tipoRuta.startsWith('VIA') && (r.vuelo || r.fechaHoraSalida));
   const normal = c.liquidaciones.find((l) => l.tipo === 'NORMAL');
   const extra = c.corteExtra ? c.liquidaciones.find((l) => l.tipo === 'CORTE_EXTRA') : undefined;
   const liquidacion: LiquidacionForm = {};
@@ -258,6 +292,11 @@ export function desdeDetalle(c: CoordinacionDetalle): FormCoordinar {
       fechaVuelo: c.fechaVuelo.slice(0, 10),
       referencia: c.referencia ?? '',
       nota: c.nota ?? '',
+      vuelo: via?.vuelo ?? c.manifiesto?.vuelo ?? '',
+      salida: aLocal(via?.fechaHoraSalida),
+      llegada: aLocal(via?.fechaHoraLlegada),
+      numeroManifiesto: c.manifiesto?.numero ?? '',
+      secuencial: c.manifiesto?.secuencial ?? '',
     },
     lineas: c.guias.flatMap((g) =>
       g.lineas.map((l) =>

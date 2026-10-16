@@ -1,5 +1,6 @@
 import api from '@/shared/services/api';
 import type {
+  ArchivoFlowerCargo,
   CoordinacionArmada,
   CoordinacionDetalle,
   GuardarCoordinacionDto,
@@ -80,4 +81,18 @@ export const operacionService = {
 
   anularCoordinacion: async (id: number): Promise<{ id: number; anulada: true }> =>
     (await api.delete(`/operacion/coordinaciones/${id}`)).data,
+
+  archivoFlowerCargo: async (id: number): Promise<ArchivoFlowerCargo> =>
+    (await api.get(`/operacion/coordinaciones/${id}/flowercargo`)).data,
+
+  /** Descarga el .txt tal cual lo arma el servidor (sin tocar bytes ni fin de línea). */
+  descargarFlowerCargo: async (id: number, nombre: string): Promise<void> => {
+    const r = await api.get(`/operacion/coordinaciones/${id}/flowercargo.txt`, { responseType: 'blob' });
+    const url = URL.createObjectURL(r.data as Blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = nombre;
+    a.click();
+    URL.revokeObjectURL(url);
+  },
 };

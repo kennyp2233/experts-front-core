@@ -356,6 +356,8 @@ export interface GuardarCoordinacionDto {
   liquidacion?: ValoresLiquidacion;
   /** Lo que se le cobra al cliente, si es distinto (Access: "corte extra"). */
   cobroCliente?: ValoresLiquidacion;
+  /** Vuelo y manifiesto (los da la aerolínea). */
+  vuelo?: { vuelo?: string; salida?: string; llegada?: string; numeroManifiesto?: string; secuencial?: string };
 }
 
 export interface ResumenLiquidacion {
@@ -394,6 +396,23 @@ export interface CoordinacionArmada {
     valores: ValoresLiquidacion;
     desde: { id: number; numeroGuia: string | null; fechaVuelo: string };
   } | null;
+  advertencias: string[];
+}
+
+/** Vista previa del archivo de manifiesto para FlowerCargo. */
+export interface ArchivoFlowerCargo {
+  nombreArchivo: string;
+  filas: Array<{
+    linea: number;
+    guiaHija: string;
+    /** Guías hijas nuestras que van juntas en la fila (mismo RUC de finca). */
+    guiasAgrupadas: string[];
+    finca: string;
+    ruc: string | null;
+    piezas: number;
+    kg: number;
+    dae: string | null;
+  }>;
   advertencias: string[];
 }
 

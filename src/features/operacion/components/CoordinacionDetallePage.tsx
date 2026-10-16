@@ -27,6 +27,7 @@ import type { CoordinacionDetalle } from '../types/coordinacion';
 import { kg, nombreRef, num, usd } from '../utils/formato';
 import { EstadoCoordinacionChip, OrigenChip } from './EstadoCoordinacionChip';
 import { AccionesCoordinacion } from './detalle/AccionesCoordinacion';
+import { ArchivoFlowerCargo } from './detalle/ArchivoFlowerCargo';
 import { GuiasHijasTabla } from './detalle/GuiasHijasTabla';
 import { LiquidacionPanel } from './detalle/LiquidacionPanel';
 import { ValidacionTab } from './detalle/ValidacionTab';
@@ -255,6 +256,7 @@ export function CoordinacionDetallePage({ id }: { id: number }) {
         <>
           <OrigenChip origen={c.origen} />
           <EstadoCoordinacionChip estado={c.estado} corteExtra={c.corteExtra} />
+          <ArchivoFlowerCargo c={c} />
           <AccionesCoordinacion c={c} onCambio={() => mutate()} />
           {volver}
         </>

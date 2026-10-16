@@ -1,6 +1,6 @@
 'use client';
 
-import { Grid, Paper, TextField, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
+import { Divider, Grid, Paper, TextField, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
 import type { Opcion } from '../../types/coordinacion';
 import type { CabeceraForm } from './formulario';
 import { OpcionAutocomplete } from './OpcionAutocomplete';
@@ -130,6 +130,71 @@ export function CabeceraCoordinacion({ valor: c, onChange, onConsignatario, bloq
             label="Nota"
             value={c.nota}
             onChange={(e) => onChange({ nota: e.target.value })}
+          />
+        </Grid>
+      </Grid>
+
+      <Divider sx={{ my: 2 }} />
+      <Typography variant="subtitle2" fontWeight={600}>
+        Vuelo y manifiesto
+      </Typography>
+      <Typography variant="caption" color="text.secondary" component="p" sx={{ mb: 1.5 }}>
+        Los da la aerolínea; se pueden completar después. El número de manifiesto va en el archivo de FlowerCargo.
+      </Typography>
+      <Grid container spacing={2}>
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <TextField
+            size="small"
+            fullWidth
+            label="Vuelo"
+            placeholder="5Y9918"
+            value={c.vuelo}
+            onChange={(e) => onChange({ vuelo: e.target.value })}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <TextField
+            type="datetime-local"
+            size="small"
+            fullWidth
+            label="Salida"
+            value={c.salida}
+            onChange={(e) => onChange({ salida: e.target.value })}
+            slotProps={{ inputLabel: { shrink: true } }}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <TextField
+            type="datetime-local"
+            size="small"
+            fullWidth
+            label="Llegada"
+            value={c.llegada}
+            onChange={(e) => onChange({ llegada: e.target.value })}
+            slotProps={{ inputLabel: { shrink: true } }}
+          />
+        </Grid>
+        <Grid size={{ xs: 6, sm: 4 }}>
+          <TextField
+            size="small"
+            fullWidth
+            label="N° de manifiesto"
+            placeholder="052167"
+            value={c.numeroManifiesto}
+            onChange={(e) => onChange({ numeroManifiesto: e.target.value })}
+            slotProps={{ htmlInput: { inputMode: 'numeric', maxLength: 6 } }}
+          />
+        </Grid>
+        <Grid size={{ xs: 6, sm: 4 }}>
+          <TextField
+            size="small"
+            fullWidth
+            label="Secuencial"
+            placeholder="0026"
+            helperText="Posición de la guía en el manifiesto"
+            value={c.secuencial}
+            onChange={(e) => onChange({ secuencial: e.target.value })}
+            slotProps={{ htmlInput: { inputMode: 'numeric', maxLength: 5 } }}
           />
         </Grid>
       </Grid>
