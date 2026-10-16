@@ -4,6 +4,8 @@ export interface RefMaestro {
   id: number;
   codigo: string | null;
   nombre: string;
+  /** Nombre corto del sistema viejo (alias de finca o aerolínea), si es distinto del nombre. */
+  alias?: string | null;
 }
 
 export type EstadoCoordinacion = 'BORRADOR' | 'CORTADO' | 'ANULADO';
@@ -20,6 +22,8 @@ export interface CoordinacionResumen {
   fechaAsignacion: string;
   aerolinea: RefMaestro | null;
   consignatario: RefMaestro | null;
+  /** Cliente de la marca ("Embarcador" en el sistema viejo). */
+  cliente: RefMaestro | null;
   destino: RefMaestro | null;
   destinoFinal: RefMaestro | null;
   totalFulls: number | null;
@@ -27,6 +31,7 @@ export interface CoordinacionResumen {
   totalKgs: number | null;
   guiasHijas: number;
   liqTotal: number | null;
+  pesoCobrable: number | null;
   corteExtra: boolean;
 }
 
@@ -293,7 +298,15 @@ export interface Opcion {
   extra?: Record<string, unknown>;
 }
 
-export type TipoOpcion = 'guias' | 'consignatarios' | 'fincas' | 'productos' | 'agencias' | 'destinos' | 'tipos-embarque';
+export type TipoOpcion =
+  | 'guias'
+  | 'consignatarios'
+  | 'fincas'
+  | 'productos'
+  | 'agencias'
+  | 'aerolineas'
+  | 'destinos'
+  | 'tipos-embarque';
 
 export const CODIGOS_AGENCIA = ['cargoAwa', 'cargoCha', 'cargoPca', 'cargoTax', 'cargoMma', 'cargoHawb', 'cargoFitos'] as const;
 export type CodigoAgencia = (typeof CODIGOS_AGENCIA)[number];

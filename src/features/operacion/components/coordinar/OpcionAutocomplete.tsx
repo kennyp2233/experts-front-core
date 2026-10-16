@@ -21,6 +21,10 @@ interface Props {
   conCodigo?: boolean;
   /** Sin etiqueta visible (dentro de una tabla); `label` queda como aria-label. */
   sinEtiqueta?: boolean;
+  /** Id del input (para llevar la pantalla hasta el campo). */
+  id?: string;
+  /** Debajo del campo, el detalle de la opción elegida (p. ej. el cliente de la marca). */
+  mostrarDetalle?: boolean;
 }
 
 const etiqueta = (o: Opcion, conCodigo: boolean) => (conCodigo && o.codigo ? `${o.codigo} · ${o.nombre}` : o.nombre);
@@ -43,6 +47,8 @@ export function OpcionAutocomplete({
   placeholder,
   conCodigo = false,
   sinEtiqueta = false,
+  id,
+  mostrarDetalle = false,
 }: Props) {
   const [texto, setTexto] = useState('');
   const [q, setQ] = useState('');
@@ -73,6 +79,7 @@ export function OpcionAutocomplete({
 
   return (
     <Autocomplete
+      id={id}
       size={size}
       fullWidth
       options={conElegida}
@@ -111,7 +118,7 @@ export function OpcionAutocomplete({
           label={sinEtiqueta ? undefined : label}
           required={required}
           error={error}
-          helperText={helperText}
+          helperText={helperText ?? (mostrarDetalle && actual?.detalle ? actual.detalle : undefined)}
           placeholder={sinEtiqueta ? (placeholder ?? label) : placeholder}
           inputProps={{ ...p.inputProps, 'aria-label': label }}
         />

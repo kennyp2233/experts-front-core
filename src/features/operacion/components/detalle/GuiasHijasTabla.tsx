@@ -17,7 +17,7 @@ import {
 } from '@mui/material';
 import { KeyboardArrowDown as AbrirIcon, KeyboardArrowUp as CerrarIcon } from '@mui/icons-material';
 import type { GuiaHija } from '../../types/coordinacion';
-import { kg, num, usd } from '../../utils/formato';
+import { kg, nombreCorto, num, plural, usd } from '../../utils/formato';
 
 const nums = { fontVariantNumeric: 'tabular-nums' } as const;
 
@@ -27,10 +27,10 @@ function Lineas({ guia }: { guia: GuiaHija }) {
       <TableHead>
         <TableRow>
           <TableCell>Producto</TableCell>
-          <TableCell>Caja</TableCell>
+          <TableCell>Tipo caja</TableCell>
           <TableCell align="right">Cajas</TableCell>
           <TableCell align="right">Fulls</TableCell>
-          <TableCell align="right">Peso</TableCell>
+          <TableCell align="right">Kg</TableCell>
           <TableCell align="right">Tallos</TableCell>
           <TableCell align="right">Valor</TableCell>
           <TableCell>Medidas (cm)</TableCell>
@@ -54,7 +54,7 @@ function Lineas({ guia }: { guia: GuiaHija }) {
             </TableCell>
             <TableCell align="right" sx={nums}>{num(l.cantidadCajas, 0)}</TableCell>
             <TableCell align="right" sx={nums}>{num(l.fulls)}</TableCell>
-            <TableCell align="right" sx={nums}>{kg(l.pesoKg)}</TableCell>
+            <TableCell align="right" sx={nums}>{num(l.pesoKg)}</TableCell>
             <TableCell align="right" sx={nums}>{num(l.tallos, 0)}</TableCell>
             <TableCell align="right" sx={nums}>{usd(l.valor)}</TableCell>
             <TableCell sx={nums}>
@@ -72,8 +72,8 @@ function Lineas({ guia }: { guia: GuiaHija }) {
 export function GuiasHijasTabla({ guias }: { guias: GuiaHija[] }) {
   const [abiertas, setAbiertas] = useState<Record<number, boolean>>({});
   const tot = guias.reduce(
-    (a, g) => ({ piezas: a.piezas + g.totalPiezas, fulls: a.fulls + g.totalFulls, kg: a.kg + g.pesoBruto }),
-    { piezas: 0, fulls: 0, kg: 0 },
+    (a, g) => ({ cajas: a.cajas + g.totalPiezas, fulls: a.fulls + g.totalFulls, kg: a.kg + g.pesoBruto }),
+    { cajas: 0, fulls: 0, kg: 0 },
   );
 
   if (guias.length === 0) {
@@ -93,9 +93,9 @@ export function GuiasHijasTabla({ guias }: { guias: GuiaHija[] }) {
             <TableCell>Guía hija</TableCell>
             <TableCell>Finca</TableCell>
             <TableCell>DAE</TableCell>
-            <TableCell align="right">Piezas</TableCell>
+            <TableCell align="right">Cajas</TableCell>
             <TableCell align="right">Fulls</TableCell>
-            <TableCell align="right">Peso</TableCell>
+            <TableCell align="right">Kg</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
@@ -115,17 +115,19 @@ export function GuiasHijasTabla({ guias }: { guias: GuiaHija[] }) {
                   </TableCell>
                   <TableCell sx={{ ...nums, fontWeight: 600 }}>{g.numeroGuiaHija}</TableCell>
                   <TableCell>
-                    <Typography variant="body2">{g.finca?.nombre ?? '—'}</Typography>
-                    {g.finca?.codigo && (
+                    <Typography variant="body2">{nombreCorto(g.finca)}</Typography>
+                    {(g.finca?.alias || g.finca?.codigo) && (
                       <Typography variant="caption" color="text.secondary">
-                        RUC {g.finca.codigo}
+                        {[g.finca.alias ? g.finca.nombre : null, g.finca.codigo ? `RUC ${g.finca.codigo}` : null]
+                          .filter(Boolean)
+                          .join(' · ')}
                       </Typography>
                     )}
                   </TableCell>
                   <TableCell sx={nums}>{g.dae ?? '—'}</TableCell>
                   <TableCell align="right" sx={nums}>{num(g.totalPiezas, 0)}</TableCell>
                   <TableCell align="right" sx={nums}>{num(g.totalFulls)}</TableCell>
-                  <TableCell align="right" sx={nums}>{kg(g.pesoBruto)}</TableCell>
+                  <TableCell align="right" sx={nums}>{num(g.pesoBruto)}</TableCell>
                 </TableRow>
                 {abierta && (
                   <TableRow>
@@ -143,8 +145,8 @@ export function GuiasHijasTabla({ guias }: { guias: GuiaHija[] }) {
           })}
           <TableRow sx={{ '& td': { fontWeight: 600, borderBottom: 'none' } }}>
             <TableCell />
-            <TableCell colSpan={3}>Total ({guias.length} guías hijas)</TableCell>
-            <TableCell align="right" sx={nums}>{num(tot.piezas, 0)}</TableCell>
+            <TableCell colSpan={3}>Total ({plural(guias.length, 'guía hija', 'guías hijas')})</TableCell>
+            <TableCell align="right" sx={nums}>{num(tot.cajas, 0)}</TableCell>
             <TableCell align="right" sx={nums}>{num(tot.fulls)}</TableCell>
             <TableCell align="right" sx={nums}>{kg(tot.kg)}</TableCell>
           </TableRow>

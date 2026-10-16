@@ -1,3 +1,4 @@
+import { toIsoDate } from '@/shared/utils';
 import type {
   CoordinacionDetalle,
   GuardarCoordinacionDto,
@@ -85,9 +86,26 @@ export const numero = (t: string | undefined | null): number | undefined => {
   return Number.isFinite(n) ? n : undefined;
 };
 
-/** Número → texto para el input (sin ceros de más). */
+/** Número → texto para el input, con coma decimal como el resto de la pantalla ("1,5"; sin ceros de más). */
 export const texto = (n: number | null | undefined, decimales = 2): string =>
-  n === null || n === undefined ? '' : String(Math.round(n * 10 ** decimales) / 10 ** decimales);
+  n === null || n === undefined ? '' : String(Math.round(n * 10 ** decimales) / 10 ** decimales).replace('.', ',');
+
+/** Formato de la DAE: 055-AAAA-40-XXXXXXXX. */
+export const PATRON_DAE = /^\d{3}-\d{4}-\d{2}-\d{8}$/;
+
+/**
+ * Pone los guiones de la DAE mientras se escribe ("055202640" → "055-2026-40-").
+ * Al borrar (texto más corto que antes) no agrega el guion final, para poder borrarlo.
+ */
+export function formatearDae(nuevo: string, anterior = ''): string {
+  const d = nuevo.replace(/\D/g, '').slice(0, 17);
+  const partes = [d.slice(0, 3), d.slice(3, 7), d.slice(7, 9), d.slice(9)].filter(Boolean);
+  const bloqueCompleto = [3, 7, 9].includes(d.length) && nuevo.length > anterior.length;
+  return partes.join('-') + (bloqueCompleto ? '-' : '');
+}
+
+/** "055-2026-40-12345678" → "055-2026-40-" (para la fila siguiente). */
+export const prefijoDae = (dae: string) => /^(\d{3}-\d{4}-\d{2}-)/.exec(dae.trim())?.[1] ?? '';
 
 export const lineaVacia = (base?: Partial<LineaForm>): LineaForm => ({
   key: nuevaKey(),
@@ -108,7 +126,8 @@ export const lineaVacia = (base?: Partial<LineaForm>): LineaForm => ({
   ...base,
 });
 
-const hoy = () => new Date().toISOString().slice(0, 10);
+// Hora local: con toISOString (UTC), después de las 19:00 en Ecuador proponía el día siguiente.
+const hoy = () => toIsoDate(new Date());
 
 export const formVacio = (): FormCoordinar => ({
   cabecera: {
@@ -236,24 +255,42 @@ export function cobroCliente(f: FormCoordinar): ValoresLiquidacion {
   return { ...base, ...cambios };
 }
 
-/** Problemas que impiden guardar (los mismos que valida el servidor). */
-export function faltantes(f: FormCoordinar): string[] {
+/** Id del campo en la página (para marcarlo y llevar la pantalla hasta él). */
+export const ID_CAMPO = {
+  guia: 'coordinar-guia',
+  fecha: 'coordinar-fecha',
+  consignatario: 'coordinar-consignatario',
+  agencia: 'coordinar-agencia',
+  destino: 'coordinar-destino',
+  fincas: 'coordinar-fincas',
+  fila: (key: string, campo: 'finca' | 'producto' | 'cajas' | 'kg' | 'dae') => `coordinar-${key}-${campo}`,
+} as const;
+
+export interface Faltante {
+  /** Id del campo (ver ID_CAMPO). */
+  campo: string;
+  mensaje: string;
+}
+
+/** Lo que falta para grabar (lo mismo que valida el servidor), en el orden de la pantalla. */
+export function faltantes(f: FormCoordinar, nombresFinca: Record<number, string> = {}): Faltante[] {
   const c = f.cabecera;
-  const out: string[] = [];
-  if (!c.idGuiaMadre) out.push('Elige la guía (AWB).');
-  if (!c.fechaVuelo) out.push('Falta la fecha de vuelo.');
-  if (!c.idConsignatario) out.push('Elige el consignatario (marca).');
-  if (!c.idAgenciaIata) out.push('Elige la agencia IATA.');
-  if (!c.idDestinoAwb) out.push('Elige el destino de la guía.');
+  const out: Faltante[] = [];
+  if (!c.idGuiaMadre) out.push({ campo: ID_CAMPO.guia, mensaje: 'Elige la guía madre.' });
+  if (!c.fechaVuelo) out.push({ campo: ID_CAMPO.fecha, mensaje: 'Falta la fecha de vuelo.' });
+  if (!c.idConsignatario) out.push({ campo: ID_CAMPO.consignatario, mensaje: 'Elige el consignatario.' });
+  if (!c.idAgenciaIata) out.push({ campo: ID_CAMPO.agencia, mensaje: 'Elige la agencia IATA.' });
+  if (!c.idDestinoAwb) out.push({ campo: ID_CAMPO.destino, mensaje: 'Elige el destino de la guía.' });
   const usadas = f.lineas.filter((l) => l.idFinca !== null || l.idProducto !== null || l.cajas.trim());
-  if (usadas.length === 0) out.push('Agrega al menos una línea de carga.');
-  usadas.forEach((l, i) => {
-    const n = i + 1;
-    if (l.idFinca === null) out.push(`Línea ${n}: falta la finca.`);
-    if (l.idProducto === null) out.push(`Línea ${n}: falta el producto.`);
-    if (numero(l.cajas) === undefined) out.push(`Línea ${n}: faltan las cajas.`);
-    if (numero(l.pesoKg) === undefined) out.push(`Línea ${n}: falta el peso.`);
-    if (!l.dae.trim()) out.push(`Línea ${n}: la DAE es obligatoria.`);
+  if (usadas.length === 0) out.push({ campo: ID_CAMPO.fila(f.lineas[0]?.key ?? '', 'finca'), mensaje: 'Agrega al menos una finca.' });
+  usadas.forEach((l) => {
+    const n = f.lineas.indexOf(l) + 1;
+    const fila = l.idFinca !== null && nombresFinca[l.idFinca] ? `Fila ${n} (${nombresFinca[l.idFinca]})` : `Fila ${n}`;
+    if (l.idFinca === null) out.push({ campo: ID_CAMPO.fila(l.key, 'finca'), mensaje: `${fila}: falta la finca.` });
+    if (l.idProducto === null) out.push({ campo: ID_CAMPO.fila(l.key, 'producto'), mensaje: `${fila}: falta el producto.` });
+    if (numero(l.cajas) === undefined) out.push({ campo: ID_CAMPO.fila(l.key, 'cajas'), mensaje: `${fila}: faltan las cajas.` });
+    if (numero(l.pesoKg) === undefined) out.push({ campo: ID_CAMPO.fila(l.key, 'kg'), mensaje: `${fila}: falta el peso (kg).` });
+    if (!l.dae.trim()) out.push({ campo: ID_CAMPO.fila(l.key, 'dae'), mensaje: `${fila}: falta la DAE.` });
   });
   return out;
 }

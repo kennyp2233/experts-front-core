@@ -5,7 +5,18 @@ import { CheckCircleOutline as OkIcon, ErrorOutline as DifIcon, RemoveCircleOutl
 import { getErrorMessage } from '@/shared/utils';
 import { useValidacionCoordinacion } from '../../hooks/useValidacion';
 
-const valor = (v: unknown) => (v === null || v === undefined ? '—' : typeof v === 'number' ? v.toLocaleString('es-EC') : String(v));
+const valor = (v: unknown): string => {
+  if (v === null || v === undefined) return '—';
+  if (typeof v === 'number') return v.toLocaleString('es-EC');
+  if (typeof v === 'boolean') return v ? 'sí' : 'no';
+  if (Array.isArray(v)) return v.map(valor).join(', ');
+  if (typeof v === 'object') {
+    return Object.entries(v as Record<string, unknown>)
+      .map(([k, x]) => `${k}: ${valor(x)}`)
+      .join(' · ');
+  }
+  return String(v);
+};
 
 /** Cada regla del sistema nuevo aplicada a esta coordinación, frente a lo que guardó Access. */
 export function ValidacionTab({ id }: { id: number }) {

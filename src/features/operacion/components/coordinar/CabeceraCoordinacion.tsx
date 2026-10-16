@@ -1,8 +1,18 @@
 'use client';
 
-import { Divider, Grid, Paper, TextField, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
+import {
+  Accordion,
+  AccordionDetails,
+  AccordionSummary,
+  Grid,
+  MenuItem,
+  Paper,
+  TextField,
+  Typography,
+} from '@mui/material';
+import { ExpandMore as AbrirIcon } from '@mui/icons-material';
 import type { Opcion } from '../../types/coordinacion';
-import type { CabeceraForm } from './formulario';
+import { type CabeceraForm, ID_CAMPO } from './formulario';
 import { OpcionAutocomplete } from './OpcionAutocomplete';
 
 interface Props {
@@ -12,100 +22,71 @@ interface Props {
   onConsignatario: (id: number | null) => void;
   /** Al editar no se cambia de guía libremente si ya tiene guías hijas numeradas. */
   bloquearGuia?: boolean;
+  /** Ids de los campos que faltan (se marcan en rojo después de intentar grabar). */
+  errores: Set<string>;
 }
 
-/** Guía, vuelo y partes de la coordinación. */
-export function CabeceraCoordinacion({ valor: c, onChange, onConsignatario, bloquearGuia }: Props) {
+/** Resumen de lo que se cargó en "vuelo, manifiesto…" para verlo sin abrirlo. */
+function resumenVuelo(c: CabeceraForm) {
+  const partes = [
+    c.vuelo.trim() && `vuelo ${c.vuelo.trim().toUpperCase()}`,
+    c.numeroManifiesto.trim() && `manifiesto ${c.numeroManifiesto.trim()}`,
+    c.secuencial.trim() && `secuencial ${c.secuencial.trim()}`,
+    c.referencia.trim() && `ref. ${c.referencia.trim()}`,
+    c.nota.trim() && 'con nota',
+  ].filter(Boolean);
+  return partes.length ? partes.join(' · ') : 'Los da la aerolínea; se pueden completar después.';
+}
+
+/** Guía, partes y destino de la coordinación. Vuelo, manifiesto, referencia y nota van plegados. */
+export function CabeceraCoordinacion({ valor: c, onChange, onConsignatario, bloquearGuia, errores }: Props) {
   return (
     <Paper variant="outlined" sx={{ p: 2 }}>
-      <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 1.5 }}>
-        Guía y vuelo
-      </Typography>
-      <Grid container spacing={2}>
-        <Grid size={{ xs: 12, md: 6 }}>
+      <Grid container spacing={1.5}>
+        <Grid size={{ xs: 12, sm: 6, md: 4 }}>
           <OpcionAutocomplete
+            id={ID_CAMPO.guia}
             tipo="guias"
-            label="Guía (AWB)"
+            label="Guía madre"
             required
+            error={errores.has(ID_CAMPO.guia)}
             value={c.idGuiaMadre}
             disabled={bloquearGuia}
-            placeholder="Número o parte del número"
-            helperText="Solo guías disponibles del stock"
+            placeholder="Número o aerolínea (KL, 8469…)"
+            mostrarDetalle
             onChange={(id, o: Opcion | null) =>
               onChange({ idGuiaMadre: id, idAerolinea: (o?.extra?.idAerolinea as number | null | undefined) ?? null })
             }
           />
         </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+        <Grid size={{ xs: 6, sm: 3, md: 2 }}>
           <TextField
+            id={ID_CAMPO.fecha}
             type="date"
             size="small"
             fullWidth
             required
+            error={errores.has(ID_CAMPO.fecha)}
             label="Fecha de vuelo"
             value={c.fechaVuelo}
             onChange={(e) => onChange({ fechaVuelo: e.target.value })}
             slotProps={{ inputLabel: { shrink: true } }}
           />
         </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <ToggleButtonGroup
-            exclusive
+        <Grid size={{ xs: 6, sm: 3, md: 2 }}>
+          <TextField
+            select
             size="small"
             fullWidth
+            label="Pago"
             value={c.pago}
-            onChange={(_, v) => v && onChange({ pago: v })}
-            aria-label="Forma de pago"
+            onChange={(e) => onChange({ pago: e.target.value as CabeceraForm['pago'] })}
           >
-            <ToggleButton value="PREPAID">Prepaid</ToggleButton>
-            <ToggleButton value="COLLECT">Collect</ToggleButton>
-          </ToggleButtonGroup>
+            <MenuItem value="PREPAID">Prepaid</MenuItem>
+            <MenuItem value="COLLECT">Collect</MenuItem>
+          </TextField>
         </Grid>
-
-        <Grid size={{ xs: 12, md: 6 }}>
-          <OpcionAutocomplete
-            tipo="consignatarios"
-            label="Consignatario (marca)"
-            required
-            value={c.idConsignatario}
-            onChange={(id) => {
-              onChange({ idConsignatario: id });
-              onConsignatario(id);
-            }}
-          />
-        </Grid>
-        <Grid size={{ xs: 12, md: 6 }}>
-          <OpcionAutocomplete
-            tipo="agencias"
-            label="Agencia IATA"
-            required
-            value={c.idAgenciaIata}
-            onChange={(id) => onChange({ idAgenciaIata: id })}
-          />
-        </Grid>
-
-        <Grid size={{ xs: 12, sm: 6 }}>
-          <OpcionAutocomplete
-            tipo="destinos"
-            label="Destino de la guía"
-            required
-            conCodigo
-            value={c.idDestinoAwb}
-            helperText="Aeropuerto que va en la AWB"
-            onChange={(id) => onChange({ idDestinoAwb: id })}
-          />
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6 }}>
-          <OpcionAutocomplete
-            tipo="destinos"
-            label="Destino final"
-            conCodigo
-            value={c.idDestinoFinalDocs}
-            helperText="Para los documentos, si es otro"
-            onChange={(id) => onChange({ idDestinoFinalDocs: id })}
-          />
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6 }}>
+        <Grid size={{ xs: 12, sm: 6, md: 4 }}>
           <OpcionAutocomplete
             tipo="tipos-embarque"
             label="Tipo de embarque"
@@ -114,90 +95,142 @@ export function CabeceraCoordinacion({ valor: c, onChange, onConsignatario, bloq
           />
         </Grid>
 
-        <Grid size={{ xs: 12, sm: 6 }}>
-          <TextField
-            size="small"
-            fullWidth
-            label="Referencia"
-            value={c.referencia}
-            onChange={(e) => onChange({ referencia: e.target.value })}
+        <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+          <OpcionAutocomplete
+            id={ID_CAMPO.consignatario}
+            tipo="consignatarios"
+            label="Consignatario"
+            required
+            error={errores.has(ID_CAMPO.consignatario)}
+            value={c.idConsignatario}
+            mostrarDetalle
+            onChange={(id) => {
+              onChange({ idConsignatario: id });
+              onConsignatario(id);
+            }}
           />
         </Grid>
-        <Grid size={{ xs: 12 }}>
-          <TextField
-            size="small"
-            fullWidth
-            label="Nota"
-            value={c.nota}
-            onChange={(e) => onChange({ nota: e.target.value })}
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <OpcionAutocomplete
+            id={ID_CAMPO.agencia}
+            tipo="agencias"
+            label="Agencia IATA"
+            required
+            error={errores.has(ID_CAMPO.agencia)}
+            value={c.idAgenciaIata}
+            onChange={(id) => onChange({ idAgenciaIata: id })}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, md: 2.5 }}>
+          <OpcionAutocomplete
+            id={ID_CAMPO.destino}
+            tipo="destinos"
+            label="Destino de la guía"
+            required
+            conCodigo
+            error={errores.has(ID_CAMPO.destino)}
+            value={c.idDestinoAwb}
+            onChange={(id) => onChange({ idDestinoAwb: id })}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, md: 2.5 }}>
+          <OpcionAutocomplete
+            tipo="destinos"
+            label="Destino final"
+            conCodigo
+            value={c.idDestinoFinalDocs}
+            helperText="Si es otro (va en los documentos)"
+            onChange={(id) => onChange({ idDestinoFinalDocs: id })}
           />
         </Grid>
       </Grid>
 
-      <Divider sx={{ my: 2 }} />
-      <Typography variant="subtitle2" fontWeight={600}>
-        Vuelo y manifiesto
-      </Typography>
-      <Typography variant="caption" color="text.secondary" component="p" sx={{ mb: 1.5 }}>
-        Los da la aerolínea; se pueden completar después. El número de manifiesto va en el archivo de FlowerCargo.
-      </Typography>
-      <Grid container spacing={2}>
-        <Grid size={{ xs: 12, sm: 4 }}>
-          <TextField
-            size="small"
-            fullWidth
-            label="Vuelo"
-            placeholder="5Y9918"
-            value={c.vuelo}
-            onChange={(e) => onChange({ vuelo: e.target.value })}
-          />
-        </Grid>
-        <Grid size={{ xs: 12, sm: 4 }}>
-          <TextField
-            type="datetime-local"
-            size="small"
-            fullWidth
-            label="Salida"
-            value={c.salida}
-            onChange={(e) => onChange({ salida: e.target.value })}
-            slotProps={{ inputLabel: { shrink: true } }}
-          />
-        </Grid>
-        <Grid size={{ xs: 12, sm: 4 }}>
-          <TextField
-            type="datetime-local"
-            size="small"
-            fullWidth
-            label="Llegada"
-            value={c.llegada}
-            onChange={(e) => onChange({ llegada: e.target.value })}
-            slotProps={{ inputLabel: { shrink: true } }}
-          />
-        </Grid>
-        <Grid size={{ xs: 6, sm: 4 }}>
-          <TextField
-            size="small"
-            fullWidth
-            label="N° de manifiesto"
-            placeholder="052167"
-            value={c.numeroManifiesto}
-            onChange={(e) => onChange({ numeroManifiesto: e.target.value })}
-            slotProps={{ htmlInput: { inputMode: 'numeric', maxLength: 6 } }}
-          />
-        </Grid>
-        <Grid size={{ xs: 6, sm: 4 }}>
-          <TextField
-            size="small"
-            fullWidth
-            label="Secuencial"
-            placeholder="0026"
-            helperText="Posición de la guía en el manifiesto"
-            value={c.secuencial}
-            onChange={(e) => onChange({ secuencial: e.target.value })}
-            slotProps={{ htmlInput: { inputMode: 'numeric', maxLength: 5 } }}
-          />
-        </Grid>
-      </Grid>
+      <Accordion
+        disableGutters
+        elevation={0}
+        sx={{ mt: 1.5, border: 1, borderColor: 'divider', borderRadius: 1, '&::before': { display: 'none' } }}
+      >
+        <AccordionSummary expandIcon={<AbrirIcon />} sx={{ minHeight: 44, '& .MuiAccordionSummary-content': { my: 1 } }}>
+          <Typography variant="body2" fontWeight={600} sx={{ mr: 1.5, flexShrink: 0 }}>
+            Vuelo, manifiesto, referencia y nota
+          </Typography>
+          <Typography variant="body2" color="text.secondary" noWrap>
+            {resumenVuelo(c)}
+          </Typography>
+        </AccordionSummary>
+        <AccordionDetails>
+          <Grid container spacing={1.5}>
+            <Grid size={{ xs: 12, sm: 4, md: 2 }}>
+              <TextField
+                size="small"
+                fullWidth
+                label="N° de vuelo"
+                placeholder="5Y9918"
+                value={c.vuelo}
+                onChange={(e) => onChange({ vuelo: e.target.value })}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 4, md: 2.5 }}>
+              <TextField
+                type="datetime-local"
+                size="small"
+                fullWidth
+                label="Salida"
+                value={c.salida}
+                onChange={(e) => onChange({ salida: e.target.value })}
+                slotProps={{ inputLabel: { shrink: true } }}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 4, md: 2.5 }}>
+              <TextField
+                type="datetime-local"
+                size="small"
+                fullWidth
+                label="Llegada"
+                value={c.llegada}
+                onChange={(e) => onChange({ llegada: e.target.value })}
+                slotProps={{ inputLabel: { shrink: true } }}
+              />
+            </Grid>
+            <Grid size={{ xs: 6, sm: 4, md: 2 }}>
+              <TextField
+                size="small"
+                fullWidth
+                label="N° de manifiesto"
+                placeholder="052167"
+                helperText="Va en el archivo de FlowerCargo"
+                value={c.numeroManifiesto}
+                onChange={(e) => onChange({ numeroManifiesto: e.target.value })}
+                slotProps={{ htmlInput: { inputMode: 'numeric', maxLength: 6 } }}
+              />
+            </Grid>
+            <Grid size={{ xs: 6, sm: 4, md: 1.5 }}>
+              <TextField
+                size="small"
+                fullWidth
+                label="Secuencial"
+                placeholder="0026"
+                helperText="Posición en el manifiesto"
+                value={c.secuencial}
+                onChange={(e) => onChange({ secuencial: e.target.value })}
+                slotProps={{ htmlInput: { inputMode: 'numeric', maxLength: 5 } }}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 4, md: 1.5 }}>
+              <TextField
+                size="small"
+                fullWidth
+                label="Referencia"
+                value={c.referencia}
+                onChange={(e) => onChange({ referencia: e.target.value })}
+              />
+            </Grid>
+            <Grid size={{ xs: 12 }}>
+              <TextField size="small" fullWidth label="Nota" value={c.nota} onChange={(e) => onChange({ nota: e.target.value })} />
+            </Grid>
+          </Grid>
+        </AccordionDetails>
+      </Accordion>
     </Paper>
   );
 }

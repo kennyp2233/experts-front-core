@@ -1,4 +1,4 @@
-import { Box, Typography, Divider, ListItemButton, ListItemIcon, ListItemText, Avatar } from '@mui/material';
+import { Box, Typography, Divider, ListItemButton, ListItemIcon, ListItemText, Avatar, IconButton, Tooltip } from '@mui/material';
 import { Logout as LogoutIcon } from '@mui/icons-material';
 
 interface SidebarUserSectionProps {
@@ -6,16 +6,39 @@ interface SidebarUserSectionProps {
   lastName?: string;
   email?: string;
   onLogout: () => void;
+  /** Menú plegado: solo las iniciales y el botón de salir. */
+  colapsado?: boolean;
 }
 
 export function SidebarUserSection({
   firstName = '',
   lastName = '',
   email = '',
-  onLogout
+  onLogout,
+  colapsado = false,
 }: SidebarUserSectionProps) {
   // Generate initials for avatar
   const initials = `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
+
+  if (colapsado) {
+    return (
+      <>
+        <Divider />
+        <Box sx={{ py: 1.5, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+          <Tooltip title={`${firstName} ${lastName}`.trim() || email} placement="right">
+            <Avatar sx={{ width: 32, height: 32, fontSize: '0.875rem', fontWeight: 600, bgcolor: 'primary.main' }}>
+              {initials}
+            </Avatar>
+          </Tooltip>
+          <Tooltip title="Cerrar sesión" placement="right">
+            <IconButton onClick={onLogout} size="small" aria-label="Cerrar sesión" sx={{ color: 'error.main' }}>
+              <LogoutIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        </Box>
+      </>
+    );
+  }
 
   return (
     <>

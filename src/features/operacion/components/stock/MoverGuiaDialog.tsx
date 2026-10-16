@@ -14,6 +14,7 @@ import {
 import { getErrorMessage, toIsoDate } from '@/shared/utils';
 import { operacionService } from '../../services/operacion.service';
 import type { GuiaMadreFila } from '../../types/coordinacion';
+import { formatoAwb } from '../../utils/formato';
 
 export type MovimientoGuia = 'prestar' | 'devolver';
 
@@ -47,7 +48,8 @@ export function MoverGuiaDialog({ guia, accion, onClose, onHecho }: Props) {
       const dto = { fecha, observaciones: observaciones.trim() || undefined };
       if (accion === 'prestar') await operacionService.prestarGuia(guia.id, dto);
       else await operacionService.devolverGuia(guia.id, dto);
-      onHecho(accion === 'prestar' ? `Guía ${guia.numero} prestada.` : `Devolución de la guía ${guia.numero} registrada.`);
+      const numero = formatoAwb(guia.numero);
+      onHecho(accion === 'prestar' ? `Guía ${numero} prestada.` : `Devolución de la guía ${numero} registrada.`);
       onClose();
     } catch (e) {
       setError(getErrorMessage(e));
@@ -58,7 +60,9 @@ export function MoverGuiaDialog({ guia, accion, onClose, onHecho }: Props) {
 
   return (
     <Dialog open={guia !== null} onClose={onClose} fullWidth maxWidth="xs">
-      <DialogTitle>{accion === 'prestar' ? `Prestar la guía ${guia?.numero ?? ''}` : `Devolución de la guía ${guia?.numero ?? ''}`}</DialogTitle>
+      <DialogTitle>
+        {accion === 'prestar' ? `Prestar la guía ${formatoAwb(guia?.numero)}` : `Devolución de la guía ${formatoAwb(guia?.numero)}`}
+      </DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ mt: 1 }}>
           <TextField
