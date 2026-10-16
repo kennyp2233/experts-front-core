@@ -7,7 +7,6 @@ import type {
   ParametrosCoordinacion,
   SugerenciaConsignatario,
   TipoOpcion,
-  ValoresLiquidacion,
   CoordinacionFiltros,
   CoordinacionPagina,
   GuiasMadreFiltros,
@@ -76,8 +75,8 @@ export const operacionService = {
   actualizarCoordinacion: async (id: number, dto: GuardarCoordinacionDto): Promise<{ id: number }> =>
     (await api.put(`/operacion/coordinaciones/${id}`, dto)).data,
 
-  cortarCoordinacion: async (id: number, extra?: ValoresLiquidacion): Promise<{ id: number; estado: 'CORTADO' }> =>
-    (await api.post(`/operacion/coordinaciones/${id}/corte`, extra ? { extra } : {})).data,
+  cortarCoordinacion: async (id: number): Promise<{ id: number; estado: 'CORTADO' }> =>
+    (await api.post(`/operacion/coordinaciones/${id}/corte`)).data,
 
   anularCoordinacion: async (id: number): Promise<{ id: number; anulada: true }> =>
     (await api.delete(`/operacion/coordinaciones/${id}`)).data,

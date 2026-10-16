@@ -1,151 +1,25 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import useSWR from 'swr';
 import {
   Alert,
-  Box,
   Button,
   CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
-  FormControlLabel,
   Stack,
-  Switch,
   Typography,
 } from '@mui/material';
 import { ContentCut as CortarIcon, DeleteOutline as AnularIcon, Edit as EditarIcon } from '@mui/icons-material';
 import { useToast } from '@/shared/providers';
 import { getErrorMessage } from '@/shared/utils';
 import { operacionService } from '../../services/operacion.service';
-import type { CoordinacionDetalle, Liquidacion, ValoresLiquidacion } from '../../types/coordinacion';
-import { CODIGOS_AGENCIA, CONCEPTOS_AEROLINEA } from '../../types/coordinacion';
+import type { CoordinacionDetalle } from '../../types/coordinacion';
 import { usd } from '../../utils/formato';
-import { LiquidacionEditor } from '../coordinar/LiquidacionEditor';
-import { LiquidacionForm, numero, texto } from '../coordinar/formulario';
-
-const CAMPOS: Array<keyof ValoresLiquidacion> = [
-  'pesoCobrable',
-  'tarifa',
-  ...CONCEPTOS_AEROLINEA,
-  'iva',
-  ...CODIGOS_AGENCIA,
-];
-
-/** Resumen local (mismas fórmulas del servidor) para el diálogo de corte extra. */
-function resumir(v: LiquidacionForm) {
-  const n = (k: keyof ValoresLiquidacion) => numero(v[k]) ?? 0;
-  const r2 = (x: number) => Math.round((x + Number.EPSILON) * 100) / 100;
-  const cw = numero(v.pesoCobrable);
-  const tarifa = numero(v.tarifa);
-  const flete = cw !== undefined && tarifa !== undefined ? r2(cw * tarifa) : null;
-  const dueCarrier = r2(CONCEPTOS_AEROLINEA.reduce((a, k) => a + n(k), 0));
-  const dueAgent = r2(CODIGOS_AGENCIA.reduce((a, k) => a + n(k), 0));
-  const iva = r2(n('iva'));
-  return {
-    pesoCobrable: cw ?? null,
-    tarifa: tarifa ?? null,
-    flete,
-    dueCarrier,
-    dueAgent,
-    iva,
-    total: flete === null ? null : r2(flete + dueCarrier + iva + dueAgent),
-  };
-}
-
-const aForm = (l: Liquidacion | undefined): LiquidacionForm =>
-  Object.fromEntries(CAMPOS.map((k) => [k, texto(l?.[k as keyof Liquidacion] as number | null, 4)]));
-
-function CortarDialog({ c, open, onClose, onCortada }: { c: CoordinacionDetalle; open: boolean; onClose: () => void; onCortada: () => void }) {
-  const toast = useToast();
-  const normal = c.liquidaciones.find((l) => l.tipo === 'NORMAL');
-  const [extra, setExtra] = useState(false);
-  const [valores, setValores] = useState<LiquidacionForm>(() => aForm(normal));
-  const [trabajando, setTrabajando] = useState(false);
-  const { data: parametros } = useSWR(open ? ['operacion/coordinar/parametros', c.aerolinea?.id ?? null] : null, () =>
-    operacionService.parametrosCoordinacion(c.aerolinea?.id ?? null),
-  );
-  const resumen = useMemo(() => resumir(valores), [valores]);
-
-  const cortar = async () => {
-    setTrabajando(true);
-    try {
-      let dto: ValoresLiquidacion | undefined;
-      if (extra) {
-        dto = {};
-        for (const k of CAMPOS) {
-          const n = numero(valores[k]);
-          if (n !== undefined) dto[k] = n;
-        }
-      }
-      await operacionService.cortarCoordinacion(c.id, dto);
-      toast.success('Guía cortada.');
-      onCortada();
-      onClose();
-    } catch (e) {
-      toast.error(getErrorMessage(e));
-    } finally {
-      setTrabajando(false);
-    }
-  };
-
-  return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth={extra ? 'lg' : 'sm'}>
-      <DialogTitle>Cortar guía {c.numeroGuia}</DialogTitle>
-      <DialogContent>
-        <Stack spacing={2}>
-          <Alert severity="warning" variant="outlined">
-            El corte es definitivo: después ya no se puede modificar ni anular la coordinación.
-          </Alert>
-          <Typography variant="body2">
-            Total con los valores actuales: <strong>{usd(c.liquidacion.total)}</strong> ({c.guias.length} guías hijas).
-          </Typography>
-          <FormControlLabel
-            control={<Switch checked={extra} onChange={(e) => setExtra(e.target.checked)} />}
-            label={
-              <Box>
-                <Typography variant="body2">Corte extra</Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Valores distintos para facturar (se parte de los actuales). El total de la guía pasa a ser el del corte extra.
-                </Typography>
-              </Box>
-            }
-          />
-          {extra && (
-            <LiquidacionEditor
-              valores={valores}
-              onChange={(k, v) => setValores((x) => ({ ...x, [k]: v }))}
-              parametros={parametros}
-              resumen={resumen}
-              pesoBruto={c.totalKgs ?? undefined}
-              liqAuto={false}
-              cwAuto={false}
-              conHandlingCliente={false}
-            />
-          )}
-        </Stack>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose} disabled={trabajando}>
-          Cancelar
-        </Button>
-        <Button
-          variant="contained"
-          color="warning"
-          onClick={cortar}
-          disabled={trabajando}
-          startIcon={trabajando ? <CircularProgress size={16} color="inherit" /> : <CortarIcon />}
-        >
-          Cortar guía
-        </Button>
-      </DialogActions>
-    </Dialog>
-  );
-}
 
 /**
  * Acciones sobre una coordinación del sistema nuevo mientras está abierta:
@@ -155,20 +29,30 @@ function CortarDialog({ c, open, onClose, onCortada }: { c: CoordinacionDetalle;
 export function AccionesCoordinacion({ c, onCambio }: { c: CoordinacionDetalle; onCambio: () => void }) {
   const router = useRouter();
   const toast = useToast();
-  const [cortar, setCortar] = useState(false);
-  const [anular, setAnular] = useState(false);
+  const [dialogo, setDialogo] = useState<'cortar' | 'anular' | null>(null);
   const [trabajando, setTrabajando] = useState(false);
 
   if (c.origen !== 'SISTEMA' || c.estado !== 'BORRADOR') return null;
 
-  const confirmarAnular = async () => {
+  const normal = c.liquidaciones.find((l) => l.tipo === 'NORMAL');
+  const cliente = c.corteExtra ? c.liquidaciones.find((l) => l.tipo === 'CORTE_EXTRA') : undefined;
+
+  const ejecutar = async (accion: 'cortar' | 'anular') => {
     setTrabajando(true);
     try {
-      await operacionService.anularCoordinacion(c.id);
-      toast.success(`Coordinación anulada: la guía ${c.numeroGuia ?? ''} vuelve a estar disponible.`);
-      router.push('/operacion/coordinaciones');
+      if (accion === 'cortar') {
+        await operacionService.cortarCoordinacion(c.id);
+        toast.success('Guía cortada.');
+        setDialogo(null);
+        onCambio();
+      } else {
+        await operacionService.anularCoordinacion(c.id);
+        toast.success(`Coordinación anulada: la guía ${c.numeroGuia ?? ''} vuelve a estar disponible.`);
+        router.push('/operacion/coordinaciones');
+      }
     } catch (e) {
       toast.error(getErrorMessage(e));
+    } finally {
       setTrabajando(false);
     }
   };
@@ -178,16 +62,50 @@ export function AccionesCoordinacion({ c, onCambio }: { c: CoordinacionDetalle; 
       <Button component={Link} href={`/operacion/coordinaciones/${c.id}/editar`} startIcon={<EditarIcon />} variant="outlined">
         Editar
       </Button>
-      <Button startIcon={<CortarIcon />} variant="contained" onClick={() => setCortar(true)}>
+      <Button startIcon={<CortarIcon />} variant="contained" onClick={() => setDialogo('cortar')}>
         Cortar guía
       </Button>
-      <Button startIcon={<AnularIcon />} color="error" onClick={() => setAnular(true)}>
+      <Button startIcon={<AnularIcon />} color="error" onClick={() => setDialogo('anular')}>
         Anular
       </Button>
 
-      {cortar && <CortarDialog c={c} open={cortar} onClose={() => setCortar(false)} onCortada={onCambio} />}
+      <Dialog open={dialogo === 'cortar'} onClose={() => setDialogo(null)} maxWidth="xs" fullWidth>
+        <DialogTitle>Cortar guía {c.numeroGuia}</DialogTitle>
+        <DialogContent>
+          <Stack spacing={1.5}>
+            <Alert severity="warning" variant="outlined">
+              El corte es definitivo: después ya no se puede modificar ni anular.
+            </Alert>
+            <Typography variant="body2">
+              Guía madre (aerolínea): <strong>{usd(normal?.resumen.total)}</strong>
+            </Typography>
+            {cliente && (
+              <Typography variant="body2">
+                Cobro al cliente: <strong>{usd(cliente.resumen.total)}</strong>
+              </Typography>
+            )}
+            <Typography variant="body2" color="text.secondary">
+              {c.guias.length} guías hijas. Si falta algún valor, edita la coordinación antes de cortar.
+            </Typography>
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDialogo(null)} disabled={trabajando}>
+            Cancelar
+          </Button>
+          <Button
+            variant="contained"
+            color="warning"
+            onClick={() => ejecutar('cortar')}
+            disabled={trabajando}
+            startIcon={trabajando ? <CircularProgress size={16} color="inherit" /> : <CortarIcon />}
+          >
+            Cortar guía
+          </Button>
+        </DialogActions>
+      </Dialog>
 
-      <Dialog open={anular} onClose={() => setAnular(false)} maxWidth="xs" fullWidth>
+      <Dialog open={dialogo === 'anular'} onClose={() => setDialogo(null)} maxWidth="xs" fullWidth>
         <DialogTitle>¿Anular la coordinación?</DialogTitle>
         <DialogContent>
           <Typography variant="body2">
@@ -196,10 +114,10 @@ export function AccionesCoordinacion({ c, onCambio }: { c: CoordinacionDetalle; 
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setAnular(false)} disabled={trabajando}>
+          <Button onClick={() => setDialogo(null)} disabled={trabajando}>
             Cancelar
           </Button>
-          <Button color="error" variant="contained" onClick={confirmarAnular} disabled={trabajando}>
+          <Button color="error" variant="contained" onClick={() => ejecutar('anular')} disabled={trabajando}>
             Anular
           </Button>
         </DialogActions>

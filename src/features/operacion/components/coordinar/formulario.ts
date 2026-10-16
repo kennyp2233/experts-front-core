@@ -49,12 +49,22 @@ export type LiquidacionForm = Partial<Record<keyof ValoresLiquidacion, string>>;
 export interface FormCoordinar {
   cabecera: CabeceraForm;
   lineas: LineaForm[];
+  /** Lo que cobra la aerolínea (va en la guía madre). */
   liquidacion: LiquidacionForm;
+  /** true: al cliente se le cobra distinto que la guía madre (96 % de las guías del sistema viejo). */
+  conCliente: boolean;
+  /** Solo lo que cambia para el cliente; lo vacío es igual a la guía madre. */
+  cliente: LiquidacionForm;
   /** true mientras tarifa y conceptos de aerolínea sean los sugeridos (no editados). */
   liqAuto: boolean;
-  /** true mientras el peso cobrable sea el sugerido (= peso bruto redondeado arriba). */
-  cwAuto: boolean;
+  /** true mientras el handling al cliente sea el de la ficha del cliente. */
+  handlingAuto: boolean;
+  /** true mientras el cobro al cliente sea el propuesto (última guía de la marca). */
+  clienteAuto: boolean;
 }
+
+/** Campos de la liquidación que no van en el cobro al cliente (Access los guarda solo en el normal). */
+export const SOLO_GUIA_MADRE = ['aux3Handling', 'auxOtros', 'tarifaAcordada'] as const;
 
 let secuencia = 0;
 const nuevaKey = () => `l${Date.now().toString(36)}${(secuencia++).toString(36)}`;
@@ -109,8 +119,11 @@ export const formVacio = (): FormCoordinar => ({
   },
   lineas: [lineaVacia()],
   liquidacion: {},
+  conCliente: true,
+  cliente: {},
   liqAuto: true,
-  cwAuto: true,
+  handlingAuto: true,
+  clienteAuto: true,
 });
 
 /**
@@ -155,11 +168,7 @@ export function aDto(f: FormCoordinar): GuardarCoordinacionDto | null {
     nota: l.nota.trim() || undefined,
   }));
   if (lineas.length === 0) return null;
-  const liquidacion: ValoresLiquidacion = {};
-  for (const [k, v] of Object.entries(f.liquidacion)) {
-    const n = numero(v);
-    if (n !== undefined) liquidacion[k as keyof ValoresLiquidacion] = n;
-  }
+  const liquidacion = valoresDe(f.liquidacion);
   return {
     idGuiaMadre: c.idGuiaMadre,
     idConsignatario: c.idConsignatario,
@@ -173,7 +182,25 @@ export function aDto(f: FormCoordinar): GuardarCoordinacionDto | null {
     nota: c.nota.trim() || undefined,
     lineas,
     liquidacion,
+    cobroCliente: f.conCliente ? cobroCliente(f) : undefined,
   };
+}
+
+function valoresDe(form: LiquidacionForm): ValoresLiquidacion {
+  const out: ValoresLiquidacion = {};
+  for (const [k, v] of Object.entries(form)) {
+    const n = numero(v);
+    if (n !== undefined) out[k as keyof ValoresLiquidacion] = n;
+  }
+  return out;
+}
+
+/** Cobro al cliente efectivo: la guía madre con lo que cambia para el cliente encima. */
+export function cobroCliente(f: FormCoordinar): ValoresLiquidacion {
+  const base = valoresDe(f.liquidacion);
+  for (const k of SOLO_GUIA_MADRE) delete base[k];
+  const cambios = valoresDe(f.cliente);
+  return { ...base, ...cambios };
 }
 
 /** Problemas que impiden guardar (los mismos que valida el servidor). */
@@ -201,10 +228,21 @@ export function faltantes(f: FormCoordinar): string[] {
 /** Coordinación guardada → formulario (para editar). */
 export function desdeDetalle(c: CoordinacionDetalle): FormCoordinar {
   const normal = c.liquidaciones.find((l) => l.tipo === 'NORMAL');
+  const extra = c.corteExtra ? c.liquidaciones.find((l) => l.tipo === 'CORTE_EXTRA') : undefined;
   const liquidacion: LiquidacionForm = {};
+  const cliente: LiquidacionForm = {};
+  const campo = (k: string) => typeof k === 'string' && k !== 'handling' && k !== 'tipo' && k !== 'resumen';
   if (normal) {
     for (const [k, v] of Object.entries(normal)) {
-      if (typeof v === 'number' && k !== 'handling') liquidacion[k as keyof ValoresLiquidacion] = texto(v, 4);
+      if (campo(k) && typeof v === 'number') liquidacion[k as keyof ValoresLiquidacion] = texto(v, 4);
+    }
+  }
+  // Del cobro al cliente solo se cargan los valores que cambian respecto a la guía madre.
+  if (extra) {
+    for (const [k, v] of Object.entries(extra)) {
+      if (!campo(k) || typeof v !== 'number') continue;
+      const n = normal?.[k as keyof typeof normal];
+      if ((typeof n === 'number' ? n : 0) !== v) cliente[k as keyof ValoresLiquidacion] = texto(v, 4);
     }
   }
   return {
@@ -242,7 +280,10 @@ export function desdeDetalle(c: CoordinacionDetalle): FormCoordinar {
       ),
     ),
     liquidacion,
+    conCliente: !!extra,
+    cliente,
     liqAuto: false,
-    cwAuto: false,
+    handlingAuto: false,
+    clienteAuto: false,
   };
 }

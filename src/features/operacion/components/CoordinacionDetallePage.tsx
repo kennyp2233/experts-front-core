@@ -156,6 +156,7 @@ function MasDatosPanel({ c }: { c: CoordinacionDetalle }) {
             ['Guía madre', `${c.guiaMadre.numero ?? '—'} · ${c.guiaMadre.estado ?? ''}${c.guiaMadre.virtual ? ' · virtual' : ''}`],
             ['Lote de guías', c.guiaMadre.lote ? `N° ${c.guiaMadre.lote.codigoAccess ?? c.guiaMadre.lote.id} del ${formatDate(c.guiaMadre.lote.fecha)}` : null],
             ['Volumen', num(c.totalVolumen)],
+            ['Comisión (sistema viejo)', c.liquidacion.comision ? `${num(c.liquidacion.comision)} %` : null],
             ['Cupo de fulls', c.cupoFulls ? num(c.cupoFulls) : null],
             ['Certificado de origen', c.certificadoOrigen],
             ['Referencia', c.referencia],
@@ -265,7 +266,7 @@ export function CoordinacionDetallePage({ id }: { id: number }) {
         <Kpi label="Cajas" valor={num(c.totalCajas, 0)} />
         <Kpi label="Peso bruto" valor={kg(c.totalKgs)} />
         <Kpi label="Peso cobrable" valor={kg(c.liquidacion.pesoCobrable)} />
-        <Kpi label="Total liquidación" valor={usd(c.liquidacion.total)} />
+        <Kpi label={c.corteExtra ? 'Cobro al cliente' : 'Total guía'} valor={usd(c.liquidacion.total)} />
       </Stack>
 
       <Tabs value={tab} onChange={(_, v) => setTab(v)} variant="scrollable" sx={{ mb: 2, borderBottom: 1, borderColor: 'divider' }}>

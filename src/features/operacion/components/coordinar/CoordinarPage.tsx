@@ -22,10 +22,9 @@ import {
   faltantes as calcularFaltantes,
   FormCoordinar,
   formVacio,
-  lineaCompleta,
   LineaForm,
+  LiquidacionForm,
   lineaVacia,
-  numero,
   recalcularLinea,
   texto,
 } from './formulario';
@@ -33,16 +32,8 @@ import { LineasEditor } from './LineasEditor';
 import { LiquidacionEditor } from './LiquidacionEditor';
 import { VistaPrevia } from './VistaPrevia';
 
-/** Campos que trae "valores de la aerolínea" (el peso cobrable no). */
+/** Campos que trae "valores de la aerolínea" (el peso cobrable no: lo da la aerolínea al pesar). */
 const CAMPOS_AEROLINEA = new Set<string>(['tarifa', 'iva', 'cargoPca', ...CONCEPTOS_AEROLINEA]);
-
-/** Peso cobrable sugerido = peso bruto redondeado arriba (el usuario lo corrige). */
-function aplicarCw(f: FormCoordinar): FormCoordinar {
-  if (!f.cwAuto) return f;
-  const kg = f.lineas.filter(lineaCompleta).reduce((a, l) => a + (numero(l.pesoKg) ?? 0), 0);
-  const cw = kg > 0 ? String(Math.ceil(kg - 1e-9)) : '';
-  return f.liquidacion.pesoCobrable === cw ? f : { ...f, liquidacion: { ...f.liquidacion, pesoCobrable: cw } };
-}
 
 /**
  * Crear o editar una coordinación del sistema nuevo. Cada cambio se simula en
@@ -93,15 +84,17 @@ export function CoordinarPage({ id }: { id?: number }) {
     shouldRetryOnError: false,
   });
 
-  // Mientras no se editen, tarifa y conceptos siguen a la aerolínea y al peso.
+  // Mientras no se editen, tarifa y conceptos siguen a la aerolínea y al peso, y el
+  // handling al cliente a la ficha del cliente.
   useEffect(() => {
     if (!armada) return;
     setForm((f) => {
-      if (!f || !f.liqAuto) return f;
+      if (!f || (!f.liqAuto && !f.handlingAuto)) return f;
       const liq = { ...f.liquidacion };
       let cambio = false;
       for (const [k, val] of Object.entries(armada.sugerida)) {
-        if (!CAMPOS_AEROLINEA.has(k) || typeof val !== 'number') continue;
+        const aplica = (f.liqAuto && CAMPOS_AEROLINEA.has(k)) || (f.handlingAuto && k === 'aux3Handling');
+        if (!aplica || typeof val !== 'number') continue;
         const t = texto(val, 4);
         if (liq[k as keyof ValoresLiquidacion] !== t) {
           liq[k as keyof ValoresLiquidacion] = t;
@@ -111,6 +104,19 @@ export function CoordinarPage({ id }: { id?: number }) {
       return cambio ? { ...f, liquidacion: liq } : f;
     });
   }, [armada]);
+
+  // Mientras no se edite, el cobro al cliente es el de la última guía de la marca.
+  const propuestaCliente = armada?.sugeridaCliente;
+  useEffect(() => {
+    setForm((f) => {
+      if (!f || !f.clienteAuto) return f;
+      const cliente: LiquidacionForm = {};
+      for (const [k, v] of Object.entries(propuestaCliente?.valores ?? {})) {
+        if (typeof v === 'number') cliente[k as keyof ValoresLiquidacion] = texto(v, 4);
+      }
+      return JSON.stringify(cliente) === JSON.stringify(f.cliente) ? f : { ...f, cliente };
+    });
+  }, [propuestaCliente]);
 
   // ---- cambios ----
 
@@ -161,7 +167,7 @@ export function CoordinarPage({ id }: { id?: number }) {
         }
         return recalcularLinea(nueva, parametros);
       });
-      return aplicarCw({ ...f, lineas });
+      return { ...f, lineas };
     });
   };
 
@@ -173,11 +179,11 @@ export function CoordinarPage({ id }: { id?: number }) {
       const lineas = [...f.lineas];
       const i = base ? lineas.findIndex((l) => l.key === duplicarKey) + 1 : lineas.length;
       lineas.splice(i, 0, nueva);
-      return aplicarCw({ ...f, lineas });
+      return { ...f, lineas };
     });
 
   const quitarLinea = (key: string) =>
-    setForm((f) => f && aplicarCw({ ...f, lineas: f.lineas.filter((l) => l.key !== key) }));
+    setForm((f) => f && { ...f, lineas: f.lineas.filter((l) => l.key !== key) });
 
   const cambiarLiquidacion = (campo: keyof ValoresLiquidacion, valor: string) =>
     setForm(
@@ -186,9 +192,12 @@ export function CoordinarPage({ id }: { id?: number }) {
           ...f,
           liquidacion: { ...f.liquidacion, [campo]: valor },
           liqAuto: CAMPOS_AEROLINEA.has(campo) ? false : f.liqAuto,
-          cwAuto: campo === 'pesoCobrable' ? false : f.cwAuto,
+          handlingAuto: campo === 'aux3Handling' ? false : f.handlingAuto,
         },
     );
+
+  const cambiarCliente = (campo: keyof ValoresLiquidacion, valor: string) =>
+    setForm((f) => f && { ...f, cliente: { ...f.cliente, [campo]: valor }, clienteAuto: false });
 
   const usarValoresAerolinea = () =>
     setForm((f) => {
@@ -292,14 +301,22 @@ export function CoordinarPage({ id }: { id?: number }) {
         />
 
         <LiquidacionEditor
-          valores={form.liquidacion}
-          onChange={cambiarLiquidacion}
+          aerolinea={form.liquidacion}
+          onAerolinea={cambiarLiquidacion}
+          cliente={form.cliente}
+          onCliente={cambiarCliente}
+          conCliente={form.conCliente}
+          onConCliente={(v) => setForm((f) => f && { ...f, conCliente: v })}
           parametros={parametros}
-          resumen={dto ? armada?.liquidacion : undefined}
+          resumenAerolinea={dto ? armada?.aerolinea : undefined}
+          resumenCliente={dto ? armada?.cliente : undefined}
+          diferencia={dto ? armada?.diferencia : undefined}
           pesoBruto={armada?.totales.kgs}
           onSugerir={armada ? usarValoresAerolinea : undefined}
           liqAuto={form.liqAuto}
-          cwAuto={form.cwAuto}
+          handlingAuto={form.handlingAuto}
+          clienteAuto={form.clienteAuto}
+          propuestaCliente={form.clienteAuto ? propuestaCliente?.desde : undefined}
         />
       </Stack>
 
@@ -320,12 +337,27 @@ export function CoordinarPage({ id }: { id?: number }) {
         <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between">
           <Box>
             <Typography variant="caption" color="text.secondary" component="div">
-              Total guía
+              {form.conCliente ? 'Cobro al cliente' : 'Total guía'}
             </Typography>
             <Typography variant="subtitle1" fontWeight={700} sx={{ fontVariantNumeric: 'tabular-nums' }}>
               {usd(dto ? armada?.liquidacion.total : null)}
             </Typography>
           </Box>
+          {form.conCliente && dto && armada?.diferencia?.total !== null && armada?.diferencia?.total !== undefined && (
+            <Box>
+              <Typography variant="caption" color="text.secondary" component="div">
+                Ganancia
+              </Typography>
+              <Typography
+                variant="subtitle1"
+                fontWeight={700}
+                color={armada.diferencia.total < 0 ? 'error.main' : 'success.main'}
+                sx={{ fontVariantNumeric: 'tabular-nums' }}
+              >
+                {usd(armada.diferencia.total)}
+              </Typography>
+            </Box>
+          )}
           <Button
             variant="contained"
             startIcon={guardando ? <CircularProgress size={16} color="inherit" /> : <GuardarIcon />}

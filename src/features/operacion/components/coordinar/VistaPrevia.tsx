@@ -58,9 +58,6 @@ export function VistaPrevia({ armada, calculando, error, faltantes, nombresFinca
         <Dato label="Cajas" valor={num(t?.cajas, 0)} />
         <Dato label="Peso bruto" valor={kg(t?.kgs)} />
         <Dato label="Volumen" valor={t ? `${num(t.volumen)} kg vol.` : '—'} />
-        {armada?.comision !== null && armada?.comision !== undefined && (
-          <Dato label="Comisión agencia" valor={`${num(armada.comision)} %`} />
-        )}
       </Stack>
 
       <Stack spacing={1} sx={{ mb: armada?.guiasHijas.length ? 2 : 0 }}>

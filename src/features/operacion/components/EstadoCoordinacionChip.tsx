@@ -19,7 +19,7 @@ export function EstadoCoordinacionChip({ estado, corteExtra }: { estado: EstadoC
   const e = ESTADOS[estado];
   const extra = corteExtra && estado === 'CORTADO';
   return (
-    <Tooltip title={extra ? `${e.ayuda} Tiene valores de corte extra (la facturación usa esos).` : e.ayuda}>
+    <Tooltip title={extra ? `${e.ayuda} Al cliente se le cobró distinto que la guía madre.` : e.ayuda}>
       <Chip size="small" label={extra ? `${e.label}*` : e.label} color={e.color} variant="outlined" />
     </Tooltip>
   );

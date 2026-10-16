@@ -54,11 +54,11 @@ const columnas: DataTableColumn<CoordinacionResumen>[] = [
   { key: 'fulls', label: 'Fulls', align: 'right', value: (c) => num(c.totalFulls) },
   { key: 'cajas', label: 'Cajas', align: 'right', value: (c) => num(c.totalCajas, 0), defaultHidden: true },
   { key: 'kgs', label: 'Peso', align: 'right', value: (c) => kg(c.totalKgs) },
-  { key: 'total', label: 'Total', description: 'Total de la liquidación', align: 'right', value: (c) => usd(c.liqTotal) },
+  { key: 'total', label: 'Total', description: 'Lo que se cobra al cliente (o el total de la guía madre)', align: 'right', value: (c) => usd(c.liqTotal) },
   {
     key: 'estado',
     label: 'Estado',
-    description: '* = con corte extra',
+    description: '* = al cliente se le cobró distinto que la guía madre',
     value: (c) => ETIQUETA_ESTADO[c.estado],
     render: (c) => <EstadoCoordinacionChip estado={c.estado} corteExtra={c.corteExtra} />,
   },

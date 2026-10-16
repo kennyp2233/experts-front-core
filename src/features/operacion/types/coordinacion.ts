@@ -352,7 +352,10 @@ export interface GuardarCoordinacionDto {
   referencia?: string;
   nota?: string;
   lineas: LineaCoordinacionDto[];
+  /** Lo que cobra la aerolínea (guía madre). */
   liquidacion?: ValoresLiquidacion;
+  /** Lo que se le cobra al cliente, si es distinto (Access: "corte extra"). */
+  cobroCliente?: ValoresLiquidacion;
 }
 
 export interface ResumenLiquidacion {
@@ -379,9 +382,18 @@ export interface CoordinacionArmada {
     lineas: Array<LineaCoordinacionDto & { codigoProducto: string | null; fullsCalculados: number }>;
   }>;
   totales: { cajas: number; fulls: number; kgs: number; volumen: number };
+  /** La que vale: la del cliente si se cobra distinto, si no la de la guía madre. */
   liquidacion: ResumenLiquidacion;
+  aerolinea: ResumenLiquidacion;
+  cliente: ResumenLiquidacion | null;
+  /** Ganancia: cobro al cliente − guía madre. */
+  diferencia: { tarifa: number | null; flete: number | null; total: number | null } | null;
   sugerida: ValoresLiquidacion;
-  comision: number | null;
+  /** Cobro al cliente propuesto: lo de la última guía de la misma marca. */
+  sugeridaCliente: {
+    valores: ValoresLiquidacion;
+    desde: { id: number; numeroGuia: string | null; fechaVuelo: string };
+  } | null;
   advertencias: string[];
 }
 
