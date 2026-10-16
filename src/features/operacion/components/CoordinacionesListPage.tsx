@@ -3,71 +3,99 @@
 import { useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Button, InputAdornment, MenuItem, Stack, TextField, Typography } from '@mui/material';
+import { Box, Button, InputAdornment, MenuItem, Stack, TextField, Tooltip, Typography } from '@mui/material';
 import { Add as AddIcon, Search as SearchIcon } from '@mui/icons-material';
 import { AppPage, DataTable, type DataTableColumn } from '@/shared/components/ui';
 import { formatDate } from '@/shared/utils';
 import { useCoordinaciones } from '../hooks/useCoordinaciones';
 import type { CoordinacionResumen, EstadoCoordinacion } from '../types/coordinacion';
-import { kg, num, usd } from '../utils/formato';
+import { formatoAwb, kg, nombreCorto, num, usd } from '../utils/formato';
+import { OpcionAutocomplete } from './coordinar/OpcionAutocomplete';
 import { ETIQUETA_ESTADO, EstadoCoordinacionChip } from './EstadoCoordinacionChip';
 
 const PAGE_SIZE = 50;
 
+const nums = { fontVariantNumeric: 'tabular-nums' } as const;
+
+const idDe = (sp: URLSearchParams, k: string) => (sp.get(k) ? Number(sp.get(k)) || undefined : undefined);
+
 const columnas: DataTableColumn<CoordinacionResumen>[] = [
   {
     key: 'guia',
-    label: 'Guía (AWB)',
+    label: 'Guía madre',
     pinned: true,
     mobile: 'title',
-    value: (c) => c.numeroGuia,
+    value: (c) => `${formatoAwb(c.numeroGuia)} N° ${c.codigoAccess ?? c.id}`,
     render: (c) => (
       <Stack spacing={0}>
-        <Typography variant="body2" fontWeight={600} sx={{ fontVariantNumeric: 'tabular-nums' }}>
-          {c.numeroGuia ?? '—'}
+        <Typography variant="body2" fontWeight={600} sx={{ ...nums, whiteSpace: 'nowrap' }}>
+          {formatoAwb(c.numeroGuia)}
         </Typography>
-        {c.codigoAccess !== null && (
-          <Typography variant="caption" color="text.secondary">
-            Coord. {c.codigoAccess}
-          </Typography>
-        )}
+        <Typography variant="caption" color="text.secondary" sx={nums}>
+          N° {c.codigoAccess ?? c.id}
+        </Typography>
       </Stack>
     ),
   },
-  { key: 'vuelo', label: 'Vuelo', value: (c) => formatDate(c.fechaVuelo), mobile: 'subtitle' },
+  {
+    key: 'estado',
+    label: 'Estado',
+    value: (c) => ETIQUETA_ESTADO[c.estado],
+    render: (c) => <EstadoCoordinacionChip estado={c.estado} />,
+  },
+  { key: 'vuelo', label: 'Fecha vuelo', value: (c) => formatDate(c.fechaVuelo), mobile: 'subtitle' },
   {
     key: 'aerolinea',
-    label: 'Aerolínea',
-    value: (c) => (c.aerolinea ? `${c.aerolinea.codigo ?? ''} ${c.aerolinea.nombre}`.trim() : null),
+    label: 'Aerol.',
+    description: 'Aerolínea (código)',
+    value: (c) => c.aerolinea?.codigo ?? (c.aerolinea ? nombreCorto(c.aerolinea) : null),
+    render: (c) =>
+      c.aerolinea ? (
+        <Tooltip title={nombreCorto(c.aerolinea)}>
+          <span>{c.aerolinea.codigo ?? nombreCorto(c.aerolinea)}</span>
+        </Tooltip>
+      ) : (
+        '—'
+      ),
   },
-  { key: 'consignatario', label: 'Consignatario', value: (c) => c.consignatario?.nombre, maxWidth: 220 },
+  { key: 'consignatario', label: 'Consignatario', value: (c) => c.consignatario?.nombre, maxWidth: 190 },
+  { key: 'cliente', label: 'Cliente', value: (c) => c.cliente?.nombre, maxWidth: 140 },
   {
     key: 'destino',
     label: 'Destino',
-    description: 'Aeropuerto de la guía → destino final',
+    description: 'Destino de la guía → destino final',
+    defaultHidden: true,
     value: (c) =>
       [c.destino?.codigo, c.destinoFinal?.codigo && c.destinoFinal.codigo !== c.destino?.codigo ? c.destinoFinal.codigo : null]
         .filter(Boolean)
         .join(' → '),
   },
-  { key: 'hijas', label: 'Hijas', description: 'Guías hijas (HAWB)', align: 'right', value: (c) => c.guiasHijas },
-  { key: 'fulls', label: 'Fulls', align: 'right', value: (c) => num(c.totalFulls) },
-  { key: 'cajas', label: 'Cajas', align: 'right', value: (c) => num(c.totalCajas, 0), defaultHidden: true },
-  { key: 'kgs', label: 'Peso', align: 'right', value: (c) => kg(c.totalKgs) },
-  { key: 'total', label: 'Total', description: 'Lo que se cobra al cliente (o el total de la guía madre)', align: 'right', value: (c) => usd(c.liqTotal) },
   {
-    key: 'estado',
-    label: 'Estado',
-    description: '* = al cliente se le cobró distinto que la guía madre',
-    value: (c) => ETIQUETA_ESTADO[c.estado],
-    render: (c) => <EstadoCoordinacionChip estado={c.estado} corteExtra={c.corteExtra} />,
+    key: 'hijas',
+    label: 'G. hijas',
+    description: 'Guías hijas (HAWB)',
+    align: 'right',
+    defaultHidden: true,
+    value: (c) => c.guiasHijas,
+  },
+  { key: 'fulls', label: 'Fulls', align: 'right', value: (c) => num(c.totalFulls) },
+  { key: 'cajas', label: 'Cajas', align: 'right', value: (c) => num(c.totalCajas, 0) },
+  { key: 'kgs', label: 'Kg', align: 'right', value: (c) => num(c.totalKgs) },
+  { key: 'cobrable', label: 'Peso cobrable', align: 'right', value: (c) => kg(c.pesoCobrable), defaultHidden: true },
+  {
+    key: 'total',
+    label: 'Cobro $',
+    description: 'Lo que se cobra al cliente (corte extra); si no hay, el total de la guía madre',
+    align: 'right',
+    value: (c) => usd(c.liqTotal),
   },
 ];
 
 /**
- * Lista de coordinaciones del sistema nuevo. Los filtros viven en la URL
- * (?q=&estado=&desde=&hasta=&page=) para que "atrás" y los links funcionen.
- * Usa `useSearchParams`: la página que la monta la envuelve en <Suspense>.
+ * Lista de coordinaciones. Los filtros viven en la URL
+ * (?q=&estado=&aerolinea=&consignatario=&desde=&hasta=&page=) para que "atrás"
+ * y los links funcionen. Usa `useSearchParams`: la página que la monta la
+ * envuelve en <Suspense>.
  */
 export function CoordinacionesListPage() {
   const router = useRouter();
@@ -78,6 +106,8 @@ export function CoordinacionesListPage() {
     () => ({
       q: sp.get('q') ?? undefined,
       estado: (sp.get('estado') as EstadoCoordinacion | null) ?? undefined,
+      idAerolinea: idDe(sp, 'aerolinea'),
+      idConsignatario: idDe(sp, 'consignatario'),
       desde: sp.get('desde') ?? undefined,
       hasta: sp.get('hasta') ?? undefined,
       page: Number(sp.get('page') ?? '1') || 1,
@@ -114,11 +144,7 @@ export function CoordinacionesListPage() {
   return (
     <AppPage
       title="Coordinaciones"
-      subtitle={
-        pagina
-          ? `${total.toLocaleString('es-EC')} coordinaciones. Las del sistema viejo se actualizan solas cada 15 minutos.`
-          : 'Embarques coordinados: guía madre, guías hijas por finca y liquidación.'
-      }
+      subtitle="Las del sistema viejo se actualizan solas cada 15 minutos."
       actions={
         <Button component={Link} href="/operacion/coordinaciones/nueva" variant="contained" startIcon={<AddIcon />}>
           Nueva coordinación
@@ -137,13 +163,13 @@ export function CoordinacionesListPage() {
         onRowClick={(c) => router.push(`/operacion/coordinaciones/${c.id}`)}
         emptyMessage="No hay coordinaciones con esos filtros."
         filters={
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ width: '100%' }}>
+          <Stack direction="row" flexWrap="wrap" useFlexGap spacing={1} sx={{ width: '100%' }}>
             <TextField
               size="small"
               value={texto}
               onChange={(e) => setTexto(e.target.value)}
-              placeholder="AWB, guía hija, DAE o N° coordinación"
-              sx={{ minWidth: 280, flex: 1 }}
+              placeholder="Guía, guía hija, DAE, N°, marca o finca"
+              sx={{ minWidth: 220, flex: '1 1 220px' }}
               slotProps={{
                 input: {
                   startAdornment: (
@@ -160,12 +186,29 @@ export function CoordinacionesListPage() {
               label="Estado"
               value={filtros.estado ?? ''}
               onChange={(e) => actualizar({ estado: e.target.value || undefined })}
-              sx={{ minWidth: 140 }}
+              sx={{ width: 120 }}
             >
               <MenuItem value="">Todos</MenuItem>
               <MenuItem value="BORRADOR">Abiertas</MenuItem>
               <MenuItem value="CORTADO">Cortadas</MenuItem>
             </TextField>
+            <Box sx={{ width: 170 }}>
+              <OpcionAutocomplete
+                tipo="aerolineas"
+                label="Aerolínea"
+                conCodigo
+                value={filtros.idAerolinea ?? null}
+                onChange={(id) => actualizar({ aerolinea: id ? String(id) : undefined })}
+              />
+            </Box>
+            <Box sx={{ width: 210 }}>
+              <OpcionAutocomplete
+                tipo="consignatarios"
+                label="Consignatario"
+                value={filtros.idConsignatario ?? null}
+                onChange={(id) => actualizar({ consignatario: id ? String(id) : undefined })}
+              />
+            </Box>
             <TextField
               type="date"
               size="small"
@@ -173,6 +216,7 @@ export function CoordinacionesListPage() {
               value={filtros.desde ?? ''}
               onChange={(e) => actualizar({ desde: e.target.value || undefined })}
               slotProps={{ inputLabel: { shrink: true } }}
+              sx={{ width: 145 }}
             />
             <TextField
               type="date"
@@ -181,6 +225,7 @@ export function CoordinacionesListPage() {
               value={filtros.hasta ?? ''}
               onChange={(e) => actualizar({ hasta: e.target.value || undefined })}
               slotProps={{ inputLabel: { shrink: true } }}
+              sx={{ width: 145 }}
             />
           </Stack>
         }
@@ -188,6 +233,8 @@ export function CoordinacionesListPage() {
           page,
           hasNextPage: page * PAGE_SIZE < total,
           onPageChange: (p) => actualizar({ page: p > 1 ? String(p) : undefined }, false),
+          total: pagina?.total,
+          pageSize: PAGE_SIZE,
         }}
       />
     </AppPage>

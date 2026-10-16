@@ -33,7 +33,7 @@ export function AppPage({ title, subtitle, actions, maxWidth, children }: AppPag
             {title}
           </Typography>
           {subtitle && (
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+            <Typography variant="body2" color="text.secondary" component="div" sx={{ mt: 0.5 }}>
               {subtitle}
             </Typography>
           )}

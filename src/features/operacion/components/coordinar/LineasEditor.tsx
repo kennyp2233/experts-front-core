@@ -25,9 +25,9 @@ import {
   ContentCopy as DuplicarIcon,
   DeleteOutline as BorrarIcon,
 } from '@mui/icons-material';
-import type { Opcion, ParametrosCoordinacion } from '../../types/coordinacion';
-import { num } from '../../utils/formato';
-import { LineaForm, numero } from './formulario';
+import type { CoordinacionArmada, Opcion, ParametrosCoordinacion } from '../../types/coordinacion';
+import { num, plural } from '../../utils/formato';
+import { formatearDae, ID_CAMPO, LineaForm, numero, PATRON_DAE } from './formulario';
 import { OpcionAutocomplete } from './OpcionAutocomplete';
 
 type CampoNumerico = 'cajas' | 'fulls' | 'pesoKg' | 'tallos' | 'valor' | 'largo' | 'ancho' | 'alto';
@@ -35,11 +35,14 @@ type CampoNumerico = 'cajas' | 'fulls' | 'pesoKg' | 'tallos' | 'valor' | 'largo'
 interface Props {
   lineas: LineaForm[];
   parametros: ParametrosCoordinacion | undefined;
+  /** Resultado del servidor: de ahí sale el número de guía hija de cada fila. */
+  armada: CoordinacionArmada | undefined;
   onCambiar: (key: string, cambios: Partial<LineaForm>, finca?: Opcion | null) => void;
   onAgregar: (duplicarKey?: string) => void;
   onQuitar: (key: string) => void;
+  /** Ids de los campos que faltan (se marcan en rojo después de intentar grabar). */
+  errores: Set<string>;
 }
-
 
 function Numero({
   value,
@@ -48,6 +51,8 @@ function Numero({
   width = '100%',
   label,
   placeholder,
+  id,
+  error,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -55,12 +60,16 @@ function Numero({
   width?: number | string;
   label: string;
   placeholder?: string;
+  id?: string;
+  error?: boolean;
 }) {
   return (
     <TextField
+      id={id}
       size="small"
       value={value}
       placeholder={placeholder}
+      error={error}
       onChange={(e) => onChange(e.target.value)}
       slotProps={{ htmlInput: { inputMode: 'decimal', 'aria-label': label } }}
       sx={{
@@ -76,15 +85,21 @@ function Numero({
   );
 }
 
+/** Número de guía hija que le toca a la fila (una guía hija por marca + finca + producto). */
+function guiaHijaDe(l: LineaForm, armada: CoordinacionArmada | undefined) {
+  if (!armada || l.idFinca === null) return undefined;
+  return armada.guiasHijas.find((g) => g.idFinca === l.idFinca && g.lineas.some((x) => x.idProducto === l.idProducto));
+}
+
 /**
- * Carga de la coordinación: una línea por finca + producto + tipo de caja.
- * Fulls, kg, tallos y valor se proponen (en cursiva) y se pueden corregir; las
- * medidas salen de la caja de la finca. El sistema agrupa las líneas en guías
- * hijas (una por marca + finca + producto).
+ * Detalle por finca: una fila por finca + producto + tipo de caja. Fulls, kg,
+ * tallos y valor se proponen (en cursiva) y se pueden corregir; las medidas
+ * salen de la caja de la finca. El sistema agrupa las filas en guías hijas
+ * (una por marca + finca + producto).
  */
-export function LineasEditor({ lineas, parametros, onCambiar, onAgregar, onQuitar }: Props) {
-  // Las medidas salen de la finca y solo cambian el volumen: se ocultan por defecto.
-  const [medidas, setMedidas] = useState(false);
+export function LineasEditor({ lineas, parametros, armada, onCambiar, onAgregar, onQuitar, errores }: Props) {
+  // Tallos, valor y medidas casi siempre son los sugeridos: se ocultan por defecto.
+  const [mas, setMas] = useState(false);
   const tot = lineas.reduce(
     (a, l) => ({
       cajas: a.cajas + (numero(l.cajas) ?? 0),
@@ -95,6 +110,7 @@ export function LineasEditor({ lineas, parametros, onCambiar, onAgregar, onQuita
     }),
     { cajas: 0, fulls: 0, kg: 0, tallos: 0, valor: 0 },
   );
+  const fincas = new Set(lineas.map((l) => l.idFinca).filter((x) => x !== null)).size;
 
   const editarNumero = (l: LineaForm, campo: CampoNumerico) => (v: string) => {
     const auto = { ...l.auto };
@@ -103,12 +119,14 @@ export function LineasEditor({ lineas, parametros, onCambiar, onAgregar, onQuita
     onCambiar(l.key, { [campo]: v, auto });
   };
 
+  const totalCelda = { pr: '12px !important' } as const;
+
   return (
     <Paper variant="outlined" sx={{ p: 2 }}>
-      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }} spacing={1}>
+      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }} spacing={1}>
         <Box>
           <Typography variant="subtitle1" fontWeight={600}>
-            Carga
+            Detalle por finca
           </Typography>
           <Typography variant="caption" color="text.secondary">
             Los valores en cursiva son sugeridos ({parametros?.lineas.cajasPorFull ?? 2} cajas × {parametros?.lineas.kgPorCaja ?? 22} kg por full,{' '}
@@ -116,15 +134,11 @@ export function LineasEditor({ lineas, parametros, onCambiar, onAgregar, onQuita
             escribir encima quedan fijos.
           </Typography>
         </Box>
-        <Stack direction="row" spacing={1} alignItems="center" sx={{ flexShrink: 0 }}>
-          <FormControlLabel
-            control={<Switch size="small" checked={medidas} onChange={(e) => setMedidas(e.target.checked)} />}
-            label={<Typography variant="body2">Medidas</Typography>}
-          />
-          <Button startIcon={<AddIcon />} onClick={() => onAgregar()} variant="outlined" size="small">
-            Línea
-          </Button>
-        </Stack>
+        <FormControlLabel
+          sx={{ flexShrink: 0 }}
+          control={<Switch size="small" checked={mas} onChange={(e) => setMas(e.target.checked)} />}
+          label={<Typography variant="body2">Tallos, valor y medidas</Typography>}
+        />
       </Stack>
 
       <TableContainer sx={{ mx: -2, px: 2, width: 'calc(100% + 32px)' }}>
@@ -132,162 +146,218 @@ export function LineasEditor({ lineas, parametros, onCambiar, onAgregar, onQuita
           size="small"
           sx={{
             '& td, & th': { px: 0.5, borderBottom: 'none' },
-            // Celdas compactas: que la fila entre en una pantalla de laptop sin las medidas.
+            '& th': { color: 'text.secondary', fontWeight: 600 },
             '& .MuiInputBase-root': { fontSize: 14 },
             '& .MuiOutlinedInput-input': { px: 1 },
             tableLayout: 'fixed',
-            minWidth: medidas ? 1260 : 1080,
+            // Debajo de este ancho se desplaza; a 1366 entra con el menú plegado.
+            minWidth: mas ? 1220 : 900,
           }}
         >
           {/* Anchos fijos: la finca se lleva el espacio que sobra. */}
           <colgroup>
             <col style={{ width: 28 }} />
             <col />
-            <col style={{ width: 150 }} />
-            <col style={{ width: 182 }} />
-            <col style={{ width: 92 }} />
-            <col style={{ width: 64 }} />
-            <col style={{ width: 72 }} />
-            <col style={{ width: 72 }} />
-            <col style={{ width: 72 }} />
+            <col style={{ width: 160 }} />
             <col style={{ width: 84 }} />
-            {medidas && <col style={{ width: 180 }} />}
-            <col style={{ width: 76 }} />
+            <col style={{ width: 66 }} />
+            <col style={{ width: 200 }} />
+            <col style={{ width: 70 }} />
+            <col style={{ width: 74 }} />
+            {mas && <col style={{ width: 72 }} />}
+            {mas && <col style={{ width: 82 }} />}
+            {mas && <col style={{ width: 170 }} />}
+            <col style={{ width: 92 }} />
+            <col style={{ width: 72 }} />
           </colgroup>
           <TableHead>
             <TableRow>
               <TableCell>#</TableCell>
               <TableCell>Finca</TableCell>
               <TableCell>Producto</TableCell>
-              <TableCell>DAE</TableCell>
-              <TableCell>Caja</TableCell>
+              <TableCell>Tipo caja</TableCell>
               <TableCell align="right">Cajas</TableCell>
+              <TableCell>DAE</TableCell>
               <TableCell align="right">Fulls</TableCell>
               <TableCell align="right">Kg</TableCell>
-              <TableCell align="right">Tallos</TableCell>
-              <TableCell align="right">Valor $</TableCell>
-              {medidas && <TableCell>Medidas cm (L × A × H)</TableCell>}
+              {mas && <TableCell align="right">Tallos</TableCell>}
+              {mas && <TableCell align="right">Valor $</TableCell>}
+              {mas && <TableCell>Medidas cm (L × A × H)</TableCell>}
+              <TableCell>Guía hija</TableCell>
               <TableCell />
             </TableRow>
           </TableHead>
           <TableBody>
-            {lineas.map((l, i) => (
-              <TableRow key={l.key} sx={{ verticalAlign: 'top' }}>
-                <TableCell sx={{ pt: 1.5 }}>
-                  <Typography variant="caption" color="text.secondary">
-                    {i + 1}
-                  </Typography>
-                </TableCell>
-                <TableCell>
-                  <OpcionAutocomplete
-                    sinEtiqueta
-                    tipo="fincas"
-                    label="Finca"
-                    value={l.idFinca}
-                    onChange={(id, o) => onCambiar(l.key, { idFinca: id }, o)}
-                  />
-                </TableCell>
-                <TableCell>
-                  <OpcionAutocomplete
-                    sinEtiqueta
-                    tipo="productos"
-                    label="Producto"
-                    value={l.idProducto}
-                    onChange={(id) => onCambiar(l.key, { idProducto: id })}
-                  />
-                </TableCell>
-                <TableCell>
-                  <TextField
-                    size="small"
-                    value={l.dae}
-                    placeholder="055-2026-40-00000000"
-                    onChange={(e) => onCambiar(l.key, { dae: e.target.value })}
-                    error={!!l.dae.trim() && !/^\d{3}-\d{4}-\d{2}-\d{8}$/.test(l.dae.trim())}
-                    slotProps={{ htmlInput: { 'aria-label': 'DAE', spellCheck: false } }}
-                    fullWidth
-                    sx={{ '& input': { fontVariantNumeric: 'tabular-nums' } }}
-                  />
-                </TableCell>
-                <TableCell>
-                  <TextField
-                    select
-                    size="small"
-                    value={l.idTipoCaja ?? ''}
-                    onChange={(e) =>
-                      onCambiar(l.key, {
-                        idTipoCaja: e.target.value === '' ? null : Number(e.target.value),
-                        auto: { ...l.auto, fulls: e.target.value !== '' ? true : l.auto.fulls },
-                      })
-                    }
-                    fullWidth
-                    slotProps={{ htmlInput: { 'aria-label': 'Tipo de caja' } }}
-                  >
-                    <MenuItem value="">
-                      <em>mixta</em>
-                    </MenuItem>
-                    {parametros?.tiposCaja.map((t) => (
-                      <MenuItem key={t.id} value={t.id}>
-                        <Tooltip title={`${t.nombre}: ${t.factorFull} full`} placement="right">
-                          <span>{t.codigo ?? t.nombre}</span>
-                        </Tooltip>
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                </TableCell>
-                <TableCell align="right">
-                  <Numero label="Cajas" value={l.cajas} onChange={editarNumero(l, 'cajas')} />
-                </TableCell>
-                <TableCell align="right">
-                  <Numero label="Fulls" value={l.fulls} auto={l.auto.fulls} onChange={editarNumero(l, 'fulls')} />
-                </TableCell>
-                <TableCell align="right">
-                  <Numero label="Kg" value={l.pesoKg} auto={l.auto.pesoKg} onChange={editarNumero(l, 'pesoKg')} />
-                </TableCell>
-                <TableCell align="right">
-                  <Numero label="Tallos" value={l.tallos} auto={l.auto.tallos} onChange={editarNumero(l, 'tallos')} />
-                </TableCell>
-                <TableCell align="right">
-                  <Numero label="Valor" value={l.valor} auto={l.auto.valor} onChange={editarNumero(l, 'valor')} />
-                </TableCell>
-                {medidas && (
-                  <TableCell>
-                    <Stack direction="row" spacing={0.5}>
-                      {(['largo', 'ancho', 'alto'] as const).map((k) => (
-                        <Numero key={k} label={k} value={l[k]} auto={l.auto.medidas} onChange={editarNumero(l, k)} width="33%" />
-                      ))}
-                    </Stack>
+            {lineas.map((l, i) => {
+              const daeMal = !!l.dae.trim() && !PATRON_DAE.test(l.dae.trim());
+              const gh = guiaHijaDe(l, armada);
+              return (
+                <TableRow key={l.key} sx={{ verticalAlign: 'top' }}>
+                  <TableCell sx={{ pt: 1.5 }}>
+                    <Typography variant="caption" color="text.secondary">
+                      {i + 1}
+                    </Typography>
                   </TableCell>
-                )}
-                <TableCell sx={{ whiteSpace: 'nowrap' }}>
-                  <Tooltip title="Duplicar línea">
-                    <IconButton size="small" onClick={() => onAgregar(l.key)} aria-label="Duplicar línea">
-                      <DuplicarIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title="Quitar línea">
-                    <span>
-                      <IconButton
-                        size="small"
-                        onClick={() => onQuitar(l.key)}
-                        disabled={lineas.length === 1}
-                        aria-label="Quitar línea"
-                      >
-                        <BorrarIcon fontSize="small" />
+                  <TableCell>
+                    <OpcionAutocomplete
+                      id={ID_CAMPO.fila(l.key, 'finca')}
+                      sinEtiqueta
+                      tipo="fincas"
+                      label="Finca"
+                      error={errores.has(ID_CAMPO.fila(l.key, 'finca'))}
+                      value={l.idFinca}
+                      onChange={(id, o) => onCambiar(l.key, { idFinca: id }, o)}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <OpcionAutocomplete
+                      id={ID_CAMPO.fila(l.key, 'producto')}
+                      sinEtiqueta
+                      tipo="productos"
+                      label="Producto"
+                      error={errores.has(ID_CAMPO.fila(l.key, 'producto'))}
+                      value={l.idProducto}
+                      onChange={(id) => onCambiar(l.key, { idProducto: id })}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <TextField
+                      select
+                      size="small"
+                      value={l.idTipoCaja ?? ''}
+                      onChange={(e) =>
+                        onCambiar(l.key, {
+                          idTipoCaja: e.target.value === '' ? null : Number(e.target.value),
+                          auto: { ...l.auto, fulls: e.target.value !== '' ? true : l.auto.fulls },
+                        })
+                      }
+                      fullWidth
+                      slotProps={{ htmlInput: { 'aria-label': 'Tipo de caja' } }}
+                    >
+                      <MenuItem value="">
+                        <em>mixta</em>
+                      </MenuItem>
+                      {parametros?.tiposCaja.map((t) => (
+                        <MenuItem key={t.id} value={t.id}>
+                          <Tooltip title={`${t.nombre}: ${t.factorFull} full`} placement="right">
+                            <span>{t.codigo ?? t.nombre}</span>
+                          </Tooltip>
+                        </MenuItem>
+                      ))}
+                    </TextField>
+                  </TableCell>
+                  <TableCell align="right">
+                    <Numero
+                      id={ID_CAMPO.fila(l.key, 'cajas')}
+                      label="Cajas"
+                      value={l.cajas}
+                      error={errores.has(ID_CAMPO.fila(l.key, 'cajas'))}
+                      onChange={editarNumero(l, 'cajas')}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <TextField
+                      id={ID_CAMPO.fila(l.key, 'dae')}
+                      size="small"
+                      value={l.dae}
+                      placeholder="055-AAAA-40-XXXXXXXX"
+                      onChange={(e) => onCambiar(l.key, { dae: formatearDae(e.target.value, l.dae) })}
+                      error={daeMal || errores.has(ID_CAMPO.fila(l.key, 'dae'))}
+                      helperText={daeMal ? 'Formato 055-AAAA-40-XXXXXXXX' : undefined}
+                      slotProps={{
+                        htmlInput: { 'aria-label': 'DAE', spellCheck: false, inputMode: 'numeric' },
+                        formHelperText: { sx: { mx: 0.5, whiteSpace: 'nowrap' } },
+                      }}
+                      fullWidth
+                      sx={{ '& input': { fontVariantNumeric: 'tabular-nums' } }}
+                    />
+                  </TableCell>
+                  <TableCell align="right">
+                    <Numero label="Fulls" value={l.fulls} auto={l.auto.fulls} onChange={editarNumero(l, 'fulls')} />
+                  </TableCell>
+                  <TableCell align="right">
+                    <Numero
+                      id={ID_CAMPO.fila(l.key, 'kg')}
+                      label="Kg"
+                      value={l.pesoKg}
+                      auto={l.auto.pesoKg}
+                      error={errores.has(ID_CAMPO.fila(l.key, 'kg'))}
+                      onChange={editarNumero(l, 'pesoKg')}
+                    />
+                  </TableCell>
+                  {mas && (
+                    <TableCell align="right">
+                      <Numero label="Tallos" value={l.tallos} auto={l.auto.tallos} onChange={editarNumero(l, 'tallos')} />
+                    </TableCell>
+                  )}
+                  {mas && (
+                    <TableCell align="right">
+                      <Numero label="Valor" value={l.valor} auto={l.auto.valor} onChange={editarNumero(l, 'valor')} />
+                    </TableCell>
+                  )}
+                  {mas && (
+                    <TableCell>
+                      <Stack direction="row" spacing={0.5}>
+                        {(['largo', 'ancho', 'alto'] as const).map((k) => (
+                          <Numero key={k} label={k} value={l[k]} auto={l.auto.medidas} onChange={editarNumero(l, k)} width="33%" />
+                        ))}
+                      </Stack>
+                    </TableCell>
+                  )}
+                  <TableCell sx={{ pt: 1.25 }}>
+                    {gh?.numeroGuiaHija ? (
+                      <Typography variant="body2" fontWeight={600} sx={{ fontVariantNumeric: 'tabular-nums' }}>
+                        {gh.numeroGuiaHija}
+                      </Typography>
+                    ) : gh ? (
+                      <Tooltip title="El número de guía hija se asigna al grabar.">
+                        <Typography variant="caption" color="text.secondary" fontStyle="italic">
+                          al grabar
+                        </Typography>
+                      </Tooltip>
+                    ) : null}
+                  </TableCell>
+                  <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                    <Tooltip title="Duplicar fila">
+                      <IconButton size="small" onClick={() => onAgregar(l.key)} aria-label="Duplicar fila">
+                        <DuplicarIcon fontSize="small" />
                       </IconButton>
-                    </span>
-                  </Tooltip>
-                </TableCell>
-              </TableRow>
-            ))}
-            <TableRow sx={{ '& td': { fontWeight: 600, pt: 1.5 } }}>
+                    </Tooltip>
+                    <Tooltip title="Quitar fila">
+                      <span>
+                        <IconButton size="small" onClick={() => onQuitar(l.key)} disabled={lineas.length === 1} aria-label="Quitar fila">
+                          <BorrarIcon fontSize="small" />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+            <TableRow sx={{ '& td': { fontWeight: 600, pt: 1 } }}>
               <TableCell />
-              <TableCell colSpan={4}>Total ({lineas.length} líneas)</TableCell>
-              <TableCell align="right" sx={{ pr: '12px !important' }}>{num(tot.cajas, 0)}</TableCell>
-              <TableCell align="right" sx={{ pr: '12px !important' }}>{num(tot.fulls, 4)}</TableCell>
-              <TableCell align="right" sx={{ pr: '12px !important' }}>{num(tot.kg)}</TableCell>
-              <TableCell align="right" sx={{ pr: '12px !important' }}>{num(tot.tallos, 0)}</TableCell>
-              <TableCell align="right" sx={{ pr: '12px !important' }}>{num(tot.valor)}</TableCell>
-              <TableCell colSpan={medidas ? 2 : 1} />
+              <TableCell colSpan={3}>
+                <Button id={ID_CAMPO.fincas} startIcon={<AddIcon />} onClick={() => onAgregar()} size="small" sx={{ mr: 2 }}>
+                  Agregar finca
+                </Button>
+                <Typography component="span" variant="body2" fontWeight={600}>
+                  Total ({plural(fincas, 'finca')})
+                </Typography>
+              </TableCell>
+              <TableCell align="right" sx={totalCelda}>{num(tot.cajas, 0)}</TableCell>
+              <TableCell />
+              <TableCell align="right" sx={totalCelda}>{num(tot.fulls, 4)}</TableCell>
+              <TableCell align="right" sx={totalCelda}>{num(tot.kg)}</TableCell>
+              {mas && <TableCell align="right" sx={totalCelda}>{num(tot.tallos, 0)}</TableCell>}
+              {mas && <TableCell align="right" sx={totalCelda}>{num(tot.valor)}</TableCell>}
+              {mas && <TableCell />}
+              <TableCell colSpan={2}>
+                {armada && (
+                  <Typography variant="body2" fontWeight={600}>
+                    {plural(armada.guiasHijas.length, 'guía hija', 'guías hijas')}
+                  </Typography>
+                )}
+              </TableCell>
             </TableRow>
           </TableBody>
         </Table>

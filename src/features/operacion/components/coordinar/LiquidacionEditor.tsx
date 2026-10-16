@@ -1,9 +1,11 @@
 'use client';
 
+import { useState } from 'react';
 import {
   Box,
   Button,
   FormControlLabel,
+  Link,
   Paper,
   Stack,
   Switch,
@@ -17,7 +19,8 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material';
-import { AutoFixHigh as SugerirIcon } from '@mui/icons-material';
+import { Refresh as RecalcularIcon } from '@mui/icons-material';
+import { formatDate } from '@/shared/utils';
 import {
   CODIGOS_AGENCIA,
   CONCEPTOS_AEROLINEA,
@@ -26,7 +29,7 @@ import {
   type ResumenLiquidacion,
   type ValoresLiquidacion,
 } from '../../types/coordinacion';
-import { num, usd } from '../../utils/formato';
+import { num, tarifa, usd } from '../../utils/formato';
 import { type LiquidacionForm, numero } from './formulario';
 
 type Campo = keyof ValoresLiquidacion;
@@ -38,7 +41,7 @@ const NOMBRE_CONCEPTO: Record<ConceptoAerolineaCampo, string> = {
   otros: 'Otros',
   aux1: 'Aux 1',
   aux2: 'Aux 2',
-  calAux: 'Cálculo aux.',
+  calAux: 'Calc. aux.',
 };
 
 const nums = { fontVariantNumeric: 'tabular-nums' } as const;
@@ -65,6 +68,8 @@ interface Props {
   clienteAuto: boolean;
   /** De qué guía de la marca salió la propuesta. */
   propuestaCliente?: { numeroGuia: string | null; fechaVuelo: string };
+  /** Error del servidor sobre el peso cobrable (se muestra debajo del campo). */
+  errorPesoCobrable?: string | null;
 }
 
 function Entrada({
@@ -73,12 +78,14 @@ function Entrada({
   placeholder,
   auto,
   label,
+  error,
 }: {
   value: string | undefined;
   onChange: (v: string) => void;
   placeholder?: string;
   auto?: boolean;
   label: string;
+  error?: string | null;
 }) {
   return (
     <TextField
@@ -86,6 +93,8 @@ function Entrada({
       fullWidth
       value={value ?? ''}
       placeholder={placeholder}
+      error={!!error}
+      helperText={error || undefined}
       onChange={(e) => onChange(e.target.value)}
       slotProps={{ htmlInput: { inputMode: 'decimal', 'aria-label': label } }}
       sx={{
@@ -129,7 +138,9 @@ export function LiquidacionEditor({
   handlingAuto,
   clienteAuto,
   propuestaCliente,
+  errorPesoCobrable,
 }: Props) {
+  const [todosLosCargos, setTodosLosCargos] = useState(false);
   // En Access hay conceptos sin rótulo guardados como "0".
   const abreviatura = (campo: string) => {
     const x = parametros?.aerolinea?.conceptos.find((k) => k.campo === campo)?.abreviatura?.trim();
@@ -144,6 +155,9 @@ export function LiquidacionEditor({
   const conceptos = CONCEPTOS_AEROLINEA.filter(
     (k) => ['guiaAerea', 'combustible', 'otros'].includes(k) || abreviatura(k) || tieneValor(k),
   );
+  // Cargos de agencia: solo los que se usan en esta guía (o todos, si se pide).
+  const codigosAgencia = CODIGOS_AGENCIA.filter((k) => todosLosCargos || tieneValor(k));
+  const ocultos = CODIGOS_AGENCIA.length - codigosAgencia.length;
   const efectivoCliente = (k: Campo) => numero(c[k]) ?? numero(a[k]);
   const difCampo = (k: Campo) => {
     const x = efectivoCliente(k);
@@ -151,7 +165,11 @@ export function LiquidacionEditor({
     return x === undefined && y === undefined ? null : (x ?? 0) - (y ?? 0);
   };
 
-  const fila = (k: Campo, etiqueta: string, opts: { auto?: boolean; ayuda?: string | null; fmt?: (x: number) => string } = {}) => (
+  const fila = (
+    k: Campo,
+    etiqueta: string,
+    opts: { auto?: boolean; ayuda?: string | null; fmt?: (x: number) => string; error?: string | null } = {},
+  ) => (
     <TableRow key={k}>
       <TableCell>
         <Typography variant="body2">{etiqueta}</Typography>
@@ -162,7 +180,13 @@ export function LiquidacionEditor({
         )}
       </TableCell>
       <TableCell>
-        <Entrada label={`${etiqueta} aerolínea`} value={a[k]} auto={opts.auto} onChange={(v) => onAerolinea(k, v)} />
+        <Entrada
+          label={`${etiqueta} guía madre`}
+          value={a[k]}
+          auto={opts.auto}
+          error={opts.error}
+          onChange={(v) => onAerolinea(k, v)}
+        />
       </TableCell>
       {conCliente && (
         <>
@@ -229,19 +253,19 @@ export function LiquidacionEditor({
           {conCliente && propuestaCliente && (
             <Typography variant="caption" color="text.secondary" component="div">
               Cobro al cliente propuesto (en cursiva) de la última guía de esta marca: {propuestaCliente.numeroGuia ?? '—'} del{' '}
-              {propuestaCliente.fechaVuelo}. Revisa sobre todo Transport, que varía.
+              {formatDate(propuestaCliente.fechaVuelo)}. Revisa sobre todo Transport, que varía.
             </Typography>
           )}
         </Box>
-        <Stack direction="row" spacing={1} alignItems="center">
+        <Stack direction="row" spacing={1} alignItems="center" sx={{ flexShrink: 0 }}>
           <FormControlLabel
             control={<Switch checked={conCliente} onChange={(e) => onConCliente(e.target.checked)} />}
-            label={<Typography variant="body2">Cobrar al cliente distinto</Typography>}
+            label={<Typography variant="body2">Corte extra (cobrar al cliente distinto)</Typography>}
           />
           {onSugerir && (
-            <Tooltip title="Tarifa y conceptos con los valores actuales de la aerolínea (datos maestros)">
-              <Button size="small" startIcon={<SugerirIcon />} onClick={onSugerir}>
-                Valores de la aerolínea
+            <Tooltip title="Vuelve a poner la tarifa y los cargos de la aerolínea">
+              <Button size="small" startIcon={<RecalcularIcon />} onClick={onSugerir}>
+                Recalcular
               </Button>
             </Tooltip>
           )}
@@ -252,15 +276,15 @@ export function LiquidacionEditor({
         <Table size="small" sx={{ '& td, & th': { borderBottom: 'none', py: 0.5 }, minWidth: conCliente ? 640 : 380 }}>
           <colgroup>
             <col />
-            <col style={{ width: conCliente ? '24%' : '45%' }} />
+            <col style={{ width: conCliente ? '24%' : 220 }} />
             {conCliente && <col style={{ width: '24%' }} />}
             {conCliente && <col style={{ width: '14%' }} />}
           </colgroup>
           <TableHead>
             <TableRow>
               <TableCell>Concepto</TableCell>
-              <TableCell align="right">Aerolínea (guía madre)</TableCell>
-              {conCliente && <TableCell align="right">Cobro al cliente</TableCell>}
+              <TableCell align="right">Guía madre (normal)</TableCell>
+              {conCliente && <TableCell align="right">Cliente (extra)</TableCell>}
               {conCliente && <TableCell align="right">Diferencia</TableCell>}
             </TableRow>
           </TableHead>
@@ -269,8 +293,9 @@ export function LiquidacionEditor({
             {fila('pesoCobrable', 'Peso cobrable (kg)', {
               ayuda: `Lo da la aerolínea (peso por volumen)${pesoBruto ? ` · mínimo ${num(pesoBruto)} kg` : ''}`,
               fmt: (x) => `${num(x)} kg`,
+              error: errorPesoCobrable,
             })}
-            {fila('tarifa', 'Tarifa por kg', { auto: liqAuto, fmt: (x) => `${num(x)}/kg` })}
+            {fila('tarifa', 'Tarifa por kg', { auto: liqAuto, fmt: (x) => `${tarifa(x)}/kg` })}
             {calculada('Flete', ra?.flete, rc?.flete, diferencia?.flete)}
 
             {grupo('Cargos de aerolínea (due carrier)')}
@@ -284,35 +309,45 @@ export function LiquidacionEditor({
             {calculada('Subtotal aerolínea', ra?.dueCarrier, rc?.dueCarrier, resta(rc?.dueCarrier, ra?.dueCarrier))}
 
             {grupo('Cargos de agencia (due agent)', conCliente ? '· normalmente van solo en el cobro al cliente' : undefined)}
-            {CODIGOS_AGENCIA.map((k) => fila(k, parametros?.etiquetasAgencia[k] ?? k))}
+            {codigosAgencia.map((k) => fila(k, parametros?.etiquetasAgencia[k] ?? k))}
+            {(ocultos > 0 || todosLosCargos) && (
+              <TableRow>
+                <TableCell colSpan={conCliente ? 4 : 2} sx={{ py: 0.25 }}>
+                  <Link component="button" type="button" variant="body2" onClick={() => setTodosLosCargos((v) => !v)}>
+                    {todosLosCargos ? 'Mostrar solo los cargos usados' : `Mostrar todos los cargos (${ocultos} sin valor)`}
+                  </Link>
+                </TableCell>
+              </TableRow>
+            )}
             {calculada('Subtotal agencia', ra?.dueAgent, rc?.dueAgent, resta(rc?.dueAgent, ra?.dueAgent))}
 
             <TableRow>
               <TableCell colSpan={conCliente ? 4 : 2} sx={{ py: 0.5 }} />
             </TableRow>
             {calculada('Total guía', ra?.total, rc?.total, diferencia?.total, true)}
+
+            {grupo('Aparte')}
+            <TableRow>
+              <TableCell>
+                <Typography variant="body2">Handling al cliente</Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {handlingAuto && a.aux3Handling ? 'De la ficha del cliente. ' : ''}Se cobra aparte: no suma a la guía.
+                </Typography>
+              </TableCell>
+              {conCliente && <TableCell />}
+              <TableCell>
+                <Entrada
+                  label="Handling al cliente"
+                  value={a.aux3Handling}
+                  auto={handlingAuto}
+                  onChange={(v) => onAerolinea('aux3Handling', v)}
+                />
+              </TableCell>
+              {conCliente && <TableCell />}
+            </TableRow>
           </TableBody>
         </Table>
       </TableContainer>
-
-      <Box sx={{ mt: 2, maxWidth: 320 }}>
-        <TextField
-          size="small"
-          fullWidth
-          label="Handling al cliente"
-          value={a.aux3Handling ?? ''}
-          onChange={(e) => onAerolinea('aux3Handling', e.target.value)}
-          helperText={`${handlingAuto && a.aux3Handling ? 'De la ficha del cliente. ' : ''}Se cobra aparte: no suma a la guía.`}
-          slotProps={{ htmlInput: { inputMode: 'decimal' } }}
-          sx={{
-            '& input': {
-              textAlign: 'right',
-              ...nums,
-              fontStyle: handlingAuto && a.aux3Handling ? 'italic' : undefined,
-            },
-          }}
-        />
-      </Box>
     </Paper>
   );
 }

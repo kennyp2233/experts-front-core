@@ -78,7 +78,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         open={toast.open}
         autoHideDuration={toast.autoHide ? toast.duration : null}
         onClose={handleClose}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        // Arriba al centro: abajo a la derecha tapaba las barras de grabar.
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
       >
         <Alert onClose={handleClose} severity={toast.severity} variant="standard" sx={{ width: '100%' }}>
           {toast.message}

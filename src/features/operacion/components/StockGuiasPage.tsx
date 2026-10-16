@@ -4,16 +4,15 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
-  Box,
   Button,
   Chip,
   InputAdornment,
   Link as MuiLink,
   MenuItem,
-  Paper,
   Skeleton,
   Stack,
   TextField,
+  Tooltip,
   Typography,
 } from '@mui/material';
 import { Add as AddIcon, Search as SearchIcon } from '@mui/icons-material';
@@ -24,11 +23,12 @@ import { IngresarLoteDialog } from './stock/IngresarLoteDialog';
 import { MoverGuiaDialog, type MovimientoGuia } from './stock/MoverGuiaDialog';
 import { useGuiasMadre, useResumenStock } from '../hooks/useStockGuias';
 import type { EstadoGuia, GuiaMadreFila } from '../types/coordinacion';
+import { formatoAwb, nombreCorto } from '../utils/formato';
 
 const PAGE_SIZE = 50;
 
 const ESTADO: Record<EstadoGuia, { label: string; color: 'success' | 'default' | 'warning' }> = {
-  INGRESADA: { label: 'Disponible', color: 'success' },
+  INGRESADA: { label: 'Libre', color: 'success' },
   COORDINADA: { label: 'Coordinada', color: 'default' },
   PRESTADA: { label: 'Prestada', color: 'warning' },
 };
@@ -36,13 +36,13 @@ const ESTADO: Record<EstadoGuia, { label: string; color: 'success' | 'default' |
 const columnas: DataTableColumn<GuiaMadreFila>[] = [
   {
     key: 'numero',
-    label: 'Guía (AWB)',
+    label: 'Guía madre',
     pinned: true,
     mobile: 'title',
-    value: (g) => g.numero,
+    value: (g) => formatoAwb(g.numero),
     render: (g) => (
-      <Typography variant="body2" fontWeight={600} sx={{ fontVariantNumeric: 'tabular-nums' }}>
-        {g.numero ?? '—'}
+      <Typography variant="body2" fontWeight={600} sx={{ fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+        {formatoAwb(g.numero)}
       </Typography>
     ),
   },
@@ -50,7 +50,7 @@ const columnas: DataTableColumn<GuiaMadreFila>[] = [
     key: 'aerolinea',
     label: 'Aerolínea',
     mobile: 'subtitle',
-    value: (g) => (g.aerolinea ? `${g.aerolinea.codigo ?? ''} ${g.aerolinea.nombre}`.trim() : null),
+    value: (g) => (g.aerolinea ? [g.aerolinea.codigo, nombreCorto(g.aerolinea)].filter(Boolean).join(' · ') : null),
   },
   {
     key: 'estado',
@@ -66,7 +66,7 @@ const columnas: DataTableColumn<GuiaMadreFila>[] = [
         '—'
       ),
   },
-  { key: 'tipo', label: 'Tipo', value: (g) => (g.virtual ? 'Virtual' : 'Física') },
+  { key: 'tipo', label: 'Tipo de stock', value: (g) => (g.virtual ? 'Virtual' : 'Normal') },
   {
     key: 'coordinacion',
     label: 'Coordinación',
@@ -82,7 +82,7 @@ const columnas: DataTableColumn<GuiaMadreFila>[] = [
   },
   {
     key: 'lote',
-    label: 'Lote',
+    label: 'Ingreso N°',
     value: (g) => (g.lote ? `N° ${g.lote.codigoAccess ?? g.lote.id} · ${formatDate(g.lote.fecha)}` : null),
     defaultHidden: true,
   },
@@ -98,50 +98,41 @@ const columnas: DataTableColumn<GuiaMadreFila>[] = [
   { key: 'obs', label: 'Observaciones', value: (g) => g.observaciones, maxWidth: 240, defaultHidden: true },
 ];
 
-/** Tarjetas de stock disponible por aerolínea (clic = filtrar). */
+/** Guías libres por aerolínea, en una línea (clic = ver las libres de esa aerolínea). */
 function ResumenPorAerolinea({ onElegir, elegida }: { onElegir: (id?: number) => void; elegida?: number }) {
   const { resumen, isLoading } = useResumenStock();
-  if (isLoading) return <Skeleton variant="rounded" height={84} sx={{ mb: 2 }} />;
+  if (isLoading) return <Skeleton variant="rounded" height={32} sx={{ mb: 2 }} />;
   const conStock = (resumen ?? []).filter((r) => r.disponibles > 0);
   if (conStock.length === 0) return null;
   return (
-    <Box sx={{ mb: 2 }}>
-      <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
-        Disponibles para coordinar
+    <Stack direction="row" flexWrap="wrap" useFlexGap spacing={1} alignItems="center" sx={{ mb: 2 }}>
+      <Typography variant="body2" color="text.secondary" sx={{ mr: 0.5 }}>
+        Guías libres:
       </Typography>
-      <Stack direction="row" flexWrap="wrap" useFlexGap spacing={1.5}>
-        {conStock.map((r) => {
-          const id = r.aerolinea?.id;
-          const activa = id !== undefined && id === elegida;
-          return (
-            <Paper
-              key={id ?? 'sin'}
-              variant="outlined"
+      {conStock.map((r) => {
+        const id = r.aerolinea?.id;
+        const activa = id !== undefined && id === elegida;
+        const nombre = r.aerolinea ? [r.aerolinea.codigo, nombreCorto(r.aerolinea)].filter(Boolean).join(' · ') : 'Sin aerolínea';
+        return (
+          <Tooltip
+            key={id ?? 'sin'}
+            title={r.disponiblesVirtuales ? `${r.disponiblesVirtuales} de ellas virtuales` : 'Todas normales'}
+          >
+            <Chip
+              clickable
+              color={activa ? 'primary' : 'default'}
+              variant={activa ? 'filled' : 'outlined'}
               onClick={() => onElegir(activa ? undefined : id)}
-              sx={{
-                px: 2,
-                py: 1.25,
-                minWidth: 150,
-                cursor: 'pointer',
-                borderColor: activa ? 'primary.main' : undefined,
-                bgcolor: activa ? 'action.selected' : undefined,
-                '&:hover': { borderColor: 'primary.main' },
-              }}
-            >
-              <Typography variant="caption" color="text.secondary" noWrap display="block">
-                {r.aerolinea ? `${r.aerolinea.codigo ?? ''} · ${r.aerolinea.nombre}` : 'Sin aerolínea'}
-              </Typography>
-              <Typography variant="h6" fontWeight={700} sx={{ fontVariantNumeric: 'tabular-nums' }}>
-                {r.disponibles}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {r.disponiblesVirtuales ? `${r.disponiblesVirtuales} virtuales` : 'físicas'}
-              </Typography>
-            </Paper>
-          );
-        })}
-      </Stack>
-    </Box>
+              label={
+                <span>
+                  {nombre} <strong style={{ fontVariantNumeric: 'tabular-nums' }}>{r.disponibles}</strong>
+                </span>
+              }
+            />
+          </Tooltip>
+        );
+      })}
+    </Stack>
   );
 }
 
@@ -195,10 +186,10 @@ export function StockGuiasPage() {
   return (
     <AppPage
       title="Stock de guías"
-      subtitle="Guías AWB ingresadas por lote: disponibles para coordinar, coordinadas o prestadas a otra agencia."
+      subtitle="Guías ingresadas: libres, coordinadas o prestadas a otra agencia."
       actions={
         <Button variant="contained" startIcon={<AddIcon />} onClick={() => setIngresando(true)}>
-          Ingresar lote
+          Ingreso de guías
         </Button>
       }
     >
@@ -234,7 +225,7 @@ export function StockGuiasPage() {
               size="small"
               value={texto}
               onChange={(e) => setTexto(e.target.value)}
-              placeholder="Número AWB"
+              placeholder="Número de guía"
               sx={{ minWidth: 220, flex: 1 }}
               slotProps={{
                 input: {
@@ -255,7 +246,7 @@ export function StockGuiasPage() {
               sx={{ minWidth: 150 }}
             >
               <MenuItem value="">Todos</MenuItem>
-              <MenuItem value="INGRESADA">Disponibles</MenuItem>
+              <MenuItem value="INGRESADA">Libres</MenuItem>
               <MenuItem value="COORDINADA">Coordinadas</MenuItem>
               <MenuItem value="PRESTADA">Prestadas</MenuItem>
             </TextField>
@@ -265,6 +256,8 @@ export function StockGuiasPage() {
           page: filtros.page,
           hasNextPage: filtros.page * PAGE_SIZE < total,
           onPageChange: (p) => actualizar({ page: p > 1 ? String(p) : undefined }, false),
+          total: pagina?.total,
+          pageSize: PAGE_SIZE,
         }}
       />
       <MoverGuiaDialog
@@ -280,8 +273,11 @@ export function StockGuiasPage() {
       <IngresarLoteDialog
         open={ingresando}
         onClose={() => setIngresando(false)}
-        onIngresado={(n) => {
-          toast.success(`Se ingresaron ${n} guías al stock.`);
+        onIngresado={(n, idAerolinea) => {
+          toast.success(n === 1 ? 'Se ingresó 1 guía al stock.' : `Se ingresaron ${n} guías al stock.`);
+          // Para verlas: las libres de esa aerolínea.
+          actualizar({ aerolinea: String(idAerolinea), estado: 'INGRESADA', q: undefined });
+          setTexto('');
           mutate();
           mutateResumen();
         }}

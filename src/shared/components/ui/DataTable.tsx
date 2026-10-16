@@ -71,6 +71,9 @@ export interface DataTablePagination {
   page: number;
   hasNextPage: boolean;
   onPageChange: (page: number) => void;
+  /** Total de filas en el servidor: con `pageSize`, el contador dice "1–50 de 11.923". */
+  total?: number;
+  pageSize?: number;
 }
 
 export interface DataTableProps<T> {
@@ -266,9 +269,15 @@ export function DataTable<T>({
   const errorMessage = error ? getErrorMessage(error) : null;
   const retry = onRetry ?? onRefresh;
 
+  const conTotal = pagination?.total !== undefined && pagination.pageSize !== undefined;
+  const desde = conTotal ? (pagination!.page - 1) * pagination!.pageSize! + 1 : 0;
   const countLabel = query.trim()
     ? `${filteredRows.length} de ${rows.length} resultados`
-    : `${rows.length} ${rows.length === 1 ? 'resultado' : 'resultados'}`;
+    : conTotal
+      ? pagination!.total === 0
+        ? 'Sin resultados'
+        : `${desde.toLocaleString('es-EC')}–${(desde + rows.length - 1).toLocaleString('es-EC')} de ${pagination!.total!.toLocaleString('es-EC')}`
+      : `${rows.length} ${rows.length === 1 ? 'resultado' : 'resultados'}`;
 
   const emptyState = (
     <Stack alignItems="center" spacing={1} sx={{ py: 6, color: 'text.secondary' }}>
@@ -312,7 +321,7 @@ export function DataTable<T>({
           <Stack direction="row" alignItems="center" spacing={0.5}>
             <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
               {initialLoading ? 'Cargando…' : countLabel}
-              {pagination ? ` · página ${pagination.page}` : ''}
+              {pagination && !conTotal ? ` · página ${pagination.page}` : ''}
             </Typography>
             {onRefresh && (
               <Tooltip title="Actualizar">

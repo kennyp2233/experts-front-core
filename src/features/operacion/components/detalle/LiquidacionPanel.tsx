@@ -17,7 +17,7 @@ import {
 import { operacionService } from '../../services/operacion.service';
 import type { CodigoAgencia, CoordinacionDetalle, Liquidacion } from '../../types/coordinacion';
 import { CODIGOS_AGENCIA } from '../../types/coordinacion';
-import { kg, num, usd } from '../../utils/formato';
+import { kg, tarifa, usd } from '../../utils/formato';
 
 const nums = { fontVariantNumeric: 'tabular-nums' } as const;
 
@@ -28,7 +28,7 @@ const AEROLINEA: Array<{ key: keyof Liquidacion; label: string }> = [
   { key: 'otros', label: 'Otros' },
   { key: 'aux1', label: 'Aux 1' },
   { key: 'aux2', label: 'Aux 2' },
-  { key: 'calAux', label: 'Cálculo auxiliar' },
+  { key: 'calAux', label: 'Calc. aux.' },
 ];
 
 const val = (l: Liquidacion | undefined, k: keyof Liquidacion) => {
@@ -92,7 +92,7 @@ export function LiquidacionPanel({ c }: { c: CoordinacionDetalle }) {
   const filas: Fila[] = [
     { tipo: 'grupo', label: 'Flete' },
     fila('Peso cobrable', (l) => val(l, 'pesoCobrable'), kg),
-    fila('Tarifa por kg', (l) => val(l, 'tarifa'), num),
+    fila('Tarifa por kg', (l) => val(l, 'tarifa'), tarifa),
     fila('Flete', (l) => l?.resumen.flete, usd, true),
     { tipo: 'grupo', label: 'Cargos de aerolínea (due carrier)' },
     ...AEROLINEA.filter((a) => conValor(a.key)).map((a) => fila(a.label, (l) => val(l, a.key))),
@@ -116,7 +116,7 @@ export function LiquidacionPanel({ c }: { c: CoordinacionDetalle }) {
         <Stack direction="row" flexWrap="wrap" useFlexGap spacing={4} rowGap={2} alignItems="flex-start">
           {cliente ? (
             <>
-              <Dato label="Cobro al cliente" valor={usd(totalCliente)} fuerte />
+              <Dato label="Cobro al cliente (corte extra)" valor={usd(totalCliente)} fuerte />
               <Dato label="Guía madre (aerolínea)" valor={usd(totalAerolinea)} fuerte />
               <Dato
                 label="Ganancia"
@@ -125,7 +125,7 @@ export function LiquidacionPanel({ c }: { c: CoordinacionDetalle }) {
                 color={ganancia !== null && ganancia < 0 ? 'error.main' : 'success.main'}
                 ayuda={
                   val(normal, 'tarifa') !== null && val(cliente, 'tarifa') !== null
-                    ? `tarifa ${num(val(normal, 'tarifa'))} → ${num(val(cliente, 'tarifa'))} por kg`
+                    ? `tarifa ${tarifa(val(normal, 'tarifa'))} → ${tarifa(val(cliente, 'tarifa'))} por kg`
                     : undefined
                 }
               />
@@ -153,8 +153,8 @@ export function LiquidacionPanel({ c }: { c: CoordinacionDetalle }) {
           <TableHead>
             <TableRow>
               <TableCell>Concepto</TableCell>
-              <TableCell align="right">Aerolínea (guía madre)</TableCell>
-              {cliente && <TableCell align="right">Cobro al cliente</TableCell>}
+              <TableCell align="right">Guía madre (normal)</TableCell>
+              {cliente && <TableCell align="right">Cliente (extra)</TableCell>}
               {cliente && <TableCell align="right">Diferencia</TableCell>}
             </TableRow>
           </TableHead>

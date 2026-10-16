@@ -6,6 +6,7 @@ import {
   Alert,
   Box,
   Button,
+  Divider,
   Paper,
   Skeleton,
   Stack,
@@ -20,37 +21,35 @@ import {
   Typography,
 } from '@mui/material';
 import { ArrowBack as VolverIcon } from '@mui/icons-material';
+import { useAuth } from '@/features/auth';
 import { AppPage } from '@/shared/components/ui';
 import { formatDate, formatDateTime, getErrorMessage } from '@/shared/utils';
 import { useCoordinacion } from '../hooks/useCoordinaciones';
 import type { CoordinacionDetalle } from '../types/coordinacion';
-import { kg, nombreRef, num, usd } from '../utils/formato';
+import { formatoAwb, kg, nombreCorto, nombreRef, num, usd } from '../utils/formato';
 import { EstadoCoordinacionChip, OrigenChip } from './EstadoCoordinacionChip';
 import { AccionesCoordinacion } from './detalle/AccionesCoordinacion';
-import { ArchivoFlowerCargo } from './detalle/ArchivoFlowerCargo';
 import { GuiasHijasTabla } from './detalle/GuiasHijasTabla';
 import { LiquidacionPanel } from './detalle/LiquidacionPanel';
 import { ValidacionTab } from './detalle/ValidacionTab';
 
 const nums = { fontVariantNumeric: 'tabular-nums' } as const;
 
-function Kpi({ label, valor, ayuda }: { label: string; valor: string; ayuda?: string }) {
+/** Un dato de la franja de totales: "220 kg" grande y lo que es, chico. */
+function Total({ valor, label }: { valor: string; label: string }) {
   return (
-    <Paper variant="outlined" sx={{ px: 2, py: 1.5, minWidth: 130, flex: '1 1 130px' }}>
+    <Box sx={{ px: 2, py: 1 }}>
+      <Typography variant="subtitle1" fontWeight={700} sx={{ ...nums, lineHeight: 1.3 }}>
+        {valor}
+      </Typography>
       <Typography variant="caption" color="text.secondary">
         {label}
       </Typography>
-      <Typography variant="h6" fontWeight={700} sx={nums}>
-        {valor}
-      </Typography>
-      {ayuda && (
-        <Typography variant="caption" color="text.secondary">
-          {ayuda}
-        </Typography>
-      )}
-    </Paper>
+    </Box>
   );
 }
+
+const ESTADO_GUIA: Record<string, string> = { INGRESADA: 'libre', COORDINADA: 'coordinada', PRESTADA: 'prestada' };
 
 /** Lista "etiqueta: valor" en dos columnas. */
 function Campos({ filas }: { filas: Array<[string, React.ReactNode]> }) {
@@ -77,14 +76,15 @@ function Campos({ filas }: { filas: Array<[string, React.ReactNode]> }) {
   );
 }
 
+/** Tramos como en el sistema viejo (From / To / By): el "By" es la aerolínea. */
 const TRAMO: Record<string, string> = {
-  ORIGEN: 'Origen',
-  DESTINO1: 'Destino',
-  VIA1: 'Vía',
-  DESTINO2: 'Destino 2',
-  VIA2: 'Vía 2',
-  DESTINO3: 'Destino 3',
-  VIA3: 'Vía 3',
+  ORIGEN: 'Origen (From)',
+  DESTINO1: 'Destino (To)',
+  VIA1: 'Aerolínea (By)',
+  DESTINO2: 'Destino 2 (To)',
+  VIA2: 'Aerolínea 2 (By)',
+  DESTINO3: 'Destino 3 (To)',
+  VIA3: 'Aerolínea 3 (By)',
 };
 
 function RutaPanel({ c }: { c: CoordinacionDetalle }) {
@@ -95,8 +95,8 @@ function RutaPanel({ c }: { c: CoordinacionDetalle }) {
         <TableHead>
           <TableRow>
             <TableCell>Tramo</TableCell>
-            <TableCell>Código</TableCell>
-            <TableCell>Vuelo</TableCell>
+            <TableCell>Aeropuerto o aerolínea</TableCell>
+            <TableCell>N° de vuelo</TableCell>
             <TableCell>Salida</TableCell>
             <TableCell>Llegada</TableCell>
           </TableRow>
@@ -130,12 +130,12 @@ function ManifiestoPanel({ c }: { c: CoordinacionDetalle }) {
         filas={[
           ['Referencia', <span key="r" style={{ fontVariantNumeric: 'tabular-nums' }}>{m.referencia}</span>],
           ['Número de manifiesto', m.numero],
-          ['Secuencial de la guía (MSN)', m.secuencial],
+          ['Secuencial', m.secuencial],
           ['Aduana', m.aduana],
           ['Año', m.anio],
           ['Transportista', m.tipo],
           ['Origen', m.origen],
-          ['Vuelo', m.vuelo],
+          ['N° de vuelo', m.vuelo],
           ['Arribo', [formatDate(m.fechaArribo, ''), m.horaArribo].filter(Boolean).join(' ')],
         ]}
       />
@@ -143,8 +143,8 @@ function ManifiestoPanel({ c }: { c: CoordinacionDetalle }) {
   );
 }
 
-function MasDatosPanel({ c }: { c: CoordinacionDetalle }) {
-  const legacy = Object.entries(c.datosLegacy ?? {});
+function MasDatosPanel({ c, admin }: { c: CoordinacionDetalle; admin: boolean }) {
+  const legacy = admin ? Object.entries(c.datosLegacy ?? {}) : [];
   return (
     <Stack spacing={2}>
       <Paper variant="outlined" sx={{ p: 2 }}>
@@ -154,15 +154,24 @@ function MasDatosPanel({ c }: { c: CoordinacionDetalle }) {
             ['Tipo de embarque', nombreRef(c.tipoEmbarque)],
             ['Pago', c.pago === 'COLLECT' ? 'Collect (CC)' : 'Prepaid (PP)'],
             ['Fecha de coordinación', formatDate(c.fechaAsignacion)],
-            ['Guía madre', `${c.guiaMadre.numero ?? '—'} · ${c.guiaMadre.estado ?? ''}${c.guiaMadre.virtual ? ' · virtual' : ''}`],
-            ['Lote de guías', c.guiaMadre.lote ? `N° ${c.guiaMadre.lote.codigoAccess ?? c.guiaMadre.lote.id} del ${formatDate(c.guiaMadre.lote.fecha)}` : null],
-            ['Volumen', num(c.totalVolumen)],
-            ['Comisión (sistema viejo)', c.liquidacion.comision ? `${num(c.liquidacion.comision)} %` : null],
+            [
+              'Guía madre',
+              [formatoAwb(c.guiaMadre.numero), ESTADO_GUIA[c.guiaMadre.estado ?? ''], c.guiaMadre.virtual ? 'virtual' : null]
+                .filter(Boolean)
+                .join(' · '),
+            ],
+            [
+              'Ingreso de guías',
+              c.guiaMadre.lote
+                ? `N° ${c.guiaMadre.lote.codigoAccess ?? c.guiaMadre.lote.id} (${formatDate(c.guiaMadre.lote.fecha)})`
+                : null,
+            ],
+            ['Volumen', c.totalVolumen !== null ? `${num(c.totalVolumen)} kg vol.` : null],
             ['Cupo de fulls', c.cupoFulls ? num(c.cupoFulls) : null],
             ['Certificado de origen', c.certificadoOrigen],
             ['Referencia', c.referencia],
             ['Nota', c.nota],
-            ['Marcas adicionales', c.marcas.map((m) => m.consignatario?.nombre ?? '—').join(', ')],
+            ['Otros consignatarios', c.marcas.map((m) => m.consignatario?.nombre ?? '—').join(', ')],
             ['Creada por', [c.auditoria.creadoPor, formatDateTime(c.auditoria.creadoEn, '')].filter(Boolean).join(' · ')],
             ['Modificada por', [c.auditoria.actualizadoPor, formatDateTime(c.auditoria.actualizadoEn, '')].filter(Boolean).join(' · ')],
           ]}
@@ -175,8 +184,8 @@ function MasDatosPanel({ c }: { c: CoordinacionDetalle }) {
               <TableRow>
                 <TableCell>Medidas (cm)</TableCell>
                 <TableCell align="right">Fulls</TableCell>
-                <TableCell align="right">Piezas</TableCell>
-                <TableCell align="right">Peso</TableCell>
+                <TableCell align="right">Cajas</TableCell>
+                <TableCell align="right">Kg</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -198,7 +207,7 @@ function MasDatosPanel({ c }: { c: CoordinacionDetalle }) {
             Otros valores del sistema viejo
           </Typography>
           <Typography variant="caption" color="text.secondary" component="p" sx={{ mb: 1 }}>
-            Columnas de Access cuyo significado todavía no está confirmado; se guardan tal cual.
+            Solo administradores: columnas de Access cuyo significado todavía no está confirmado; se guardan tal cual.
           </Typography>
           <Campos filas={legacy.map(([k, v]) => [k, String(v)])} />
         </Paper>
@@ -212,6 +221,8 @@ type Pestana = 'guias' | 'liquidacion' | 'ruta' | 'manifiesto' | 'mas' | 'valida
 export function CoordinacionDetallePage({ id }: { id: number }) {
   const { coordinacion: c, error, isLoading, mutate } = useCoordinacion(id);
   const [tab, setTab] = useState<Pestana>('guias');
+  const { user } = useAuth();
+  const admin = user?.role === 'ADMIN';
 
   const volver = (
     <Button component={Link} href="/operacion/coordinaciones" startIcon={<VolverIcon />} variant="text">
@@ -243,33 +254,41 @@ export function CoordinacionDetallePage({ id }: { id: number }) {
 
   return (
     <AppPage
-      title={`Guía ${c.numeroGuia ?? c.id}`}
+      title={`Coordinación N° ${c.codigoAccess ?? c.id} · guía ${formatoAwb(c.numeroGuia)}`}
       subtitle={
-        <>
-          {[c.aerolinea?.nombre, `vuelo ${formatDate(c.fechaVuelo)}`, destino, c.consignatario?.nombre]
-            .filter(Boolean)
-            .join(' · ')}
-          {c.codigoAccess !== null && ` · coordinación N° ${c.codigoAccess}`}
-        </>
+        <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+          <EstadoCoordinacionChip estado={c.estado} />
+          <OrigenChip origen={c.origen} />
+          <span>
+            {[
+              c.aerolinea ? nombreCorto(c.aerolinea) : null,
+              `vuelo ${formatDate(c.fechaVuelo)}`,
+              destino,
+              c.consignatario?.nombre,
+              c.cliente ? `cliente ${c.cliente.nombre}` : null,
+            ]
+              .filter(Boolean)
+              .join(' · ')}
+          </span>
+        </Stack>
       }
       actions={
         <>
-          <OrigenChip origen={c.origen} />
-          <EstadoCoordinacionChip estado={c.estado} corteExtra={c.corteExtra} />
-          <ArchivoFlowerCargo c={c} />
           <AccionesCoordinacion c={c} onCambio={() => mutate()} />
           {volver}
         </>
       }
     >
-      <Stack direction="row" flexWrap="wrap" useFlexGap spacing={1.5} sx={{ mb: 2 }}>
-        <Kpi label="Guías hijas" valor={num(c.guias.length, 0)} />
-        <Kpi label="Fulls" valor={num(c.totalFulls)} />
-        <Kpi label="Cajas" valor={num(c.totalCajas, 0)} />
-        <Kpi label="Peso bruto" valor={kg(c.totalKgs)} />
-        <Kpi label="Peso cobrable" valor={kg(c.liquidacion.pesoCobrable)} />
-        <Kpi label={c.corteExtra ? 'Cobro al cliente' : 'Total guía'} valor={usd(c.liquidacion.total)} />
-      </Stack>
+      <Paper variant="outlined" sx={{ mb: 2 }}>
+        <Stack direction="row" flexWrap="wrap" divider={<Divider orientation="vertical" flexItem />}>
+          <Total valor={num(c.guias.length, 0)} label={c.guias.length === 1 ? 'guía hija' : 'guías hijas'} />
+          <Total valor={num(c.totalFulls)} label="fulls" />
+          <Total valor={num(c.totalCajas, 0)} label="cajas" />
+          <Total valor={kg(c.totalKgs)} label="peso" />
+          <Total valor={kg(c.liquidacion.pesoCobrable)} label="peso cobrable" />
+          <Total valor={usd(c.liquidacion.total)} label={c.corteExtra ? 'cobro al cliente' : 'total guía madre'} />
+        </Stack>
+      </Paper>
 
       <Tabs value={tab} onChange={(_, v) => setTab(v)} variant="scrollable" sx={{ mb: 2, borderBottom: 1, borderColor: 'divider' }}>
         <Tab value="guias" label={`Guías hijas (${c.guias.length})`} />
@@ -277,15 +296,15 @@ export function CoordinacionDetallePage({ id }: { id: number }) {
         <Tab value="ruta" label="Ruta y vuelo" />
         <Tab value="manifiesto" label="Manifiesto" />
         <Tab value="mas" label="Más datos" />
-        {c.origen === 'ACCESS' && <Tab value="validacion" label="Validación" />}
+        {admin && c.origen === 'ACCESS' && <Tab value="validacion" label="Validación" />}
       </Tabs>
 
       {tab === 'guias' && <GuiasHijasTabla guias={c.guias} />}
       {tab === 'liquidacion' && <LiquidacionPanel c={c} />}
       {tab === 'ruta' && <RutaPanel c={c} />}
       {tab === 'manifiesto' && <ManifiestoPanel c={c} />}
-      {tab === 'mas' && <MasDatosPanel c={c} />}
-      {tab === 'validacion' && <ValidacionTab id={c.id} />}
+      {tab === 'mas' && <MasDatosPanel c={c} admin={admin} />}
+      {tab === 'validacion' && admin && <ValidacionTab id={c.id} />}
     </AppPage>
   );
 }
