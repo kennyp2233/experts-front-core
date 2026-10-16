@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import {
   Accordion,
   AccordionDetails,
@@ -18,10 +19,8 @@ import { OpcionAutocomplete } from './OpcionAutocomplete';
 interface Props {
   valor: CabeceraForm;
   onChange: (cambios: Partial<CabeceraForm>) => void;
-  /** Al elegir la marca se proponen destino, agencia, etc. */
+  /** Al elegir la marca se proponen aerolínea, destino, agencia, etc. */
   onConsignatario: (id: number | null) => void;
-  /** Al editar no se cambia de guía libremente si ya tiene guías hijas numeradas. */
-  bloquearGuia?: boolean;
   /** Ids de los campos que faltan (se marcan en rojo después de intentar grabar). */
   errores: Set<string>;
 }
@@ -33,68 +32,20 @@ function resumenVuelo(c: CabeceraForm) {
     c.numeroManifiesto.trim() && `manifiesto ${c.numeroManifiesto.trim()}`,
     c.secuencial.trim() && `secuencial ${c.secuencial.trim()}`,
     c.referencia.trim() && `ref. ${c.referencia.trim()}`,
-    c.nota.trim() && 'con nota',
   ].filter(Boolean);
   return partes.length ? partes.join(' · ') : 'Los da la aerolínea; se pueden completar después.';
 }
 
-/** Guía, partes y destino de la coordinación. Vuelo, manifiesto, referencia y nota van plegados. */
-export function CabeceraCoordinacion({ valor: c, onChange, onConsignatario, bloquearGuia, errores }: Props) {
+/**
+ * Cabecera en el orden del sistema viejo (TabIndex de frmPIN_Coordina):
+ * Consignatario → Aerolínea → Guía (la primera libre de esa aerolínea) →
+ * Fecha de vuelo; después destinos, agencia, embarque y pago. La nota
+ * (termógrafo…) va a la vista; vuelo y manifiesto, plegados.
+ */
+export function CabeceraCoordinacion({ valor: c, onChange, onConsignatario, errores }: Props) {
   return (
     <Paper variant="outlined" sx={{ p: 2 }}>
       <Grid container spacing={1.5}>
-        <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-          <OpcionAutocomplete
-            id={ID_CAMPO.guia}
-            tipo="guias"
-            label="Guía madre"
-            required
-            error={errores.has(ID_CAMPO.guia)}
-            value={c.idGuiaMadre}
-            disabled={bloquearGuia}
-            placeholder="Número o aerolínea (KL, 8469…)"
-            mostrarDetalle
-            onChange={(id, o: Opcion | null) =>
-              onChange({ idGuiaMadre: id, idAerolinea: (o?.extra?.idAerolinea as number | null | undefined) ?? null })
-            }
-          />
-        </Grid>
-        <Grid size={{ xs: 6, sm: 3, md: 2 }}>
-          <TextField
-            id={ID_CAMPO.fecha}
-            type="date"
-            size="small"
-            fullWidth
-            required
-            error={errores.has(ID_CAMPO.fecha)}
-            label="Fecha de vuelo"
-            value={c.fechaVuelo}
-            onChange={(e) => onChange({ fechaVuelo: e.target.value })}
-            slotProps={{ inputLabel: { shrink: true } }}
-          />
-        </Grid>
-        <Grid size={{ xs: 6, sm: 3, md: 2 }}>
-          <TextField
-            select
-            size="small"
-            fullWidth
-            label="Pago"
-            value={c.pago}
-            onChange={(e) => onChange({ pago: e.target.value as CabeceraForm['pago'] })}
-          >
-            <MenuItem value="PREPAID">Prepaid</MenuItem>
-            <MenuItem value="COLLECT">Collect</MenuItem>
-          </TextField>
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-          <OpcionAutocomplete
-            tipo="tipos-embarque"
-            label="Tipo de embarque"
-            value={c.idTipoEmbarque}
-            onChange={(id) => onChange({ idTipoEmbarque: id })}
-          />
-        </Grid>
-
         <Grid size={{ xs: 12, sm: 6, md: 4 }}>
           <OpcionAutocomplete
             id={ID_CAMPO.consignatario}
@@ -112,15 +63,53 @@ export function CabeceraCoordinacion({ valor: c, onChange, onConsignatario, bloq
         </Grid>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <OpcionAutocomplete
-            id={ID_CAMPO.agencia}
-            tipo="agencias"
-            label="Agencia IATA"
-            required
-            error={errores.has(ID_CAMPO.agencia)}
-            value={c.idAgenciaIata}
-            onChange={(id) => onChange({ idAgenciaIata: id })}
+            tipo="aerolineas"
+            label="Aerolínea"
+            conCodigo
+            value={c.idAerolinea}
+            helperText="Propone su primera guía libre"
+            onChange={(id) => onChange(id === c.idAerolinea ? {} : { idAerolinea: id, idGuiaMadre: null })}
           />
         </Grid>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <OpcionAutocomplete
+            id={ID_CAMPO.guia}
+            tipo="guias"
+            label="Guía madre"
+            required
+            error={errores.has(ID_CAMPO.guia)}
+            value={c.idGuiaMadre}
+            idAerolinea={c.idAerolinea}
+            placeholder="Número de guía"
+            mostrarDetalle
+            sinResultados={
+              <span>
+                No hay guías libres. Se ingresan en <Link href="/operacion/guias/ingresos">Ingreso de guías</Link>.
+              </span>
+            }
+            onChange={(id, o: Opcion | null) =>
+              onChange({
+                idGuiaMadre: id,
+                ...(o ? { idAerolinea: (o.extra?.idAerolinea as number | null | undefined) ?? c.idAerolinea } : {}),
+              })
+            }
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, md: 2 }}>
+          <TextField
+            id={ID_CAMPO.fecha}
+            type="date"
+            size="small"
+            fullWidth
+            required
+            error={errores.has(ID_CAMPO.fecha)}
+            label="Fecha de vuelo"
+            value={c.fechaVuelo}
+            onChange={(e) => onChange({ fechaVuelo: e.target.value })}
+            slotProps={{ inputLabel: { shrink: true } }}
+          />
+        </Grid>
+
         <Grid size={{ xs: 12, sm: 6, md: 2.5 }}>
           <OpcionAutocomplete
             id={ID_CAMPO.destino}
@@ -143,6 +132,48 @@ export function CabeceraCoordinacion({ valor: c, onChange, onConsignatario, bloq
             onChange={(id) => onChange({ idDestinoFinalDocs: id })}
           />
         </Grid>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <OpcionAutocomplete
+            id={ID_CAMPO.agencia}
+            tipo="agencias"
+            label="Agencia IATA"
+            required
+            error={errores.has(ID_CAMPO.agencia)}
+            value={c.idAgenciaIata}
+            onChange={(id) => onChange({ idAgenciaIata: id })}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, md: 2.5 }}>
+          <OpcionAutocomplete
+            tipo="tipos-embarque"
+            label="Tipo de embarque"
+            value={c.idTipoEmbarque}
+            onChange={(id) => onChange({ idTipoEmbarque: id })}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, md: 1.5 }}>
+          <TextField
+            select
+            size="small"
+            fullWidth
+            label="Pago"
+            value={c.pago}
+            onChange={(e) => onChange({ pago: e.target.value as CabeceraForm['pago'] })}
+          >
+            <MenuItem value="PREPAID">Prepaid</MenuItem>
+            <MenuItem value="COLLECT">Collect</MenuItem>
+          </TextField>
+        </Grid>
+        <Grid size={{ xs: 12 }}>
+          <TextField
+            size="small"
+            fullWidth
+            label="Nota"
+            placeholder="TERMOGRAFO …"
+            value={c.nota}
+            onChange={(e) => onChange({ nota: e.target.value })}
+          />
+        </Grid>
       </Grid>
 
       <Accordion
@@ -152,7 +183,7 @@ export function CabeceraCoordinacion({ valor: c, onChange, onConsignatario, bloq
       >
         <AccordionSummary expandIcon={<AbrirIcon />} sx={{ minHeight: 44, '& .MuiAccordionSummary-content': { my: 1 } }}>
           <Typography variant="body2" fontWeight={600} sx={{ mr: 1.5, flexShrink: 0 }}>
-            Vuelo, manifiesto, referencia y nota
+            Vuelo, manifiesto y referencia
           </Typography>
           <Typography variant="body2" color="text.secondary" noWrap>
             {resumenVuelo(c)}
@@ -224,9 +255,6 @@ export function CabeceraCoordinacion({ valor: c, onChange, onConsignatario, bloq
                 value={c.referencia}
                 onChange={(e) => onChange({ referencia: e.target.value })}
               />
-            </Grid>
-            <Grid size={{ xs: 12 }}>
-              <TextField size="small" fullWidth label="Nota" value={c.nota} onChange={(e) => onChange({ nota: e.target.value })} />
             </Grid>
           </Grid>
         </AccordionDetails>

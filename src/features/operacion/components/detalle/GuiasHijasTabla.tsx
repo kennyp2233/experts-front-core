@@ -46,17 +46,13 @@ function Lineas({ guia }: { guia: GuiaHija }) {
                 <Tooltip title={l.tipoCaja.nombre}>
                   <span>{l.tipoCaja.codigo}</span>
                 </Tooltip>
-              ) : (
-                <Typography variant="caption" color="text.secondary">
-                  mixta
-                </Typography>
-              )}
+              ) : null}
             </TableCell>
             <TableCell align="right" sx={nums}>{num(l.cantidadCajas, 0)}</TableCell>
             <TableCell align="right" sx={nums}>{num(l.fulls)}</TableCell>
             <TableCell align="right" sx={nums}>{num(l.pesoKg)}</TableCell>
             <TableCell align="right" sx={nums}>{num(l.tallos, 0)}</TableCell>
-            <TableCell align="right" sx={nums}>{usd(l.valor)}</TableCell>
+            <TableCell align="right" sx={nums}>{l.valor ? usd(l.valor) : ''}</TableCell>
             <TableCell sx={nums}>
               {l.largo || l.ancho || l.alto ? `${num(l.largo, 0)} × ${num(l.ancho, 0)} × ${num(l.alto, 0)}` : '—'}
             </TableCell>

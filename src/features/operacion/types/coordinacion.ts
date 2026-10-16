@@ -33,10 +33,14 @@ export interface CoordinacionResumen {
   liqTotal: number | null;
   pesoCobrable: number | null;
   corteExtra: boolean;
+  /** Nota de la coordinación (p. ej. el termógrafo). */
+  nota: string | null;
 }
 
 export interface CoordinacionPagina {
   items: CoordinacionResumen[];
+  /** Totales de todo el filtro, como el pie de la lista vieja. */
+  totales: { fulls: number; cajas: number; kgs: number; pesoCobrable: number };
   total: number;
   page: number;
   pageSize: number;
@@ -109,6 +113,9 @@ export interface LineaGuiaHija {
   ancho: number | null;
   alto: number | null;
   nota: string | null;
+  factura: string | null;
+  /** "E" = la registró la finca por la web; "I" = transferencia interna; null = la oficina. */
+  origen: string | null;
   usuario: string | null;
   fechaRegistro: string | null;
 }
@@ -188,9 +195,9 @@ export interface CoordinacionDetalle extends CoordinacionResumen {
   };
 }
 
-// ===== Stock de guías AWB =====
+// ===== Guías AWB (Ingreso y Administración) =====
 
-export type EstadoGuia = 'INGRESADA' | 'COORDINADA' | 'PRESTADA';
+export type EstadoGuia = 'INGRESADA' | 'COORDINADA' | 'PRESTADA' | 'ANULADA';
 
 export interface GuiaMadreFila {
   id: number;
@@ -203,7 +210,8 @@ export interface GuiaMadreFila {
   fechaPrestamo: string | null;
   fechaDevolucion: string | null;
   observaciones: string | null;
-  lote: { id: number; codigoAccess: number | null; fecha: string | null } | null;
+  /** Ingreso de guías (CGU) con el que nació. */
+  lote: { id: number; codigoAccess: number | null; numero: number | null; fecha: string | null } | null;
   coordinacion: { id: number; codigoAccess: number | null; fechaVuelo: string } | null;
 }
 
@@ -270,21 +278,79 @@ export interface ValidacionCoordinacion {
   reglas: Array<{ id: string; nombre: string; descripcion: string; resultado: ResultadoRegla | null }>;
 }
 
-export interface IngresoLoteDto {
-  idAerolinea: number;
-  /** 8 dígitos con verificador o 7 sin él. */
-  primeraGuia: string;
-  cantidad: number;
-  virtual?: boolean;
+/** Estado del ingreso (catálogo del sistema viejo). CANCELADO = todas sus guías ya se usaron. */
+export type EstadoIngreso = 'ANULADO' | 'INGRESADO' | 'GUIAS_COORDINADAS' | 'CANCELADO';
+export type PestanaIngreso = 'todos' | 'activos' | 'cancelados' | 'anulados';
+
+export interface GuiaDeIngreso {
+  id: number;
+  numero: string | null;
+  estado: EstadoGuia | null;
+  virtual: boolean;
+  prestada: boolean;
+  devuelta: boolean;
+  fechaPrestamo: string | null;
+  fechaDevolucion: string | null;
+  observaciones: string | null;
+  /** Coordinación que la usa: `id` null si todavía no está sincronizada. */
+  coordinacion: { id: number | null; numero: number; fechaVuelo: string | null } | null;
+}
+
+/** Ingreso de guías: documento CGU del sistema viejo, con el que nace cada guía. */
+export interface IngresoResumen {
+  id: number;
+  numero: number | null;
+  origen: OrigenDocumento;
+  fecha: string | null;
+  aerolinea: RefMaestro | null;
+  agencia: RefMaestro | null;
+  referencia: string | null;
+  tipoStock: 'NORMAL' | 'VIRTUAL' | null;
+  estado: EstadoIngreso | null;
+  guias: GuiaDeIngreso[];
+}
+
+export interface IngresoDetalle extends IngresoResumen {
+  nota: string | null;
+  conteo: { total: number; libres: number; coordinadas: number; prestamos: number; devoluciones: number; anuladas: number };
+  estadoCalculado: EstadoIngreso | null;
+  /** "Stock verificado": el estado guardado coincide con sus guías. */
+  verificado: boolean;
+  editable: boolean;
+  auditoria: { creadoPor: string | null; creadoEn: string | null; actualizadoPor: string | null; actualizadoEn: string | null };
+}
+
+export interface IngresosPagina {
+  items: IngresoResumen[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface IngresosFiltros {
+  q?: string;
+  pestana?: PestanaIngreso;
+  idAerolinea?: number;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface GuardarIngresoDto {
   fecha?: string;
+  idAerolinea: number;
+  idAgenciaIata?: number;
   referencia?: string;
+  virtual: boolean;
+  /** 8 dígitos (con el verificador) o 7. */
+  guias: string[];
   nota?: string;
 }
 
-export interface PrevisualizacionLote {
-  aerolinea: { id: number; nombre: string; codigo: string | null; prefijoAwb: string | null };
-  guias: Array<{ numero: string; texto: string }>;
-  repetidas: string[];
+export interface PrevisualizacionIngreso {
+  aerolinea: { id: number; nombre: string; codigo: string | null; prefijo: string };
+  guias: Array<{ entrada: string; numero: string | null; texto: string | null; problema: string | null }>;
+  revisadoSistemaViejo: boolean;
+  ok: boolean;
 }
 
 // ===== Coordinar (crear / editar / cortar) =====
@@ -337,6 +403,8 @@ export type ValoresLiquidacion = Partial<
 >;
 
 export interface LineaCoordinacionDto {
+  /** Línea que ya existía: conserva quién y cuándo la registró. */
+  idLinea?: number;
   idFinca: number;
   idProducto: number;
   idConsignatario?: number;
@@ -351,6 +419,7 @@ export interface LineaCoordinacionDto {
   ancho?: number;
   alto?: number;
   nota?: string;
+  factura?: string;
 }
 
 export interface GuardarCoordinacionDto {

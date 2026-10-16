@@ -25,6 +25,10 @@ interface Props {
   id?: string;
   /** Debajo del campo, el detalle de la opción elegida (p. ej. el cliente de la marca). */
   mostrarDetalle?: boolean;
+  /** Qué decir cuando la búsqueda no trae nada (default "Sin resultados"). */
+  sinResultados?: React.ReactNode;
+  /** Solo guías: las libres de esta aerolínea (como el combo del sistema viejo). */
+  idAerolinea?: number | null;
 }
 
 const etiqueta = (o: Opcion, conCodigo: boolean) => (conCodigo && o.codigo ? `${o.codigo} · ${o.nombre}` : o.nombre);
@@ -49,6 +53,8 @@ export function OpcionAutocomplete({
   sinEtiqueta = false,
   id,
   mostrarDetalle = false,
+  sinResultados = 'Sin resultados',
+  idAerolinea,
 }: Props) {
   const [texto, setTexto] = useState('');
   const [q, setQ] = useState('');
@@ -60,8 +66,8 @@ export function OpcionAutocomplete({
   }, [texto]);
 
   const { data: opciones, isLoading } = useSWR(
-    disabled ? null : ['operacion/opciones', tipo, q],
-    () => operacionService.opciones(tipo, q),
+    disabled ? null : ['operacion/opciones', tipo, q, idAerolinea ?? null],
+    () => operacionService.opciones(tipo, q, undefined, idAerolinea),
     { keepPreviousData: true, revalidateOnFocus: false },
   );
 
@@ -97,7 +103,7 @@ export function OpcionAutocomplete({
       }}
       getOptionLabel={(o) => etiqueta(o, conCodigo)}
       isOptionEqualToValue={(a, b) => a.id === b.id}
-      noOptionsText={q ? 'Sin resultados' : 'Escribe para buscar'}
+      noOptionsText={q || tipo === 'guias' ? sinResultados : 'Escribe para buscar'}
       renderOption={({ key, ...props }, o) => (
         <Box component="li" key={key} {...props}>
           <Box sx={{ minWidth: 0 }}>

@@ -29,6 +29,7 @@ import type { CoordinacionDetalle } from '../types/coordinacion';
 import { formatoAwb, kg, nombreCorto, nombreRef, num, usd } from '../utils/formato';
 import { EstadoCoordinacionChip, OrigenChip } from './EstadoCoordinacionChip';
 import { AccionesCoordinacion } from './detalle/AccionesCoordinacion';
+import { DetalleCoordinadoTabla } from './detalle/DetalleCoordinadoTabla';
 import { GuiasHijasTabla } from './detalle/GuiasHijasTabla';
 import { LiquidacionPanel } from './detalle/LiquidacionPanel';
 import { ValidacionTab } from './detalle/ValidacionTab';
@@ -216,11 +217,11 @@ function MasDatosPanel({ c, admin }: { c: CoordinacionDetalle; admin: boolean })
   );
 }
 
-type Pestana = 'guias' | 'liquidacion' | 'ruta' | 'manifiesto' | 'mas' | 'validacion';
+type Pestana = 'detalle' | 'guias' | 'liquidacion' | 'ruta' | 'manifiesto' | 'mas' | 'validacion';
 
 export function CoordinacionDetallePage({ id }: { id: number }) {
   const { coordinacion: c, error, isLoading, mutate } = useCoordinacion(id);
-  const [tab, setTab] = useState<Pestana>('guias');
+  const [tab, setTab] = useState<Pestana>('detalle');
   const { user } = useAuth();
   const admin = user?.role === 'ADMIN';
 
@@ -290,7 +291,14 @@ export function CoordinacionDetallePage({ id }: { id: number }) {
         </Stack>
       </Paper>
 
+      {c.nota && (
+        <Alert severity="info" icon={false} sx={{ mb: 2 }}>
+          <strong>Nota:</strong> {c.nota}
+        </Alert>
+      )}
+
       <Tabs value={tab} onChange={(_, v) => setTab(v)} variant="scrollable" sx={{ mb: 2, borderBottom: 1, borderColor: 'divider' }}>
+        <Tab value="detalle" label="Detalle coordinado" />
         <Tab value="guias" label={`Guías hijas (${c.guias.length})`} />
         <Tab value="liquidacion" label="Liquidación" />
         <Tab value="ruta" label="Ruta y vuelo" />
@@ -299,6 +307,7 @@ export function CoordinacionDetallePage({ id }: { id: number }) {
         {admin && c.origen === 'ACCESS' && <Tab value="validacion" label="Validación" />}
       </Tabs>
 
+      {tab === 'detalle' && <DetalleCoordinadoTabla guias={c.guias} />}
       {tab === 'guias' && <GuiasHijasTabla guias={c.guias} />}
       {tab === 'liquidacion' && <LiquidacionPanel c={c} />}
       {tab === 'ruta' && <RutaPanel c={c} />}

@@ -10,7 +10,8 @@ import {
   CompareArrows as SyncIcon,
   PersonOutline as ProfileIcon,
   StorageOutlined as MaestrosIcon,
-  ConfirmationNumberOutlined as StockIcon,
+  ConfirmationNumberOutlined as AdministracionGuiasIcon,
+  ReceiptLongOutlined as IngresoGuiasIcon,
   RuleOutlined as ValidacionIcon,
 } from '@mui/icons-material';
 import type { MenuSection } from './types';
@@ -30,8 +31,15 @@ export const MENU_SECTIONS: MenuSection[] = [
   {
     title: 'Operación',
     items: [
+      // Como el menú del sistema viejo: las guías nacen en el ingreso, antes de coordinar.
+      { label: 'Ingreso de guías', icon: <IngresoGuiasIcon />, href: '/operacion/guias/ingresos', roles: ['ADMIN', 'USER'] },
+      {
+        label: 'Administración de guías',
+        icon: <AdministracionGuiasIcon />,
+        href: '/operacion/guias/administracion',
+        roles: ['ADMIN', 'USER'],
+      },
       { label: 'Coordinaciones', icon: <CoordinacionesIcon />, href: '/operacion/coordinaciones', roles: ['ADMIN', 'USER'] },
-      { label: 'Stock de guías', icon: <StockIcon />, href: '/operacion/guias', roles: ['ADMIN', 'USER'] },
       { label: 'Validación', icon: <ValidacionIcon />, href: '/operacion/validacion', roles: ['ADMIN'] },
     ],
   },

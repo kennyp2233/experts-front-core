@@ -3,10 +3,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Box, Button, InputAdornment, MenuItem, Stack, TextField, Tooltip, Typography } from '@mui/material';
-import { Add as AddIcon, Search as SearchIcon } from '@mui/icons-material';
+import { Box, Button, IconButton, InputAdornment, Stack, Tab, Tabs, TextField, Tooltip, Typography } from '@mui/material';
+import {
+  Add as AddIcon,
+  ChevronLeft as AnteriorIcon,
+  ChevronRight as SiguienteIcon,
+  StickyNote2Outlined as NotaIcon,
+  Search as SearchIcon,
+} from '@mui/icons-material';
 import { AppPage, DataTable, type DataTableColumn } from '@/shared/components/ui';
-import { formatDate } from '@/shared/utils';
+import { formatDate, toIsoDate } from '@/shared/utils';
 import { useCoordinaciones } from '../hooks/useCoordinaciones';
 import type { CoordinacionResumen, EstadoCoordinacion } from '../types/coordinacion';
 import { formatoAwb, kg, nombreCorto, num, usd } from '../utils/formato';
@@ -18,6 +24,20 @@ const PAGE_SIZE = 50;
 const nums = { fontVariantNumeric: 'tabular-nums' } as const;
 
 const idDe = (sp: URLSearchParams, k: string) => (sp.get(k) ? Number(sp.get(k)) || undefined : undefined);
+
+/** Pestañas de la lista vieja: Todos los documentos / Guías no cortadas / Guía cortada. */
+const PESTANAS: Array<{ valor: '' | EstadoCoordinacion; label: string }> = [
+  { valor: '', label: 'Todas' },
+  { valor: 'BORRADOR', label: 'Por cortar' },
+  { valor: 'CORTADO', label: 'Cortadas' },
+];
+
+/** Día ± n, en "YYYY-MM-DD". */
+const otroDia = (dia: string, n: number) => {
+  const d = new Date(`${dia}T12:00:00`);
+  d.setDate(d.getDate() + n);
+  return toIsoDate(d);
+};
 
 const columnas: DataTableColumn<CoordinacionResumen>[] = [
   {
@@ -58,8 +78,22 @@ const columnas: DataTableColumn<CoordinacionResumen>[] = [
         '—'
       ),
   },
-  { key: 'consignatario', label: 'Consignatario', value: (c) => c.consignatario?.nombre, maxWidth: 190 },
-  { key: 'cliente', label: 'Cliente', value: (c) => c.cliente?.nombre, maxWidth: 140 },
+  { key: 'consignatario', label: 'Consignatario', value: (c) => c.consignatario?.nombre, maxWidth: 170 },
+  { key: 'cliente', label: 'Cliente', value: (c) => c.cliente?.nombre, maxWidth: 120 },
+  {
+    key: 'nota',
+    label: 'Nota',
+    description: 'Nota de la coordinación (termógrafo…)',
+    value: (c) => c.nota,
+    render: (c) =>
+      c.nota ? (
+        <Tooltip title={c.nota}>
+          <NotaIcon fontSize="small" color="action" />
+        </Tooltip>
+      ) : (
+        ''
+      ),
+  },
   {
     key: 'destino',
     label: 'Destino',
@@ -81,35 +115,39 @@ const columnas: DataTableColumn<CoordinacionResumen>[] = [
   { key: 'fulls', label: 'Fulls', align: 'right', value: (c) => num(c.totalFulls) },
   { key: 'cajas', label: 'Cajas', align: 'right', value: (c) => num(c.totalCajas, 0) },
   { key: 'kgs', label: 'Kg', align: 'right', value: (c) => num(c.totalKgs) },
-  { key: 'cobrable', label: 'Peso cobrable', align: 'right', value: (c) => kg(c.pesoCobrable), defaultHidden: true },
+  { key: 'cobrable', label: 'Cobrable', description: 'Peso cobrable (kg)', align: 'right', value: (c) => num(c.pesoCobrable) },
   {
     key: 'total',
     label: 'Cobro $',
     description: 'Lo que se cobra al cliente (corte extra); si no hay, el total de la guía madre',
     align: 'right',
+    defaultHidden: true,
     value: (c) => usd(c.liqTotal),
   },
 ];
 
 /**
- * Lista de coordinaciones. Los filtros viven en la URL
- * (?q=&estado=&aerolinea=&consignatario=&desde=&hasta=&page=) para que "atrás"
- * y los links funcionen. Usa `useSearchParams`: la página que la monta la
- * envuelve en <Suspense>.
+ * Lista de coordinaciones, pensada como el "día de vuelo" de la lista vieja:
+ * pestañas Todas / Por cortar / Cortadas, un día con Hoy y Mañana, y los
+ * totales del filtro al pie. Filtros en la URL
+ * (?q=&estado=&dia=&aerolinea=&consignatario=&page=) para que "atrás" y los
+ * links funcionen. Usa `useSearchParams`: la página que la monta la envuelve
+ * en <Suspense>.
  */
 export function CoordinacionesListPage() {
   const router = useRouter();
   const pathname = usePathname();
   const sp = useSearchParams();
 
+  const dia = sp.get('dia') ?? undefined;
   const filtros = useMemo(
     () => ({
       q: sp.get('q') ?? undefined,
       estado: (sp.get('estado') as EstadoCoordinacion | null) ?? undefined,
       idAerolinea: idDe(sp, 'aerolinea'),
       idConsignatario: idDe(sp, 'consignatario'),
-      desde: sp.get('desde') ?? undefined,
-      hasta: sp.get('hasta') ?? undefined,
+      desde: sp.get('dia') ?? undefined,
+      hasta: sp.get('dia') ?? undefined,
       page: Number(sp.get('page') ?? '1') || 1,
       pageSize: PAGE_SIZE,
     }),
@@ -140,6 +178,30 @@ export function CoordinacionesListPage() {
   const { pagina, error, isLoading, isValidating, mutate } = useCoordinaciones(filtros);
   const total = pagina?.total ?? 0;
   const page = filtros.page;
+  const hoy = toIsoDate(new Date());
+  const manana = otroDia(hoy, 1);
+
+  // Dentro de un día, como la lista vieja: por aerolínea y después por consignatario.
+  const filas = useMemo(() => {
+    const items = pagina?.items ?? [];
+    if (!dia) return items;
+    return [...items].sort(
+      (a, b) =>
+        (a.aerolinea?.codigo ?? '').localeCompare(b.aerolinea?.codigo ?? '') ||
+        (a.consignatario?.nombre ?? '').localeCompare(b.consignatario?.nombre ?? ''),
+    );
+  }, [pagina, dia]);
+
+  const t = pagina?.totales;
+  const totales = t
+    ? {
+        guia: `${total.toLocaleString('es-EC')} ${total === 1 ? 'guía' : 'guías'}`,
+        fulls: num(t.fulls),
+        cajas: num(t.cajas, 0),
+        kgs: num(t.kgs),
+        cobrable: kg(t.pesoCobrable),
+      }
+    : undefined;
 
   return (
     <AppPage
@@ -151,17 +213,71 @@ export function CoordinacionesListPage() {
         </Button>
       }
     >
+      <Stack
+        direction="row"
+        alignItems="center"
+        justifyContent="space-between"
+        flexWrap="wrap"
+        useFlexGap
+        spacing={1}
+        sx={{ mb: 2, borderBottom: 1, borderColor: 'divider' }}
+      >
+        <Tabs value={filtros.estado ?? ''} onChange={(_, v) => actualizar({ estado: v || undefined })}>
+          {PESTANAS.map((p) => (
+            <Tab key={p.valor} value={p.valor} label={p.label} />
+          ))}
+        </Tabs>
+        {/* El día de vuelo, como el filtro de la lista vieja. */}
+        <Stack direction="row" alignItems="center" spacing={0.5} sx={{ pb: 0.5 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ mr: 0.5 }}>
+            Vuelo:
+          </Typography>
+          <Tooltip title="Día anterior">
+            <span>
+              <IconButton size="small" disabled={!dia} onClick={() => dia && actualizar({ dia: otroDia(dia, -1) })} aria-label="Día anterior">
+                <AnteriorIcon fontSize="small" />
+              </IconButton>
+            </span>
+          </Tooltip>
+          <TextField
+            type="date"
+            size="small"
+            value={dia ?? ''}
+            onChange={(e) => actualizar({ dia: e.target.value || undefined })}
+            slotProps={{ htmlInput: { 'aria-label': 'Día de vuelo' } }}
+            sx={{ width: 150 }}
+          />
+          <Tooltip title="Día siguiente">
+            <span>
+              <IconButton size="small" disabled={!dia} onClick={() => dia && actualizar({ dia: otroDia(dia, 1) })} aria-label="Día siguiente">
+                <SiguienteIcon fontSize="small" />
+              </IconButton>
+            </span>
+          </Tooltip>
+          <Button size="small" variant={dia === hoy ? 'contained' : 'text'} onClick={() => actualizar({ dia: hoy })}>
+            Hoy
+          </Button>
+          <Button size="small" variant={dia === manana ? 'contained' : 'text'} onClick={() => actualizar({ dia: manana })}>
+            Mañana
+          </Button>
+          <Button size="small" variant={!dia ? 'contained' : 'text'} onClick={() => actualizar({ dia: undefined })}>
+            Todos los días
+          </Button>
+        </Stack>
+      </Stack>
       <DataTable
         id="operacion-coordinaciones"
-        columns={columnas}
-        rows={pagina?.items ?? []}
+        // Con un día elegido, la fecha de vuelo sobra.
+        columns={dia ? columnas.filter((c) => c.key !== 'vuelo') : columnas}
+        rows={filas}
         getRowId={(c) => String(c.id)}
         loading={isLoading || isValidating}
         error={error}
         onRetry={() => mutate()}
         onRefresh={() => mutate()}
         onRowClick={(c) => router.push(`/operacion/coordinaciones/${c.id}`)}
-        emptyMessage="No hay coordinaciones con esos filtros."
+        emptyMessage={dia ? `No hay coordinaciones con vuelo el ${formatDate(dia)}.` : 'No hay coordinaciones con esos filtros.'}
+        totals={totales}
         filters={
           <Stack direction="row" flexWrap="wrap" useFlexGap spacing={1} sx={{ width: '100%' }}>
             <TextField
@@ -169,7 +285,7 @@ export function CoordinacionesListPage() {
               value={texto}
               onChange={(e) => setTexto(e.target.value)}
               placeholder="Guía, guía hija, DAE, N°, marca o finca"
-              sx={{ minWidth: 220, flex: '1 1 220px' }}
+              sx={{ minWidth: 240, flex: '1 1 240px' }}
               slotProps={{
                 input: {
                   startAdornment: (
@@ -180,19 +296,7 @@ export function CoordinacionesListPage() {
                 },
               }}
             />
-            <TextField
-              select
-              size="small"
-              label="Estado"
-              value={filtros.estado ?? ''}
-              onChange={(e) => actualizar({ estado: e.target.value || undefined })}
-              sx={{ width: 120 }}
-            >
-              <MenuItem value="">Todos</MenuItem>
-              <MenuItem value="BORRADOR">Abiertas</MenuItem>
-              <MenuItem value="CORTADO">Cortadas</MenuItem>
-            </TextField>
-            <Box sx={{ width: 170 }}>
+            <Box sx={{ width: 180 }}>
               <OpcionAutocomplete
                 tipo="aerolineas"
                 label="Aerolínea"
@@ -201,7 +305,7 @@ export function CoordinacionesListPage() {
                 onChange={(id) => actualizar({ aerolinea: id ? String(id) : undefined })}
               />
             </Box>
-            <Box sx={{ width: 210 }}>
+            <Box sx={{ width: 230 }}>
               <OpcionAutocomplete
                 tipo="consignatarios"
                 label="Consignatario"
@@ -209,24 +313,6 @@ export function CoordinacionesListPage() {
                 onChange={(id) => actualizar({ consignatario: id ? String(id) : undefined })}
               />
             </Box>
-            <TextField
-              type="date"
-              size="small"
-              label="Vuelo desde"
-              value={filtros.desde ?? ''}
-              onChange={(e) => actualizar({ desde: e.target.value || undefined })}
-              slotProps={{ inputLabel: { shrink: true } }}
-              sx={{ width: 145 }}
-            />
-            <TextField
-              type="date"
-              size="small"
-              label="hasta"
-              value={filtros.hasta ?? ''}
-              onChange={(e) => actualizar({ hasta: e.target.value || undefined })}
-              slotProps={{ inputLabel: { shrink: true } }}
-              sx={{ width: 145 }}
-            />
           </Stack>
         }
         pagination={{

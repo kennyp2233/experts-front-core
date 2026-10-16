@@ -1,10 +1,6 @@
-import { Suspense } from 'react';
-import { StockGuiasPage } from '@/features/operacion/components/StockGuiasPage';
+import { redirect } from 'next/navigation';
 
+/** El menú Guías del sistema viejo arranca en el ingreso. */
 export default function Page() {
-  return (
-    <Suspense fallback={null}>
-      <StockGuiasPage />
-    </Suspense>
-  );
+  redirect('/operacion/guias/ingresos');
 }

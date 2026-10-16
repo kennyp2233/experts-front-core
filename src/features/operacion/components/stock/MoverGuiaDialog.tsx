@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import {
   Alert,
   Button,
+  Chip,
   Dialog,
   DialogActions,
   DialogContent,
@@ -25,7 +26,14 @@ interface Props {
   onHecho: (mensaje: string) => void;
 }
 
-/** Préstamo de una guía disponible a otra agencia, o registro de su devolución. */
+/** Lo que suele anotar el dueño en el préstamo (notas del sistema viejo). */
+const SUGERENCIAS = ['Usa EBF', 'Usa FlowerCargo', 'No se usa', 'Error'];
+
+/**
+ * Préstamo de una guía libre (la usó otra agencia, o no se usa) o registro de
+ * su devolución. La observación es opcional: en el sistema viejo casi nunca se
+ * anotaba.
+ */
 export function MoverGuiaDialog({ guia, accion, onClose, onHecho }: Props) {
   const [fecha, setFecha] = useState(toIsoDate(new Date()));
   const [observaciones, setObservaciones] = useState('');
@@ -73,18 +81,25 @@ export function MoverGuiaDialog({ guia, accion, onClose, onHecho }: Props) {
             slotProps={{ inputLabel: { shrink: true } }}
           />
           <TextField
-            label={accion === 'prestar' ? 'A quién se presta' : 'Observaciones'}
+            label="Observación (opcional)"
             value={observaciones}
             onChange={(e) => setObservaciones(e.target.value)}
             multiline
             minRows={2}
           />
+          {accion === 'prestar' && (
+            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+              {SUGERENCIAS.map((s) => (
+                <Chip key={s} size="small" label={s} variant="outlined" onClick={() => setObservaciones(s)} />
+              ))}
+            </Stack>
+          )}
           {error && <Alert severity="error">{error}</Alert>}
         </Stack>
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Cancelar</Button>
-        <Button variant="contained" onClick={confirmar} disabled={trabajando || (accion === 'prestar' && !observaciones.trim())}>
+        <Button variant="contained" onClick={confirmar} disabled={trabajando}>
           {accion === 'prestar' ? 'Prestar' : 'Registrar devolución'}
         </Button>
       </DialogActions>
