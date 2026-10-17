@@ -13,6 +13,7 @@ import {
   ConfirmationNumberOutlined as AdministracionGuiasIcon,
   ReceiptLongOutlined as IngresoGuiasIcon,
   RuleOutlined as ValidacionIcon,
+  AgricultureOutlined as UsuariosFincasIcon,
 } from '@mui/icons-material';
 import type { MenuSection } from './types';
 
@@ -41,6 +42,8 @@ export const MENU_SECTIONS: MenuSection[] = [
       },
       { label: 'Coordinaciones', icon: <CoordinacionesIcon />, href: '/operacion/coordinaciones', roles: ['ADMIN', 'USER'] },
       { label: 'Validación', icon: <ValidacionIcon />, href: '/operacion/validacion', roles: ['ADMIN'] },
+      // Como "WEB Usuarios" del viejo: las fincas entran al portal con estos usuarios.
+      { label: 'Usuarios de fincas', icon: <UsuariosFincasIcon />, href: '/operacion/usuarios-fincas', roles: ['ADMIN'] },
     ],
   },
   {

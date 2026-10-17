@@ -4,6 +4,8 @@ export * from './types/auth.types';
 // API Layer
 export { authApi } from './api/auth.api';
 
+export { inicioSegunRol } from './utils/inicio';
+
 // Hooks
 export {
   useAuth,

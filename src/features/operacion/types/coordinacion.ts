@@ -136,6 +136,8 @@ export interface GuiaHija {
 }
 
 export interface CoordinacionDetalle extends CoordinacionResumen {
+  /** Fecha de la última modificación: se manda al grabar para no pisar lo que cargó una finca. */
+  version: string;
   agencia: RefMaestro | null;
   tipoEmbarque: RefMaestro | null;
   pago: 'PREPAID' | 'COLLECT';
@@ -429,6 +431,8 @@ export interface LineaCoordinacionDto {
 }
 
 export interface GuardarCoordinacionDto {
+  /** Al modificar: la versión que se cargó; si cambió (una finca cargó), el servidor no graba. */
+  version?: string;
   idGuiaMadre: number;
   idConsignatario: number;
   idAgenciaIata: number;
