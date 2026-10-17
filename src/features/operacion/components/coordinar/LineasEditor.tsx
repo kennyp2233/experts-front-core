@@ -31,7 +31,7 @@ import {
   DeleteOutline as BorrarIcon,
   Scale as BasculaIcon,
 } from '@mui/icons-material';
-import { formatDateTime } from '@/shared/utils';
+import { formatDate, formatDateTime } from '@/shared/utils';
 import type { CoordinacionArmada, Opcion, ParametrosCoordinacion } from '../../types/coordinacion';
 import { num, plural } from '../../utils/formato';
 import { formatearDae, ID_CAMPO, LineaForm, numero, PATRON_DAE } from './formulario';
@@ -51,6 +51,8 @@ interface Props {
   onRepartirPeso: (totalKg: number) => string | null;
   /** Ids de los campos que faltan (se marcan en rojo después de intentar grabar). */
   errores: Set<string>;
+  /** DAE vigente de cada finca según el registro de DAEs (para mostrarla como propuesta). */
+  daesRegistro?: Record<number, { dae: string; hasta: string } | null>;
 }
 
 function Numero({
@@ -111,7 +113,7 @@ const textoRegistro = (r: NonNullable<LineaForm['registro']>) =>
  * 0 y una nota es una novedad ("no llegó 1.5"). El sistema agrupa las filas en
  * guías hijas (una por marca + finca + producto).
  */
-export function LineasEditor({ lineas, parametros, armada, onCambiar, onAgregar, onQuitar, onRepartirPeso, errores }: Props) {
+export function LineasEditor({ lineas, parametros, armada, onCambiar, onAgregar, onQuitar, onRepartirPeso, errores, daesRegistro }: Props) {
   // Tipo de caja, tallos, valor, factura y medidas casi siempre son los sugeridos o no se usan.
   const [mas, setMas] = useState(false);
   const [bascula, setBascula] = useState<string | null>(null);
@@ -220,6 +222,11 @@ export function LineasEditor({ lineas, parametros, armada, onCambiar, onAgregar,
           <TableBody>
             {lineas.map((l, i) => {
               const daeMal = !!l.dae.trim() && !PATRON_DAE.test(l.dae.trim());
+              // En cursiva: la propuso el registro de DAEs (como los otros valores sugeridos).
+              const registro = l.idFinca ? daesRegistro?.[l.idFinca] : null;
+              const daeDelRegistro = l.auto.dae && registro && registro.dae === l.dae ? registro : null;
+              // Se buscó y el registro no tiene DAE vigente para la fecha y el destino (el viejo la pintaba de rojo).
+              const sinVigente = l.auto.dae && !!l.idFinca && registro === null && !!l.dae.trim();
               const gh = guiaHijaDe(l, armada);
               const novedad = numero(l.cajas) === 0 && !!l.nota.trim();
               return (
@@ -281,15 +288,25 @@ export function LineasEditor({ lineas, parametros, armada, onCambiar, onAgregar,
                       size="small"
                       value={l.dae}
                       placeholder="055-AAAA-40-XXXXXXXX"
-                      onChange={(e) => onCambiar(l.key, { dae: formatearDae(e.target.value, l.dae) })}
+                      onChange={(e) =>
+                        onCambiar(l.key, { dae: formatearDae(e.target.value, l.dae), auto: { ...l.auto, dae: false } })
+                      }
                       error={daeMal || errores.has(ID_CAMPO.fila(l.key, 'dae'))}
-                      helperText={daeMal ? 'Formato 055-AAAA-40-XXXXXXXX' : undefined}
+                      helperText={daeMal ? 'Formato 055-AAAA-40-XXXXXXXX' : sinVigente ? 'Sin DAE vigente para el vuelo' : undefined}
+                      title={
+                        daeDelRegistro
+                          ? `Del registro de DAEs de la finca, vigente hasta ${formatDate(daeDelRegistro.hasta)}. Escríbela para cambiarla.`
+                          : undefined
+                      }
                       slotProps={{
                         htmlInput: { 'aria-label': 'DAE', spellCheck: false, inputMode: 'numeric' },
-                        formHelperText: { sx: { mx: 0.5, whiteSpace: 'nowrap' } },
+                        formHelperText: { sx: { mx: 0.5, whiteSpace: 'nowrap', color: sinVigente && !daeMal ? 'warning.dark' : undefined } },
                       }}
                       fullWidth
-                      sx={{ '& input': { fontVariantNumeric: 'tabular-nums' } }}
+                      sx={{
+                        '& input': { fontVariantNumeric: 'tabular-nums', fontStyle: daeDelRegistro ? 'italic' : undefined },
+                        ...(sinVigente && !daeMal ? { '& .MuiOutlinedInput-notchedOutline': { borderColor: 'warning.main' } } : {}),
+                      }}
                     />
                   </TableCell>
                   <TableCell>
