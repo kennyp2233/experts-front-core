@@ -5,7 +5,7 @@ import { ContentCopy as CopiarIcon } from '@mui/icons-material';
 import { useToast } from '@/shared/providers';
 import { formatDate } from '@/shared/utils';
 import type { CoordinacionDetalle } from '../../types/coordinacion';
-import { formatoAwb, kg, nombreCorto, nombreRef, textoIngreso } from '../../utils/formato';
+import { formatoAwb, kg, nombreCorto, textoIngreso } from '../../utils/formato';
 import { type CampoFicha, FichaCampos } from '../FichaCampos';
 
 const nums = { fontVariantNumeric: 'tabular-nums' } as const;
@@ -62,7 +62,7 @@ export function FichaCoordinacion({ c }: { c: CoordinacionDetalle }) {
     ['Referencia', c.referencia],
   ];
   const derecha: CampoFicha[] = [
-    ['Agencia IATA', c.agencia ? nombreRef(c.agencia) : null],
+    ['Agencia IATA', c.agencia?.nombre],
     ['Destino', destino],
     ['Fecha de vuelo', formatDate(c.fechaVuelo)],
     ['Manifiesto', c.codigoManifiesto ? <span style={nums}>{c.codigoManifiesto}</span> : null],

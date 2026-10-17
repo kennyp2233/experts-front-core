@@ -5,7 +5,8 @@ import ProtectedRoute from '../../features/auth/components/ProtectedRoute';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
-    <ProtectedRoute>
+    // Las fincas usan su portal (/portal), no las pantallas de la oficina.
+    <ProtectedRoute rolesExcluidos={['FINCA']}>
       <DashboardLayout>{children}</DashboardLayout>
     </ProtectedRoute>
   );

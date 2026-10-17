@@ -23,6 +23,7 @@ import {
 import {
   ContentCut as CortarIcon,
   DeleteOutline as AnularIcon,
+  PrintOutlined as ImprimirIcon,
   Description as ArchivoIcon,
   Edit as ModificarIcon,
   MoreHoriz as MasIcon,
@@ -72,6 +73,9 @@ export function AccionesCoordinacion({ c, onCambio }: { c: CoordinacionDetalle; 
   };
 
   const flowerCargo = c.estado !== 'ANULADO';
+  // "Guías Hija por Finca" del viejo: una House Air Waybill por guía hija, en hoja blanca.
+  const imprimirHijas = c.estado !== 'ANULADO' && c.guias.length > 0;
+  const abrirImpresion = () => window.open(`/imprimir/coordinaciones/${c.id}/guias-hijas`, '_blank');
 
   return (
     <>
@@ -100,6 +104,19 @@ export function AccionesCoordinacion({ c, onCambio }: { c: CoordinacionDetalle; 
               </ListItemIcon>
               <ListItemText>Archivo FlowerCargo</ListItemText>
             </MenuItem>
+            {imprimirHijas && (
+              <MenuItem
+                onClick={() => {
+                  setMenu(null);
+                  abrirImpresion();
+                }}
+              >
+                <ListItemIcon>
+                  <ImprimirIcon fontSize="small" />
+                </ListItemIcon>
+                <ListItemText>Imprimir guías hijas</ListItemText>
+              </MenuItem>
+            )}
             <MenuItem
               onClick={() => {
                 setMenu(null);
@@ -115,15 +132,22 @@ export function AccionesCoordinacion({ c, onCambio }: { c: CoordinacionDetalle; 
           </Menu>
         </>
       ) : (
-        flowerCargo && (
-          <Button
-            startIcon={<ArchivoIcon />}
-            variant={c.origen === 'SISTEMA' ? 'contained' : 'outlined'}
-            onClick={() => setDialogo('flowercargo')}
-          >
-            Archivo FlowerCargo
-          </Button>
-        )
+        <>
+          {imprimirHijas && (
+            <Button startIcon={<ImprimirIcon />} variant="outlined" onClick={abrirImpresion}>
+              Guías hijas
+            </Button>
+          )}
+          {flowerCargo && (
+            <Button
+              startIcon={<ArchivoIcon />}
+              variant={c.origen === 'SISTEMA' ? 'contained' : 'outlined'}
+              onClick={() => setDialogo('flowercargo')}
+            >
+              Archivo FlowerCargo
+            </Button>
+          )}
+        </>
       )}
 
       {flowerCargo && <ArchivoFlowerCargo c={c} abierto={dialogo === 'flowercargo'} onCerrar={() => setDialogo(null)} />}
