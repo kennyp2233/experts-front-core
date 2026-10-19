@@ -1,12 +1,14 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { isAxiosError } from 'axios';
 import Link from 'next/link';
 import {
   Alert,
   Box,
   Button,
   Card,
+  Chip,
   CircularProgress,
   Dialog,
   DialogActions,
@@ -15,6 +17,7 @@ import {
   Grid,
   IconButton,
   InputAdornment,
+  Link as EnlaceMui,
   MenuItem,
   Paper,
   Skeleton,
@@ -73,9 +76,21 @@ const desdeLinea = (l: LineaFinca): Form => ({
 });
 
 /** Lo que cargó la finca en la guía; las de la oficina (o con nota de la oficina) se ven pero no se tocan. */
-function Linea({ l, varias, onCorregir, onBorrar }: { l: LineaFinca; varias: boolean; onCorregir: () => void; onBorrar: () => void }) {
+function Linea({
+  l,
+  varias,
+  enCorreccion,
+  onCorregir,
+  onBorrar,
+}: {
+  l: LineaFinca;
+  varias: boolean;
+  enCorreccion: boolean;
+  onCorregir: () => void;
+  onBorrar: () => void;
+}) {
   return (
-    <Paper variant="outlined" sx={{ p: 1.5 }}>
+    <Paper variant="outlined" sx={{ p: 1.5, ...(enCorreccion ? { borderColor: 'primary.main', borderWidth: 2 } : {}) }}>
       <Stack direction="row" spacing={1} alignItems="flex-start">
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Typography variant="body1" fontWeight={600}>
@@ -100,6 +115,7 @@ function Linea({ l, varias, onCorregir, onBorrar }: { l: LineaFinca; varias: boo
               La cargó la oficina.
             </Typography>
           )}
+          {enCorreccion && <Chip size="small" color="primary" label="Corrigiendo arriba" sx={{ mt: 1 }} />}
         </Box>
         {l.editable && (
           <Stack direction="row">
@@ -139,6 +155,7 @@ export function GuiaFincaPage({ id }: { id: number }) {
   }, [g, form]);
 
   const finca = useMemo(() => g?.fincas.find((f) => f.id === form?.idFinca), [g, form?.idFinca]);
+  const formulario = useRef<HTMLFormElement>(null);
 
   if (error) {
     return (
@@ -164,15 +181,19 @@ export function GuiaFincaPage({ id }: { id: number }) {
   };
 
   const cajas = n(form.cajas);
+  const fulls = n(form.fulls);
   const kgSugerido = cajas !== undefined ? Math.round(cajas * g.kgPorCaja * 100) / 100 : undefined;
+  // Qué falta en cada campo (se muestra debajo del campo al intentar grabar).
   const faltan = {
-    finca: form.idFinca === '',
-    producto: form.idProducto === '',
-    fulls: n(form.fulls) === undefined,
-    cajas: cajas === undefined || !Number.isInteger(cajas),
-    dae: !PATRON_DAE.test(form.dae),
+    finca: form.idFinca === '' ? 'Elige la finca.' : null,
+    producto: form.idProducto === '' ? (finca ? 'Elige el producto.' : 'Primero elige la finca.') : null,
+    fulls: fulls === undefined || !Number.isFinite(fulls) ? 'Escribe los fulls (ej. 1,5).' : null,
+    cajas: cajas === undefined ? 'Escribe las cajas.' : !Number.isInteger(cajas) ? 'Solo números enteros.' : null,
+    dae: PATRON_DAE.test(form.dae) ? null : form.dae ? 'Faltan dígitos: 055-AAAA-40-XXXXXXXX.' : 'Escribe la DAE.',
   };
   const hayFaltantes = Object.values(faltan).some(Boolean);
+  // Un full es una caja grande (una media son 0,5): más fulls que cajas casi siempre es que están al revés.
+  const alReves = fulls !== undefined && cajas !== undefined && cajas > 0 && fulls > cajas;
 
   const guardar = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -199,6 +220,8 @@ export function GuiaFincaPage({ id }: { id: number }) {
       setForm({ ...vacio(nueva), idFinca: form.idFinca, idProducto: form.idProducto, dae: form.dae });
     } catch (err) {
       toast.error(getErrorMessage(err, 'No se pudo grabar.'));
+      // La oficina cortó la guía mientras se cargaba: se muestra que ya no está abierta.
+      if (isAxiosError(err) && err.response?.status === 404) mutate();
     } finally {
       setTrabajando(false);
     }
@@ -224,7 +247,8 @@ export function GuiaFincaPage({ id }: { id: number }) {
   };
 
   const tot = g.lineas.reduce((a, l) => ({ fulls: a.fulls + (l.fulls ?? 0), cajas: a.cajas + l.cantidadCajas }), { fulls: 0, cajas: 0 });
-  const err = (k: keyof typeof faltan) => intentado && faltan[k];
+  const err = (k: keyof typeof faltan) => intentado && !!faltan[k];
+  const ayuda = (k: keyof typeof faltan, normal?: React.ReactNode) => (intentado && faltan[k] ? faltan[k] : normal);
 
   return (
     <>
@@ -234,45 +258,22 @@ export function GuiaFincaPage({ id }: { id: number }) {
         </IconButton>
         <Box sx={{ minWidth: 0 }}>
           <Typography variant="h6" sx={{ lineHeight: 1.3 }}>
-            {diaVuelo(g.fechaVuelo)}
+            {g.marca}
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            {g.marca} · {[g.destino?.codigo, g.destinoFinal?.codigo].filter(Boolean).join(' → ')}
-            {g.aerolinea ? ` · ${g.aerolinea}` : ''}
-            {g.guia ? ` · guía ${awb(g.guia)}` : ''}
+            {[
+              diaVuelo(g.fechaVuelo),
+              [g.destino?.codigo, g.destinoFinal?.codigo].filter(Boolean).join(' → '),
+              g.aerolinea,
+              g.guia ? `guía ${awb(g.guia)}` : null,
+            ]
+              .filter(Boolean)
+              .join(' · ')}
           </Typography>
         </Box>
       </Stack>
 
-      <Box>
-        <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1 }}>
-          Tu carga en esta guía{g.lineas.length ? ` · ${nf.format(tot.fulls)} fulls · ${tot.cajas} cajas` : ''}
-        </Typography>
-        {g.lineas.length === 0 ? (
-          <Typography variant="body2" color="text.secondary">
-            Todavía no cargaste nada en esta guía.
-          </Typography>
-        ) : (
-          <Stack spacing={1}>
-            {g.lineas.map((l) => (
-              <Linea
-                key={l.id}
-                l={l}
-                varias={g.fincas.length > 1}
-                onCorregir={() => {
-                  setEditando(l.id);
-                  setForm(desdeLinea(l));
-                  setIntentado(false);
-                  window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-                }}
-                onBorrar={() => setBorrando(l)}
-              />
-            ))}
-          </Stack>
-        )}
-      </Box>
-
-      <Card variant="outlined" component="form" onSubmit={guardar} sx={{ p: 2 }}>
+      <Card variant="outlined" component="form" ref={formulario} onSubmit={guardar} noValidate sx={{ p: 2, scrollMarginTop: 80 }}>
         <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 2 }}>
           {editando ? 'Corregir la carga' : 'Agregar carga'}
         </Typography>
@@ -282,9 +283,11 @@ export function GuiaFincaPage({ id }: { id: number }) {
               <TextField
                 select
                 fullWidth
+                required
                 label="Finca"
                 value={form.idFinca}
                 error={err('finca')}
+                helperText={ayuda('finca')}
                 onChange={(e) => elegirFinca(Number(e.target.value))}
               >
                 {g.fincas.map((f) => (
@@ -299,11 +302,16 @@ export function GuiaFincaPage({ id }: { id: number }) {
             <TextField
               select
               fullWidth
+              required
               label="Producto"
               value={form.idProducto}
-              error={err('producto')}
+              error={err('producto') && !!finca}
               disabled={!finca}
-              helperText={finca && finca.productos.length === 0 ? 'Tu finca no tiene productos: avisa a la oficina.' : undefined}
+              helperText={
+                finca && finca.productos.length === 0
+                  ? 'Tu finca no tiene productos: avisa a la oficina.'
+                  : ayuda('producto', !finca ? 'Primero elige la finca.' : undefined)
+              }
               onChange={(e) => cambiar({ idProducto: Number(e.target.value) })}
             >
               {(finca?.productos ?? []).map((p) => (
@@ -316,19 +324,26 @@ export function GuiaFincaPage({ id }: { id: number }) {
           <Grid size={{ xs: 6, sm: 4 }}>
             <TextField
               fullWidth
+              required
               label="Fulls"
               value={form.fulls}
               error={err('fulls')}
+              helperText={ayuda('fulls', alReves ? '¿Más fulls que cajas? Revisa.' : undefined)}
               onChange={(e) => cambiar({ fulls: e.target.value })}
-              slotProps={{ htmlInput: { inputMode: 'decimal' } }}
+              slotProps={{
+                htmlInput: { inputMode: 'decimal' },
+                formHelperText: { sx: { color: alReves && !err('fulls') ? 'warning.dark' : undefined } },
+              }}
             />
           </Grid>
           <Grid size={{ xs: 6, sm: 4 }}>
             <TextField
               fullWidth
+              required
               label="Cajas"
               value={form.cajas}
               error={err('cajas')}
+              helperText={ayuda('cajas')}
               onChange={(e) => cambiar({ cajas: e.target.value.replace(/\D/g, '') })}
               slotProps={{ htmlInput: { inputMode: 'numeric' } }}
             />
@@ -339,7 +354,11 @@ export function GuiaFincaPage({ id }: { id: number }) {
               label="Kg"
               value={form.kg}
               placeholder={kgSugerido !== undefined ? nf.format(kgSugerido) : ''}
-              helperText={`Si lo dejas vacío: ${g.kgPorCaja} kg por caja`}
+              helperText={
+                form.kg.trim() === '' && kgSugerido !== undefined
+                  ? `Si lo dejas vacío se ponen ${nf.format(kgSugerido)} kg (${g.kgPorCaja} por caja).`
+                  : `Si lo dejas vacío: ${g.kgPorCaja} kg por caja.`
+              }
               onChange={(e) => cambiar({ kg: e.target.value })}
               slotProps={{ htmlInput: { inputMode: 'decimal' }, inputLabel: { shrink: true } }}
             />
@@ -347,19 +366,28 @@ export function GuiaFincaPage({ id }: { id: number }) {
           <Grid size={{ xs: 12 }}>
             <TextField
               fullWidth
+              required
               label="DAE"
               value={form.dae}
               error={err('dae')}
               placeholder="055-AAAA-40-XXXXXXXX"
               onChange={(e) => cambiar({ dae: formatearDae(e.target.value, form.dae) })}
               helperText={
-                finca?.dae && finca.dae.dae === form.dae
-                  ? `De tu registro de DAE, vigente hasta ${formatDate(finca.dae.hasta)}`
-                  : finca && !finca.dae
-                    ? 'No tienes una DAE vigente para este destino: regístrala en "Mis DAE".'
-                    : err('dae')
-                      ? 'Formato 055-AAAA-40-XXXXXXXX'
-                      : ' '
+                err('dae') ? (
+                  faltan.dae
+                ) : finca?.dae && finca.dae.dae === form.dae ? (
+                  `De tu registro de DAE, vigente hasta ${formatDate(finca.dae.hasta)}.`
+                ) : finca && !finca.dae ? (
+                  <>
+                    No tienes una DAE vigente para este destino: escríbela o{' '}
+                    <EnlaceMui component={Link} href="/portal/daes" color="inherit" underline="always">
+                      regístrala en Mis DAE
+                    </EnlaceMui>
+                    .
+                  </>
+                ) : (
+                  ' '
+                )
               }
               slotProps={{
                 htmlInput: { inputMode: 'numeric', spellCheck: false, style: { fontVariantNumeric: 'tabular-nums' } },
@@ -391,12 +419,13 @@ export function GuiaFincaPage({ id }: { id: number }) {
         </Grid>
         {intentado && hayFaltantes && (
           <Alert severity="error" sx={{ mt: 2 }}>
-            Completa los campos en rojo.
+            Falta completar lo marcado en rojo.
           </Alert>
         )}
-        <Stack direction="row" spacing={1} justifyContent="flex-end" sx={{ mt: 2 }}>
+        <Stack direction={{ xs: 'column-reverse', sm: 'row' }} spacing={1} justifyContent="flex-end" sx={{ mt: 2 }}>
           {editando && (
             <Button
+              size="large"
               onClick={() => {
                 setEditando(null);
                 setForm(vacio(g));
@@ -412,17 +441,51 @@ export function GuiaFincaPage({ id }: { id: number }) {
             size="large"
             disabled={trabajando}
             startIcon={trabajando ? <CircularProgress size={18} color="inherit" /> : undefined}
+            sx={{ width: { xs: '100%', sm: 'auto' } }}
           >
-            {editando ? 'Guardar cambios' : 'Agregar'}
+            {editando ? 'Guardar cambios' : 'Agregar a la guía'}
           </Button>
         </Stack>
       </Card>
+
+      <Box>
+        <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1 }}>
+          Lo que ya cargaste{g.lineas.length ? ` · ${nf.format(tot.fulls)} fulls · ${tot.cajas} cajas` : ''}
+        </Typography>
+        {g.lineas.length === 0 ? (
+          <Typography variant="body2" color="text.secondary">
+            Todavía no cargaste nada en esta guía.
+          </Typography>
+        ) : (
+          <Stack spacing={1}>
+            {g.lineas.map((l) => (
+              <Linea
+                key={l.id}
+                l={l}
+                varias={g.fincas.length > 1}
+                enCorreccion={editando === l.id}
+                onCorregir={() => {
+                  setEditando(l.id);
+                  setForm(desdeLinea(l));
+                  setIntentado(false);
+                  formulario.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }}
+                onBorrar={() => setBorrando(l)}
+              />
+            ))}
+          </Stack>
+        )}
+      </Box>
 
       <Dialog open={borrando !== null} onClose={() => setBorrando(null)} maxWidth="xs" fullWidth>
         <DialogTitle>¿Borrar esta carga?</DialogTitle>
         <DialogContent>
           <Typography variant="body2">
-            {borrando ? `${borrando.producto} · ${nf.format(borrando.fulls ?? 0)} fulls · ${borrando.cantidadCajas} cajas` : ''}
+            {borrando
+              ? [g.fincas.length > 1 ? borrando.finca : null, borrando.producto, `${nf.format(borrando.fulls ?? 0)} fulls`, `${borrando.cantidadCajas} cajas`]
+                  .filter(Boolean)
+                  .join(' · ')
+              : ''}
           </Typography>
         </DialogContent>
         <DialogActions>

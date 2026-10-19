@@ -18,7 +18,11 @@ export function getErrorMessage(error: unknown, fallback = 'Ocurrió un error in
     const { status, data } = error.response;
     const backendMessage = extractBackendMessage(data);
     if (status === 401) return 'Tu sesión expiró. Vuelve a iniciar sesión.';
-    if (status === 403) return 'No tienes permisos para realizar esta acción.';
+    // El mensaje del servidor si explica el motivo ("Esa finca no está asignada a tu usuario");
+    // el genérico de Nest ("Forbidden resource") no dice nada.
+    if (status === 403) {
+      return backendMessage && !/^forbidden/i.test(backendMessage) ? backendMessage : 'No tienes permisos para realizar esta acción.';
+    }
     if (status === 404) return backendMessage ?? 'No se encontró la información solicitada.';
     if (status === 429) return 'Demasiadas solicitudes seguidas. Espera unos segundos e intenta de nuevo.';
     if (status >= 500) {
