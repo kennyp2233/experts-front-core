@@ -17,14 +17,23 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import { ArrowBack as VolverIcon, Close as CerrarIcon, Search as SearchIcon, SyncOutlined as SyncIcon } from '@mui/icons-material';
+import {
+  Add as NuevoIcon,
+  ArrowBack as VolverIcon,
+  Close as CerrarIcon,
+  Search as SearchIcon,
+  SyncOutlined as SyncIcon,
+} from '@mui/icons-material';
 import { AppPage, DataTable, type DataTableColumn } from '@/shared/components/ui';
 import { getErrorMessage } from '@/shared/utils';
 import { useEntidadesMaestros, useFichaMaestro, useListaMaestro } from '../hooks/useMaestros';
 import type { FilaMaestro } from '../types';
 import { FichaRegistro } from './FichaRegistro';
+import { PanelMaestro } from './PanelMaestro';
 
-const AVISO = 'Vienen del sistema viejo y se actualizan solos; se editan allá hasta que el sistema nuevo pase a mandar.';
+const AVISO =
+  'Vienen del sistema viejo y se actualizan solos. Mientras se use el sistema viejo, lo que viene de allá se cambia allá; aquí se pueden crear nuevos y cambiar los creados aquí.';
+const AVISO_SOLO_LECTURA = 'Vienen del sistema viejo y se actualizan solos; se editan allá.';
 
 /** Índice: entidades agrupadas, con su cantidad de registros. */
 export function MaestrosIndexPage() {
@@ -91,7 +100,7 @@ export function MaestrosIndexPage() {
 
 const PAGE_SIZE = 50;
 
-const columnas: DataTableColumn<FilaMaestro>[] = [
+const columnasDe = (marcarNuevos: boolean): DataTableColumn<FilaMaestro>[] => [
   {
     key: 'nombre',
     label: 'Nombre',
@@ -99,11 +108,14 @@ const columnas: DataTableColumn<FilaMaestro>[] = [
     mobile: 'title',
     value: (f) => f.nombre,
     render: (f) => (
-      <Typography variant="body2" fontWeight={600}>
-        {f.nombre}
-      </Typography>
+      <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
+        <Typography variant="body2" fontWeight={600} noWrap>
+          {f.nombre}
+        </Typography>
+        {marcarNuevos && f.nuevo && <Chip size="small" color="primary" variant="outlined" label="Creado aquí" />}
+      </Stack>
     ),
-    maxWidth: 360,
+    maxWidth: 380,
   },
   { key: 'codigo', label: 'Código', value: (f) => f.codigo, mobile: 'subtitle' },
   { key: 'detalle', label: 'Detalle', value: (f) => f.detalle, maxWidth: 320 },
@@ -152,6 +164,7 @@ export function MaestroListaPage({ entidad }: { entidad: string }) {
   const q = sp.get('q') ?? undefined;
   const page = Number(sp.get('page') ?? '1') || 1;
   const abierto = sp.get('id');
+  const creando = sp.get('nuevo') === '1';
 
   const actualizar = (cambios: Record<string, string | undefined>, resetPage = true) => {
     const p = new URLSearchParams(sp.toString());
@@ -175,6 +188,8 @@ export function MaestroListaPage({ entidad }: { entidad: string }) {
 
   const { pagina, error, isLoading, isValidating, mutate } = useListaMaestro(entidad, q, page);
   const total = pagina?.total ?? 0;
+  const edicion = pagina?.edicion ?? null;
+  const columnas = useMemo(() => columnasDe(edicion?.modo === 'sombra'), [edicion?.modo]);
 
   return (
     <AppPage
@@ -182,10 +197,20 @@ export function MaestroListaPage({ entidad }: { entidad: string }) {
       subtitle={pagina?.descripcion}
       actions={
         <>
-          <Chip size="small" icon={<SyncIcon />} label="Solo lectura · sincronizado" variant="outlined" title={AVISO} />
+          {pagina && !edicion && (
+            <Chip size="small" icon={<SyncIcon />} label="Solo lectura · sincronizado" variant="outlined" title={AVISO_SOLO_LECTURA} />
+          )}
+          {edicion?.modo === 'sombra' && (
+            <Chip size="small" icon={<SyncIcon />} label="Lo del sistema viejo se cambia allá" variant="outlined" title={AVISO} />
+          )}
           <Button component={Link} href="/maestros" startIcon={<VolverIcon />}>
             Datos maestros
           </Button>
+          {edicion && (
+            <Button variant="contained" startIcon={<NuevoIcon />} onClick={() => actualizar({ nuevo: '1', id: undefined }, false)}>
+              {edicion.femenino ? 'Nueva' : 'Nuevo'} {edicion.singular}
+            </Button>
+          )}
         </>
       }
     >
@@ -225,7 +250,17 @@ export function MaestroListaPage({ entidad }: { entidad: string }) {
           onPageChange: (p) => actualizar({ page: p > 1 ? String(p) : undefined }, false),
         }}
       />
-      <Ficha entidad={entidad} id={abierto} onClose={() => actualizar({ id: undefined }, false)} />
+      {pagina && !edicion && <Ficha entidad={entidad} id={abierto} onClose={() => actualizar({ id: undefined }, false)} />}
+      {edicion && (
+        <PanelMaestro
+          entidad={entidad}
+          id={creando ? null : abierto}
+          nuevo={creando}
+          onCerrar={() => actualizar({ id: undefined, nuevo: undefined }, false)}
+          onCreado={(id) => actualizar({ id: String(id), nuevo: undefined }, false)}
+          onGuardado={() => mutate()}
+        />
+      )}
     </AppPage>
   );
 }

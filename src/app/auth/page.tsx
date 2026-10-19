@@ -15,7 +15,7 @@ import {
   useMediaQuery,
   keyframes
 } from '@mui/material';
-import { useAuth } from '../../features/auth';
+import { inicioSegunRol, useAuth } from '../../features/auth';
 import LoginForm from '../../features/auth/components/LoginForm';
 import RegisterForm from '../../features/auth/components/RegisterForm';
 import LogisticsGlobe from '../../features/auth/components/LogisticsGlobe';
@@ -43,19 +43,19 @@ const StaticText = ({ text, color }: { text: string; color?: string }) => {
 
 export default function AuthPage() {
   const router = useRouter();
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
   const [tabValue, setTabValue] = useState(0);
   const [isPasswordFocused, setIsPasswordFocused] = useState(false);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const isDark = theme.palette.mode === 'dark';
 
-  // Redirect to dashboard if already authenticated
+  // Ya con sesión: la oficina al inicio, las fincas a su portal.
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
-      router.push('/dashboard');
+      router.push(inicioSegunRol(user?.role));
     }
-  }, [isAuthenticated, isLoading, router]);
+  }, [isAuthenticated, isLoading, router, user?.role]);
 
   if (isLoading) {
     return (

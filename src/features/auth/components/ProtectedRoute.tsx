@@ -4,9 +4,14 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Box, CircularProgress } from '@mui/material';
 import { useAuth } from '../hooks/useAuth.hook';
+import { inicioSegunRol } from '../utils/inicio';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
+  /** Solo estos roles entran; los demás van a su inicio (p. ej. el portal de fincas). */
+  rolesPermitidos?: string[];
+  /** Estos roles no entran (p. ej. FINCA en las pantallas de la oficina). */
+  rolesExcluidos?: string[];
 }
 
 /**
@@ -17,15 +22,20 @@ interface ProtectedRouteProps {
  * Note: `isMutating` (login/register in-flight) is intentionally ignored —
  * those happen on /auth pages and have their own loading UI.
  */
-export default function ProtectedRoute({ children }: ProtectedRouteProps) {
+export default function ProtectedRoute({ children, rolesPermitidos, rolesExcluidos }: ProtectedRouteProps) {
   const router = useRouter();
-  const { isAuthenticated, isAuthLoading } = useAuth();
+  const { isAuthenticated, isAuthLoading, user } = useAuth();
+  const role = user?.role ?? '';
+  const fueraDeLugar =
+    isAuthenticated && !!user && ((rolesPermitidos && !rolesPermitidos.includes(role)) || rolesExcluidos?.includes(role));
 
   useEffect(() => {
     if (!isAuthLoading && !isAuthenticated) {
       router.replace('/auth');
+    } else if (fueraDeLugar) {
+      router.replace(inicioSegunRol(role));
     }
-  }, [isAuthenticated, isAuthLoading, router]);
+  }, [isAuthenticated, isAuthLoading, router, fueraDeLugar, role]);
 
   if (isAuthLoading) {
     return (
@@ -43,7 +53,7 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
     );
   }
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated || fueraDeLugar) {
     return null;
   }
 

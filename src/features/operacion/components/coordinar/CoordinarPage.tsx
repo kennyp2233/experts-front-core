@@ -509,8 +509,8 @@ export function CoordinarPage({ id }: { id?: number }) {
       <Stack spacing={2} sx={{ pb: 12 }}>
         {!id && (
           <Alert severity="info" variant="outlined">
-            Las fincas todavía cargan su detalle por la web del sistema viejo: en una coordinación nueva, el detalle se
-            escribe aquí.
+            Puedes grabar solo la cabecera: las fincas con usuario del portal cargan ahí su detalle (las demás siguen en
+            la web del sistema viejo, que solo ve las guías del sistema viejo).
           </Alert>
         )}
         <CabeceraCoordinacion

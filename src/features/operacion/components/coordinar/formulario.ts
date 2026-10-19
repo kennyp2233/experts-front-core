@@ -75,6 +75,8 @@ export interface FormCoordinar {
   handlingAuto: boolean;
   /** true mientras el cobro al cliente sea el propuesto (última guía de la marca). */
   clienteAuto: boolean;
+  /** Al modificar: la versión cargada, para no pisar lo que cargó una finca mientras tanto. */
+  version?: string;
 }
 
 /** Campos de la liquidación que no van en el cobro al cliente (Access los guarda solo en el normal). */
@@ -215,9 +217,10 @@ export function aDto(f: FormCoordinar): GuardarCoordinacionDto | null {
     nota: l.nota.trim() || undefined,
     factura: l.factura.trim() || undefined,
   }));
-  if (lineas.length === 0) return null;
+  // Sin líneas también se graba: como en el viejo, la cabecera primero y las fincas cargan su detalle.
   const liquidacion = valoresDe(f.liquidacion);
   return {
+    version: f.version,
     idGuiaMadre: c.idGuiaMadre,
     idConsignatario: c.idConsignatario,
     idAgenciaIata: c.idAgenciaIata,
@@ -299,7 +302,6 @@ export function faltantes(f: FormCoordinar, nombresFinca: Record<number, string>
   if (!c.idDestinoAwb) out.push({ campo: ID_CAMPO.destino, mensaje: 'Elige el destino de la guía.' });
   if (!c.idAgenciaIata) out.push({ campo: ID_CAMPO.agencia, mensaje: 'Elige la agencia IATA.' });
   const usadas = f.lineas.filter((l) => l.idFinca !== null || l.idProducto !== null || l.cajas.trim());
-  if (usadas.length === 0) out.push({ campo: ID_CAMPO.fila(f.lineas[0]?.key ?? '', 'finca'), mensaje: 'Agrega al menos una finca.' });
   usadas.forEach((l) => {
     const n = f.lineas.indexOf(l) + 1;
     const fila = l.idFinca !== null && nombresFinca[l.idFinca] ? `Fila ${n} (${nombresFinca[l.idFinca]})` : `Fila ${n}`;
@@ -375,6 +377,7 @@ export function desdeDetalle(c: CoordinacionDetalle): FormCoordinar {
         }),
       ),
     ),
+    version: c.version,
     liquidacion,
     conCliente: !!extra,
     cliente,

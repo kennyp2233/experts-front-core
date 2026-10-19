@@ -23,9 +23,11 @@ import {
 import {
   ContentCut as CortarIcon,
   DeleteOutline as AnularIcon,
+  PrintOutlined as ImprimirIcon,
   Description as ArchivoIcon,
   Edit as ModificarIcon,
   MoreHoriz as MasIcon,
+  KeyboardArrowDown as AbrirIcon,
 } from '@mui/icons-material';
 import { useToast } from '@/shared/providers';
 import { getErrorMessage } from '@/shared/utils';
@@ -34,16 +36,26 @@ import type { CoordinacionDetalle } from '../../types/coordinacion';
 import { formatoAwb, usd } from '../../utils/formato';
 import { ArchivoFlowerCargo } from './ArchivoFlowerCargo';
 
+/** Documentos imprimibles: cada uno abre su hoja en una pestaña nueva. */
+const IMPRESIONES = [
+  { ruta: 'guia-madre', nombre: 'Guía madre', ayuda: 'Hoja blanca o papel de guía' },
+  { ruta: 'guias-hijas', nombre: 'Guías hijas por finca', ayuda: 'Una House Air Waybill por guía hija' },
+  { ruta: 'manifiesto', nombre: 'Manifiesto', ayuda: 'Consolidated cargo manifest' },
+] as const;
+
 /**
  * Acciones de la coordinación. Abierta (sistema nuevo): Modificar y Cortar
  * guía a la vista; FlowerCargo y Anular en "⋯". Cortada: el archivo de
  * FlowerCargo es lo que sigue. Las del sistema viejo se ven pero no se tocan.
+ * "Imprimir" (guía madre, guías hijas, manifiesto) está antes y después del
+ * corte, como el "Pre-Corte de AWB" del viejo.
  */
 export function AccionesCoordinacion({ c, onCambio }: { c: CoordinacionDetalle; onCambio: () => void }) {
   const router = useRouter();
   const toast = useToast();
   const [dialogo, setDialogo] = useState<'cortar' | 'anular' | 'flowercargo' | null>(null);
   const [menu, setMenu] = useState<HTMLElement | null>(null);
+  const [menuImprimir, setMenuImprimir] = useState<HTMLElement | null>(null);
   const [trabajando, setTrabajando] = useState(false);
 
   const abierta = c.origen === 'SISTEMA' && c.estado === 'BORRADOR';
@@ -72,11 +84,36 @@ export function AccionesCoordinacion({ c, onCambio }: { c: CoordinacionDetalle; 
   };
 
   const flowerCargo = c.estado !== 'ANULADO';
+  // La guía madre se imprime siempre (también en pre-corte); guías hijas y manifiesto necesitan guías hijas.
+  const imprimir = c.estado !== 'ANULADO';
+  const hayHijas = c.guias.length > 0;
+  const abrirImpresion = (ruta: string) => {
+    setMenuImprimir(null);
+    window.open(`/imprimir/coordinaciones/${c.id}/${ruta}`, '_blank');
+  };
+  const botonImprimir = imprimir && (
+    <>
+      <Button startIcon={<ImprimirIcon />} endIcon={<AbrirIcon />} variant="outlined" onClick={(e) => setMenuImprimir(e.currentTarget)}>
+        Imprimir
+      </Button>
+      <Menu anchorEl={menuImprimir} open={menuImprimir !== null} onClose={() => setMenuImprimir(null)}>
+        {IMPRESIONES.map((x) => {
+          const deshabilitado = x.ruta !== 'guia-madre' && !hayHijas;
+          return (
+            <MenuItem key={x.ruta} disabled={deshabilitado} onClick={() => abrirImpresion(x.ruta)}>
+              <ListItemText primary={x.nombre} secondary={deshabilitado ? 'La coordinación no tiene guías hijas' : x.ayuda} />
+            </MenuItem>
+          );
+        })}
+      </Menu>
+    </>
+  );
 
   return (
     <>
       {abierta ? (
         <>
+          {botonImprimir}
           <Button component={Link} href={`/operacion/coordinaciones/${c.id}/editar`} startIcon={<ModificarIcon />} variant="outlined">
             Modificar
           </Button>
@@ -115,15 +152,18 @@ export function AccionesCoordinacion({ c, onCambio }: { c: CoordinacionDetalle; 
           </Menu>
         </>
       ) : (
-        flowerCargo && (
-          <Button
-            startIcon={<ArchivoIcon />}
-            variant={c.origen === 'SISTEMA' ? 'contained' : 'outlined'}
-            onClick={() => setDialogo('flowercargo')}
-          >
-            Archivo FlowerCargo
-          </Button>
-        )
+        <>
+          {botonImprimir}
+          {flowerCargo && (
+            <Button
+              startIcon={<ArchivoIcon />}
+              variant={c.origen === 'SISTEMA' ? 'contained' : 'outlined'}
+              onClick={() => setDialogo('flowercargo')}
+            >
+              Archivo FlowerCargo
+            </Button>
+          )}
+        </>
       )}
 
       {flowerCargo && <ArchivoFlowerCargo c={c} abierto={dialogo === 'flowercargo'} onCerrar={() => setDialogo(null)} />}
