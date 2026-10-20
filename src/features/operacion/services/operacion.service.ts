@@ -152,7 +152,7 @@ export const operacionService = {
 
   /** Excel del día de vuelo, como los botones de la lista vieja. */
   descargarReporteDia: async (
-    tipo: 'programacion' | 'antinarcoticos',
+    tipo: 'programacion' | 'antinarcoticos' | 'reservas',
     dia: string,
     idAerolinea?: number,
   ): Promise<void> => {

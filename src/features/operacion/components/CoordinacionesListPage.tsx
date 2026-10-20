@@ -9,6 +9,9 @@ import {
   CircularProgress,
   IconButton,
   InputAdornment,
+  ListItemText,
+  Menu,
+  MenuItem,
   Stack,
   Tab,
   Tabs,
@@ -23,6 +26,7 @@ import {
   ChevronLeft as AnteriorIcon,
   ChevronRight as SiguienteIcon,
   FileDownloadOutlined as DescargarIcon,
+  KeyboardArrowDown as AbrirIcon,
   StickyNote2Outlined as NotaIcon,
   Search as SearchIcon,
 } from '@mui/icons-material';
@@ -50,6 +54,14 @@ const PESTANAS: Array<{ valor: '' | EstadoCoordinacion; label: string }> = [
   { valor: 'CORTADO', label: 'Cortadas' },
   { valor: 'ANULADO', label: 'Anuladas' },
 ];
+
+/** Excel del día de vuelo (los dos de la lista vieja y Reservas por aerolínea). */
+const REPORTES_DIA = [
+  ['programacion', 'Programación', 'Por guía: fulls, peso, peso cobrable y promedios del día'],
+  ['antinarcoticos', 'Antinarcóticos', 'Para la Policía: una fila por finca de cada guía del día'],
+  ['reservas', 'Reservas', 'Por aerolínea: una fila por guía con lo que pide la reserva'],
+] as const;
+type ReporteDia = (typeof REPORTES_DIA)[number][0];
 
 /** Día ± n, en "YYYY-MM-DD". */
 const otroDia = (dia: string, n: number) => {
@@ -218,8 +230,9 @@ export function CoordinacionesListPage() {
 
   const { pagina, error, isLoading, isValidating, mutate } = useCoordinaciones(filtros);
   const toast = useToast();
-  const [bajando, setBajando] = useState<'programacion' | 'antinarcoticos' | null>(null);
-  const descargar = async (tipo: 'programacion' | 'antinarcoticos') => {
+  const [bajando, setBajando] = useState<ReporteDia | null>(null);
+  const [menuReportes, setMenuReportes] = useState<HTMLElement | null>(null);
+  const descargar = async (tipo: ReporteDia) => {
     if (!dia) return;
     setBajando(tipo);
     try {
@@ -379,30 +392,35 @@ export function CoordinacionesListPage() {
                 onChange={(id) => actualizar({ consignatario: id ? String(id) : undefined })}
               />
             </Box>
-            {/* Los dos botones de la lista vieja: salen para el día elegido (y la aerolínea, si se filtró). */}
-            <Stack direction="row" spacing={1} alignItems="center">
-              {(
-                [
-                  ['programacion', 'Programación', 'Programación de vuelo (Excel): por guía, fulls, peso, peso cobrable y promedios del día'],
-                  ['antinarcoticos', 'Antinarcóticos', 'Reporte antinarcóticos (Excel) para la Policía: una fila por finca de cada guía del día'],
-                ] as const
-              ).map(([tipo, texto, ayuda]) => (
-                <Tooltip key={tipo} title={dia ? ayuda : 'Elija un día de vuelo'}>
-                  <span>
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      disabled={!dia || bajando !== null || total === 0}
-                      startIcon={bajando === tipo ? <CircularProgress size={14} color="inherit" /> : <DescargarIcon />}
-                      onClick={() => descargar(tipo)}
-                      sx={{ whiteSpace: 'nowrap', height: 40 }}
-                    >
-                      {texto}
-                    </Button>
-                  </span>
-                </Tooltip>
+            {/* Los Excel del día (Programación y Antinarcóticos de la lista vieja, y Reservas) en un solo botón:
+                salen para el día elegido y la aerolínea, si se filtró. */}
+            <Tooltip title={dia ? '' : 'Elija un día de vuelo'}>
+              <span>
+                <Button
+                  variant="outlined"
+                  disabled={!dia || bajando !== null || total === 0}
+                  startIcon={bajando ? <CircularProgress size={14} color="inherit" /> : <DescargarIcon />}
+                  endIcon={<AbrirIcon />}
+                  onClick={(e) => setMenuReportes(e.currentTarget)}
+                  sx={{ whiteSpace: 'nowrap', height: 40 }}
+                >
+                  Reportes del día
+                </Button>
+              </span>
+            </Tooltip>
+            <Menu anchorEl={menuReportes} open={menuReportes !== null} onClose={() => setMenuReportes(null)}>
+              {REPORTES_DIA.map(([tipo, texto, ayuda]) => (
+                <MenuItem
+                  key={tipo}
+                  onClick={() => {
+                    setMenuReportes(null);
+                    void descargar(tipo);
+                  }}
+                >
+                  <ListItemText primary={texto} secondary={ayuda} />
+                </MenuItem>
               ))}
-            </Stack>
+            </Menu>
           </Stack>
         }
         pagination={{

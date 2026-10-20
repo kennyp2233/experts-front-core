@@ -43,14 +43,20 @@ import { ArchivoFlowerCargo } from './ArchivoFlowerCargo';
 import { CorregirDialog } from './CorregirDialog';
 import { TransferirDialog } from './TransferirDialog';
 
-/** Documentos imprimibles: cada uno abre su hoja en una pestaña nueva. */
+/** Documentos imprimibles: cada uno abre su hoja en una pestaña nueva. Los de todos los días primero. */
 const IMPRESIONES = [
   { ruta: 'guia-madre', nombre: 'Guía madre', ayuda: 'Hoja blanca o papel de guía' },
   { ruta: 'guias-hijas', nombre: 'Guías hijas por finca', ayuda: 'Una House Air Waybill por guía hija' },
   { ruta: 'manifiesto', nombre: 'Manifiesto', ayuda: 'Consolidated cargo manifest' },
   { ruta: 'liquidacion-cliente', nombre: 'Liquidación al cliente', ayuda: 'Lo que se le cobra: valores del cliente + handling' },
 ] as const;
-const NECESITA_HIJAS: ReadonlyArray<string> = ['guias-hijas', 'manifiesto'];
+/** Los demás documentos del viejo (Export List, etiquetas, Form A): por si se necesitan. */
+const OTRAS_IMPRESIONES = [
+  { ruta: 'export-list', nombre: 'Export List', ayuda: 'Fincas, guías hijas, DAE, cajas, tallos, kg y valor' },
+  { ruta: 'etiquetas', nombre: 'Etiquetas', ayuda: 'Por guía hija o por caja (formato provisional)' },
+  { ruta: 'forma-a', nombre: 'Form A', ayuda: 'Certificado de origen (hoy lo emiten EBF y FlowerCargo)' },
+] as const;
+const NECESITA_HIJAS: ReadonlyArray<string> = ['guias-hijas', 'manifiesto', 'export-list', 'etiquetas'];
 
 /**
  * Acciones de la coordinación, con una sola acción principal (naranja, al
@@ -117,7 +123,8 @@ export function AccionesCoordinacion({ c, onCambio }: { c: CoordinacionDetalle; 
         Imprimir
       </Button>
       <Menu anchorEl={menuImprimir} open={menuImprimir !== null} onClose={() => setMenuImprimir(null)}>
-        {IMPRESIONES.map((x) => {
+        {[...IMPRESIONES, null, ...OTRAS_IMPRESIONES].map((x) => {
+          if (!x) return <Divider key="otros" sx={{ my: 0.5 }} />;
           const deshabilitado = NECESITA_HIJAS.includes(x.ruta) && !hayHijas;
           return (
             <MenuItem key={x.ruta} disabled={deshabilitado} onClick={() => abrirImpresion(x.ruta)}>
