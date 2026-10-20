@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
     Alert, Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, LinearProgress, Paper,
-    Snackbar, Stack, Tab, Tabs, Typography
+    Snackbar, Stack, Tab, Tabs, ToggleButton, ToggleButtonGroup, Typography
 } from '@mui/material';
 import {
     CheckCircle as CheckIcon,
@@ -18,7 +18,7 @@ import { useAuth } from '../../auth/hooks/useAuth.hook';
 import { FitoGuideTable } from './FitoGuideTable';
 import { CatalogManager } from './CatalogManager';
 import { fitoService } from '../services/fito.service';
-import { FitoXmlConfig, FitoJob, ProductMapping, GuiaHijaAgregada } from '../types/fito.types';
+import { FitoXmlConfig, FitoJob, FuenteFito, ProductMapping, GuiaHijaAgregada } from '../types/fito.types';
 
 const log = logger.createChild('FITO');
 
@@ -70,6 +70,8 @@ export const FitoPage: React.FC = () => {
 
 const FitoWorkspace: React.FC = () => {
     const [tab, setTab] = useState(0);
+    // Sistema nuevo por defecto; la base antigua queda de respaldo (deprecada) por si algo no cuadra.
+    const [fuente, setFuente] = useState<FuenteFito>('sistema');
     const [generating, setGenerating] = useState(false);
     const [message, setMessage] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
 
@@ -120,7 +122,7 @@ const FitoWorkspace: React.FC = () => {
         setJobStatus(null);
 
         try {
-            const result = await fitoService.generate({ guias: [docNumero], config, productMappings, guiasHijas });
+            const result = await fitoService.generate({ fuente, guias: [docNumero], config, productMappings, guiasHijas });
             setCurrentJobId(result.jobId);
             setProgressDialogOpen(true);
             setMessage({ type: 'info', text: 'Generación iniciada…' });
@@ -171,7 +173,26 @@ const FitoWorkspace: React.FC = () => {
             </Box>
 
             <TabPanel value={tab} index={0}>
-                <FitoGuideTable onGenerate={handleGenerate} disabled={generating} />
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} alignItems={{ sm: 'center' }} sx={{ mb: 2 }}>
+                    <Typography variant="body2" color="text.secondary">Guías desde</Typography>
+                    <ToggleButtonGroup
+                        exclusive
+                        value={fuente}
+                        onChange={(_, v: FuenteFito | null) => v && setFuente(v)}
+                        aria-label="De dónde se leen las guías"
+                    >
+                        <ToggleButton value="sistema">Sistema</ToggleButton>
+                        <ToggleButton value="access">Base antigua (deprecado)</ToggleButton>
+                    </ToggleButtonGroup>
+                </Stack>
+                {fuente === 'access' && (
+                    <Alert severity="warning" sx={{ mb: 2 }}>
+                        Lee directo de la base del sistema viejo (Access). Queda solo de respaldo por si algo no cuadra
+                        con el sistema y se va a retirar.
+                    </Alert>
+                )}
+                {/* key: al cambiar de fuente se empieza de cero (otra lista, otros ids). */}
+                <FitoGuideTable key={fuente} fuente={fuente} onGenerate={handleGenerate} disabled={generating} />
             </TabPanel>
 
             <TabPanel value={tab} index={1}>

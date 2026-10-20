@@ -1,11 +1,15 @@
 'use client';
 
-import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { AppBar, Box, Button, Container, Stack, Tab, Tabs, Toolbar, Typography } from '@mui/material';
-import { Logout as SalirIcon } from '@mui/icons-material';
+import { Stack } from '@mui/material';
 import { useAuth } from '@/features/auth';
+import { PortalShell } from '@/shared/components/ui';
 import { usePerfilFinca } from './portal';
+
+const PESTANAS = [
+  { value: 'guias', label: 'Guías abiertas', href: '/portal' },
+  { value: 'daes', label: 'Mis DAE', href: '/portal/daes' },
+];
 
 /**
  * Marco del portal de fincas: arriba la finca y salir; dos pestañas (Guías
@@ -19,29 +23,16 @@ export function PortalLayout({ children }: { children: React.ReactNode }) {
   const fincas = perfil?.fincas.map((f) => f.nombre).join(' · ');
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
-      <AppBar position="sticky" color="primary" elevation={0}>
-        <Toolbar sx={{ gap: 2 }}>
-          <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Typography variant="subtitle1" fontWeight={700} noWrap>
-              Experts Handling Cargo · Fincas
-            </Typography>
-            <Typography variant="caption" noWrap component="div" sx={{ opacity: 0.9 }}>
-              {fincas || perfil?.usuario || ''}
-            </Typography>
-          </Box>
-          <Button color="inherit" startIcon={<SalirIcon />} onClick={() => logout()}>
-            Salir
-          </Button>
-        </Toolbar>
-      </AppBar>
-      <Container maxWidth="md" sx={{ py: 2, px: { xs: 1.5, sm: 3 } }}>
-        <Tabs value={pestana} sx={{ mb: 2, borderBottom: 1, borderColor: 'divider' }} variant="fullWidth">
-          <Tab value="guias" label="Guías abiertas" component={Link} href="/portal" />
-          <Tab value="daes" label="Mis DAE" component={Link} href="/portal/daes" />
-        </Tabs>
-        <Stack spacing={2}>{children}</Stack>
-      </Container>
-    </Box>
+    <PortalShell
+      portal="Fincas"
+      detalle={fincas || perfil?.usuario || ''}
+      pestanas={PESTANAS}
+      pestana={pestana}
+      onSalir={() => logout()}
+      maxWidth="md"
+      pestanasAnchas
+    >
+      <Stack spacing={2}>{children}</Stack>
+    </PortalShell>
   );
 }

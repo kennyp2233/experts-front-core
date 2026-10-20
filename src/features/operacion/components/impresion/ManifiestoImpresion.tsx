@@ -1,15 +1,28 @@
 'use client';
 
+import { useState } from 'react';
 import useSWR from 'swr';
-import { Alert, Box, Button, CircularProgress, Stack, Typography } from '@mui/material';
+import {
+  Alert,
+  Box,
+  Button,
+  Checkbox,
+  CircularProgress,
+  FormControlLabel,
+  Stack,
+  ToggleButton,
+  ToggleButtonGroup,
+  Typography,
+} from '@mui/material';
 import { Print as ImprimirIcon } from '@mui/icons-material';
 import api from '@/shared/services/api';
 import { getErrorMessage } from '@/shared/utils';
+import { CSS_MANIFIESTO_LAN, ManifiestoLan } from './ManifiestoLanImpresion';
 
 /** Lo que usa el manifiesto de `GET /operacion/coordinaciones/:id/guias-hijas/impresion`. */
 interface GuiaHija {
   numero: string;
-  finca: { nombre: string; ruc: string | null };
+  finca: { nombre: string; ruc: string | null; direccion?: string[]; telefono?: string | null; ciudad?: string | null; pais?: string | null };
   consignee?: string[];
   dae: string | null;
   piezas: number;
@@ -36,10 +49,20 @@ interface DatosManifiesto {
 const nf = new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 });
 const nf2 = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-// A4 horizontal; el encabezado de la tabla se repite en cada hoja y el pie lleva el número de página.
-const CSS = `
+type Formato = 'general' | 'lan';
+
+/** Aerolíneas con `||FormatoLAN` en `aerPlantilla` del viejo (LAN CARGO, LATAM): salen con el "Formato LAN". */
+const esLan = (aerolinea: string | null) => /\b(lan|latam)\b/i.test(aerolinea ?? '');
+
+// Formato general: A4 horizontal; el encabezado de la tabla se repite en cada hoja y el pie lleva el número de página.
+const PAGINA_GENERAL = `
 @page { size: A4 landscape; margin: 10mm 10mm 12mm;
   @bottom-right { content: "Page " counter(page) " / " counter(pages); font: 8pt Arial, Helvetica, sans-serif; } }
+`;
+// Formato LAN (FormatoLAN.xlt): A4 vertical con 3 columnas ocultas; con "Con datos" las 9 columnas, en horizontal.
+const paginaLan = (conDatos: boolean) => `@page { size: A4 ${conDatos ? 'landscape' : 'portrait'}; margin: 7mm; }`;
+
+const CSS = `
 .man-hojas { display: flex; justify-content: center; padding: 8mm 0; }
 .man { width: 277mm; box-sizing: border-box; background: #fff; color: #000; padding: 6mm; font: 8pt Arial, Helvetica, sans-serif;
   box-shadow: 0 1px 4px rgba(0,0,0,.25); }
@@ -154,25 +177,52 @@ export function ManifiestoImpresion({ id }: { id: number }) {
   const { data, error, isLoading } = useSWR<DatosManifiesto>(['operacion/impresion-hijas', id, undefined], async () =>
     (await api.get(`/operacion/coordinaciones/${id}/guias-hijas/impresion`)).data,
   );
+  // Formato: el que corresponde a la aerolínea (LAN → "Formato LAN"), salvo que se elija otro.
+  const [elegido, setElegido] = useState<Formato | null>(null);
+  const [conDatos, setConDatos] = useState(false);
+  const formato: Formato = elegido ?? (data && esLan(data.aerolinea) ? 'lan' : 'general');
+  // El shipper master (D6 de FormatoLAN) no viene en guias-hijas/impresion: sale de la guía madre.
+  const { data: madre, error: errorMadre } = useSWR<{ shipper: string[] }>(
+    formato === 'lan' ? ['operacion/impresion-madre-shipper', id] : null,
+    async () => (await api.get(`/operacion/coordinaciones/${id}/guia-madre/impresion`)).data,
+    { revalidateOnFocus: false },
+  );
 
   return (
     <Box className="man-raiz" sx={{ bgcolor: '#e5e7eb', minHeight: '100vh' }}>
-      <style>{CSS}</style>
+      <style>{CSS + (formato === 'lan' ? CSS_MANIFIESTO_LAN + paginaLan(conDatos) : PAGINA_GENERAL)}</style>
       <Stack
         className="no-imprimir"
         direction="row"
         spacing={2}
         alignItems="center"
+        useFlexGap
+        flexWrap="wrap"
         sx={{ position: 'sticky', top: 0, zIndex: 1, bgcolor: 'background.paper', px: 3, py: 1.5, borderBottom: 1, borderColor: 'divider' }}
       >
         <Typography variant="h6" sx={{ flex: 1 }}>
           Manifiesto {data ? `· guía ${data.mawb ?? ''} · ${data.guias.length} ${data.guias.length === 1 ? 'guía hija' : 'guías hijas'}` : ''}
         </Typography>
+        <ToggleButtonGroup size="small" exclusive value={formato} onChange={(_, v: Formato | null) => v && setElegido(v)}>
+          <ToggleButton value="general">General</ToggleButton>
+          <ToggleButton value="lan">Formato LAN</ToggleButton>
+        </ToggleButtonGroup>
+        {formato === 'lan' && (
+          <FormControlLabel
+            control={<Checkbox size="small" checked={conDatos} onChange={(e) => setConDatos(e.target.checked)} />}
+            label="Con datos (shipper / consignee)"
+          />
+        )}
         <Button variant="contained" startIcon={<ImprimirIcon />} disabled={!data} onClick={() => window.print()}>
           Imprimir
         </Button>
         <Button onClick={() => window.close()}>Cerrar</Button>
       </Stack>
+      {formato === 'lan' && errorMadre && (
+        <Alert severity="warning" sx={{ m: 3, mb: 0 }} className="no-imprimir">
+          No se pudo leer el shipper de la guía madre: la columna SHIPPER MASTER queda vacía.
+        </Alert>
+      )}
       {error && (
         <Alert severity="error" sx={{ m: 3 }} className="no-imprimir">
           {getErrorMessage(error, 'No se pudo armar el manifiesto.')}
@@ -181,7 +231,7 @@ export function ManifiestoImpresion({ id }: { id: number }) {
       {isLoading && <CircularProgress sx={{ m: 4 }} />}
       {data && (
         <div className="man-hojas">
-          <Manifiesto d={data} />
+          {formato === 'lan' ? <ManifiestoLan d={data} shipper={madre?.shipper ?? null} conDatos={conDatos} /> : <Manifiesto d={data} />}
         </div>
       )}
     </Box>

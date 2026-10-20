@@ -1,10 +1,12 @@
 import { toIsoDate } from '@/shared/utils';
-import type {
-  CoordinacionDetalle,
-  GuardarCoordinacionDto,
-  LineaCoordinacionDto,
-  ParametrosCoordinacion,
-  ValoresLiquidacion,
+import {
+  TIPOS_TRAMO,
+  type CoordinacionDetalle,
+  type GuardarCoordinacionDto,
+  type LineaCoordinacionDto,
+  type ParametrosCoordinacion,
+  type TipoTramo,
+  type ValoresLiquidacion,
 } from '../../types/coordinacion';
 
 /**
@@ -56,6 +58,11 @@ export interface CabeceraForm {
   llegada: string;
   numeroManifiesto: string;
   secuencial: string;
+  /**
+   * Ruta (código IATA por tramo: aeropuerto en ORIGEN/DESTINO, aerolínea en VIA). Toda vacía = la de la
+   * aerolínea. Se cambia en el 5 % de las guías: Emirates vía CUR, MSC volado por Atlas (5Y)…
+   */
+  ruta: Record<TipoTramo, string>;
 }
 
 export type LiquidacionForm = Partial<Record<keyof ValoresLiquidacion, string>>;
@@ -156,6 +163,7 @@ export const formVacio = (): FormCoordinar => ({
     llegada: '',
     numeroManifiesto: '',
     secuencial: '',
+    ruta: rutaVacia(),
   },
   lineas: [lineaVacia()],
   liquidacion: {},
@@ -232,6 +240,7 @@ export function aDto(f: FormCoordinar): GuardarCoordinacionDto | null {
     referencia: c.referencia.trim() || undefined,
     nota: c.nota.trim() || undefined,
     vuelo: vueloDto(c),
+    rutas: rutasDto(c),
     lineas,
     liquidacion,
     cobroCliente: f.conCliente ? cobroCliente(f) : undefined,
@@ -246,6 +255,17 @@ const aLocal = (iso: string | null | undefined) => {
   const p = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
 };
+
+export const rutaVacia = (): Record<TipoTramo, string> =>
+  Object.fromEntries(TIPOS_TRAMO.map((t) => [t, ''])) as Record<TipoTramo, string>;
+
+/** Sin tramos cargados se manda nada (el servidor usa la ruta de la aerolínea). */
+function rutasDto(c: CabeceraForm): GuardarCoordinacionDto['rutas'] {
+  const tramos = TIPOS_TRAMO.map((t) => ({ tipoRuta: t, codigo: c.ruta[t].trim().toUpperCase() })).filter((t) => t.codigo);
+  if (!tramos.some((t) => t.tipoRuta !== 'ORIGEN')) return undefined;
+  if (!tramos.some((t) => t.tipoRuta === 'ORIGEN')) tramos.unshift({ tipoRuta: 'ORIGEN', codigo: 'UIO' });
+  return tramos;
+}
 
 function vueloDto(c: CabeceraForm): GuardarCoordinacionDto['vuelo'] {
   const v = {
@@ -353,6 +373,7 @@ export function desdeDetalle(c: CoordinacionDetalle): FormCoordinar {
       llegada: aLocal(via?.fechaHoraLlegada),
       numeroManifiesto: c.manifiesto?.numero ?? '',
       secuencial: c.manifiesto?.secuencial ?? '',
+      ruta: { ...rutaVacia(), ...Object.fromEntries(c.rutas.filter((r) => r.codigo).map((r) => [r.tipoRuta, r.codigo!])) },
     },
     lineas: c.guias.flatMap((g) =>
       g.lineas.map((l) =>

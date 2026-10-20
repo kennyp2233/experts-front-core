@@ -1,14 +1,15 @@
 import { Components, Theme } from '@mui/material/styles';
+import { FUENTE } from '../typography';
 
 export const createGlobalComponents = (mode: 'light' | 'dark'): Components<Theme> => ({
     MuiCssBaseline: {
         styleOverrides: (theme: Theme) => ({
-            '@import': "url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap')",
+            // Misma fuente en todo, también en las hojas de impresión (calibradas con ella).
             html: {
-                fontFamily: '"Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", sans-serif !important',
+                fontFamily: `${FUENTE} !important`,
             },
             '*': {
-                fontFamily: '"Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", sans-serif !important',
+                fontFamily: `${FUENTE} !important`,
                 WebkitFontSmoothing: 'antialiased',
                 MozOsxFontSmoothing: 'grayscale',
             },

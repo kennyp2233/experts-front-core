@@ -5,15 +5,17 @@ import {
   Accordion,
   AccordionDetails,
   AccordionSummary,
+  Button,
   Grid,
   MenuItem,
   Paper,
+  Stack,
   TextField,
   Typography,
 } from '@mui/material';
 import { ExpandMore as AbrirIcon } from '@mui/icons-material';
-import type { Opcion } from '../../types/coordinacion';
-import { type CabeceraForm, ID_CAMPO } from './formulario';
+import type { Opcion, TipoTramo } from '../../types/coordinacion';
+import { type CabeceraForm, ID_CAMPO, rutaVacia } from './formulario';
 import { OpcionAutocomplete } from './OpcionAutocomplete';
 
 interface Props {
@@ -23,11 +25,31 @@ interface Props {
   onConsignatario: (id: number | null) => void;
   /** Ids de los campos que faltan (se marcan en rojo después de intentar grabar). */
   errores: Set<string>;
+  /** Ruta por defecto de la aerolínea (se usa si no se cambia). */
+  rutaAerolinea?: Array<{ tipoRuta: TipoTramo; codigo: string }>;
 }
+
+/** Tramos en el orden de la ventana vieja: From · To1 By1 · To2 By2 · To3 By3. */
+const TRAMOS: Array<{ tipo: TipoTramo; label: string; titulo: string }> = [
+  { tipo: 'ORIGEN', label: 'Origen', titulo: 'Aeropuerto de salida' },
+  { tipo: 'DESTINO1', label: 'Destino', titulo: 'Aeropuerto del primer tramo' },
+  { tipo: 'VIA1', label: 'Vía', titulo: 'Aerolínea que vuela el primer tramo (va en el manifiesto)' },
+  { tipo: 'DESTINO2', label: 'Destino 2', titulo: 'Aeropuerto del segundo tramo' },
+  { tipo: 'VIA2', label: 'Vía 2', titulo: 'Aerolínea del segundo tramo' },
+  { tipo: 'DESTINO3', label: 'Destino 3', titulo: 'Aeropuerto del tercer tramo' },
+  { tipo: 'VIA3', label: 'Vía 3', titulo: 'Aerolínea del tercer tramo' },
+];
+
+const textoRuta = (r: Partial<Record<TipoTramo, string>>) =>
+  TRAMOS.map((t) => r[t.tipo]?.trim().toUpperCase())
+    .filter(Boolean)
+    .join(' / ');
 
 /** Resumen de lo que se cargó en "vuelo, manifiesto…" para verlo sin abrirlo. */
 function resumenVuelo(c: CabeceraForm) {
+  const ruta = textoRuta(c.ruta);
   const partes = [
+    ruta && `ruta ${ruta}`,
     c.vuelo.trim() && `vuelo ${c.vuelo.trim().toUpperCase()}`,
     c.numeroManifiesto.trim() && `manifiesto ${c.numeroManifiesto.trim()}`,
     c.secuencial.trim() && `secuencial ${c.secuencial.trim()}`,
@@ -42,7 +64,12 @@ function resumenVuelo(c: CabeceraForm) {
  * Fecha de vuelo; después destinos, agencia, embarque y pago. La nota
  * (termógrafo…) va a la vista; vuelo y manifiesto, plegados.
  */
-export function CabeceraCoordinacion({ valor: c, onChange, onConsignatario, errores }: Props) {
+export function CabeceraCoordinacion({ valor: c, onChange, onConsignatario, errores, rutaAerolinea }: Props) {
+  const porDefecto = Object.fromEntries((rutaAerolinea ?? []).map((r) => [r.tipoRuta, r.codigo])) as Partial<Record<TipoTramo, string>>;
+  const cargada = TRAMOS.some((t) => c.ruta[t.tipo].trim());
+  // Al modificar llega la ruta guardada: si es igual a la de la aerolínea, no es "propia".
+  const igualAerolinea = !!rutaAerolinea?.length && TRAMOS.every((t) => (c.ruta[t.tipo].trim() || '') === (porDefecto[t.tipo] ?? ''));
+  const rutaPropia = cargada && !igualAerolinea;
   return (
     <Paper variant="outlined" sx={{ p: 2 }}>
       <Grid container spacing={1.5}>
@@ -182,13 +209,51 @@ export function CabeceraCoordinacion({ valor: c, onChange, onConsignatario, erro
       >
         <AccordionSummary expandIcon={<AbrirIcon />} sx={{ minHeight: 44, '& .MuiAccordionSummary-content': { my: 1 } }}>
           <Typography variant="body2" fontWeight={600} sx={{ mr: 1.5, flexShrink: 0 }}>
-            Vuelo, manifiesto y referencia
+            Ruta, vuelo, manifiesto y referencia
           </Typography>
           <Typography variant="body2" color="text.secondary" noWrap>
             {resumenVuelo(c)}
           </Typography>
         </AccordionSummary>
         <AccordionDetails>
+          <Stack direction="row" alignItems="flex-start" flexWrap="wrap" useFlexGap spacing={1} sx={{ mb: 2 }}>
+            {TRAMOS.map((t) => (
+              <TextField
+                key={t.tipo}
+                size="small"
+                label={t.label}
+                title={t.titulo}
+                value={c.ruta[t.tipo]}
+                placeholder={porDefecto[t.tipo] ?? ''}
+                onChange={(e) => onChange({ ruta: { ...c.ruta, [t.tipo]: e.target.value.toUpperCase() } })}
+                slotProps={{ htmlInput: { maxLength: 3 }, inputLabel: { shrink: true } }}
+                sx={{ width: 84 }}
+              />
+            ))}
+            <Stack sx={{ pt: 0.5 }}>
+              <Typography variant="caption" color="text.secondary">
+                {rutaPropia
+                  ? 'Ruta propia de esta guía (distinta de la de la aerolínea).'
+                  : cargada
+                    ? `La de la aerolínea (${textoRuta(porDefecto)}).`
+                    : `Vacía = la de la aerolínea${textoRuta(porDefecto) ? ` (${textoRuta(porDefecto)})` : ''}.`}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                El manifiesto es de la aerolínea que vuela (&quot;Por&quot;).
+              </Typography>
+              {cargada && !igualAerolinea ? (
+                <Button size="small" sx={{ alignSelf: 'flex-start', px: 0 }} onClick={() => onChange({ ruta: rutaVacia() })}>
+                  Usar la de la aerolínea
+                </Button>
+              ) : (
+                rutaAerolinea?.length && !cargada ? (
+                  <Button size="small" sx={{ alignSelf: 'flex-start', px: 0 }} onClick={() => onChange({ ruta: { ...rutaVacia(), ...porDefecto } })}>
+                    Cambiar la ruta
+                  </Button>
+                ) : null
+              )}
+            </Stack>
+          </Stack>
           <Grid container spacing={1.5}>
             <Grid size={{ xs: 12, sm: 4, md: 2 }}>
               <TextField

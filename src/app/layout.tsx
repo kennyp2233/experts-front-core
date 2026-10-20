@@ -19,8 +19,8 @@ import { ToastProvider } from '../shared/providers/toast-provider';
 // });
 
 export const metadata: Metadata = {
-  title: "Experts Front Core",
-  description: "Experts Front Core - Next.js app with Material UI",
+  title: "Experts Handling Cargo",
+  description: "Coordinación de carga, guías y cobro de Experts Handling Cargo",
 };
 
 export default function RootLayout({
@@ -29,12 +29,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="es">
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="format-detection" content="telephone=no" />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       </head>
       <body
         className="antialiased"

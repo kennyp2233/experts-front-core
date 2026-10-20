@@ -34,15 +34,17 @@ function Regla({ r }: { r: ResumenRegla }) {
   const [abierta, setAbierta] = useState(false);
   const diferentes = r.evaluadas - r.coinciden;
   return (
-    <Paper variant="outlined" sx={{ p: 2 }}>
+    <Paper variant="outlined" sx={{ px: 2, py: 1.5 }}>
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ sm: 'center' }}>
         <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Typography fontWeight={600}>{r.nombre}</Typography>
+          <Typography variant="body2" fontWeight={600}>
+            {r.nombre}
+          </Typography>
           <Typography variant="body2" color="text.secondary">
             {r.descripcion}
           </Typography>
         </Box>
-        <Box sx={{ minWidth: 220 }}>
+        <Box sx={{ width: { sm: 220 }, flexShrink: 0 }}>
           <Stack direction="row" justifyContent="space-between" alignItems="baseline">
             <Chip size="small" color={color(r.porcentaje)} label={r.porcentaje === null ? 'sin datos' : `${r.porcentaje} %`} />
             <Typography variant="caption" color="text.secondary" sx={{ fontVariantNumeric: 'tabular-nums' }}>
@@ -53,14 +55,21 @@ function Regla({ r }: { r: ResumenRegla }) {
             variant="determinate"
             value={r.porcentaje ?? 0}
             color={color(r.porcentaje) === 'default' ? 'inherit' : (color(r.porcentaje) as 'success' | 'warning' | 'error')}
-            sx={{ mt: 0.75, height: 6, borderRadius: 3 }}
+            sx={{ mt: 0.75, height: 4, borderRadius: 2 }}
           />
         </Box>
-        {diferentes > 0 && (
-          <Button size="small" onClick={() => setAbierta((v) => !v)}>
-            {abierta ? 'Ocultar' : `Ver diferencias (${diferentes.toLocaleString('es-EC')})`}
-          </Button>
-        )}
+        {/* Columna fija: las barras quedan alineadas haya o no diferencias. */}
+        <Box sx={{ width: { sm: 170 }, flexShrink: 0, textAlign: { sm: 'right' } }}>
+          {diferentes > 0 ? (
+            <Button size="small" onClick={() => setAbierta((v) => !v)}>
+              {abierta ? 'Ocultar' : `Ver diferencias (${diferentes.toLocaleString('es-EC')})`}
+            </Button>
+          ) : (
+            <Typography variant="caption" color="text.secondary">
+              Sin diferencias
+            </Typography>
+          )}
+        </Box>
       </Stack>
       <Collapse in={abierta} unmountOnExit>
         <Table size="small" sx={{ mt: 2 }}>
@@ -117,7 +126,7 @@ export function ValidacionPage() {
       title="Validación contra el sistema viejo"
       subtitle="Cada regla del sistema nuevo se aplica a las coordinaciones del sistema viejo y se compara con el resultado que guardó Access."
       actions={
-        <Button startIcon={<RecalcularIcon />} onClick={() => recalcular()} disabled={isValidating}>
+        <Button variant="outlined" startIcon={<RecalcularIcon />} onClick={() => recalcular()} disabled={isValidating}>
           Recalcular
         </Button>
       }

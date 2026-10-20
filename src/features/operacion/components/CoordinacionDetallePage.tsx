@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import {
   Alert,
   Box,
@@ -19,9 +18,8 @@ import {
   Tabs,
   Typography,
 } from '@mui/material';
-import { ArrowBack as VolverIcon } from '@mui/icons-material';
 import { useAuth } from '@/features/auth';
-import { AppPage } from '@/shared/components/ui';
+import { AppPage, VolverLink } from '@/shared/components/ui';
 import { formatDate, formatDateTime, getErrorMessage } from '@/shared/utils';
 import { useCoordinacion } from '../hooks/useCoordinaciones';
 import type { CoordinacionDetalle, TramoRuta } from '../types/coordinacion';
@@ -229,20 +227,15 @@ export function CoordinacionDetallePage({ id }: { id: number }) {
   const { user } = useAuth();
   const admin = user?.role === 'ADMIN';
 
-  const volver = (
-    <Button
-      component={Link}
-      href={c ? `/operacion/coordinaciones?dia=${c.fechaVuelo}` : '/operacion/coordinaciones'}
-      startIcon={<VolverIcon />}
-      variant="text"
-    >
-      {c ? 'Lista del día' : 'Coordinaciones'}
-    </Button>
+  const volver = c ? (
+    <VolverLink href={`/operacion/coordinaciones?dia=${c.fechaVuelo}`}>Vuelos del {formatDate(c.fechaVuelo)}</VolverLink>
+  ) : (
+    <VolverLink href="/operacion/coordinaciones">Coordinaciones</VolverLink>
   );
 
   if (error) {
     return (
-      <AppPage title="Coordinación" actions={volver}>
+      <AppPage title="Coordinación" back={volver}>
         <Alert severity="error" action={<Button onClick={() => mutate()}>Reintentar</Button>}>
           {getErrorMessage(error, 'No se pudo cargar la coordinación.')}
         </Alert>
@@ -251,7 +244,7 @@ export function CoordinacionDetallePage({ id }: { id: number }) {
   }
   if (isLoading || !c) {
     return (
-      <AppPage title="Coordinación" actions={volver}>
+      <AppPage title="Coordinación" back={volver}>
         <Skeleton variant="rounded" height={170} sx={{ mb: 2 }} />
         <Skeleton variant="rounded" height={320} />
       </AppPage>
@@ -260,7 +253,7 @@ export function CoordinacionDetallePage({ id }: { id: number }) {
 
   return (
     <AppPage
-      title={`Coordinación N° ${c.codigoAccess ?? c.id} · ${formatoAwb(c.numeroGuia)}`}
+      title={`Coordinación N° ${c.numero} · ${formatoAwb(c.numeroGuia)}`}
       subtitle={
         <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
           <EstadoCoordinacionChip estado={c.estado} />
@@ -268,17 +261,23 @@ export function CoordinacionDetallePage({ id }: { id: number }) {
           <span>Coordinada el {formatDate(c.fechaAsignacion)}</span>
         </Stack>
       }
-      actions={
+      back={
         <>
-          <NavegacionDia c={c} />
-          <AccionesCoordinacion c={c} onCambio={() => mutate()} />
           {volver}
+          <NavegacionDia c={c} />
         </>
       }
+      actions={<AccionesCoordinacion c={c} onCambio={() => mutate()} />}
     >
       <FichaCoordinacion c={c} />
 
-      <Tabs value={tab} onChange={(_, v) => setTab(v)} variant="scrollable" sx={{ mb: 2, borderBottom: 1, borderColor: 'divider' }}>
+      <Tabs
+        value={tab}
+        onChange={(_, v) => setTab(v)}
+        variant="scrollable"
+        allowScrollButtonsMobile
+        sx={{ mt: 1, mb: 2, borderBottom: 1, borderColor: 'divider' }}
+      >
         <Tab value="detalle" label="Detalle de coordinación" />
         <Tab value="valores" label="Valores" />
         <Tab value="ruta" label="Ruta, vuelos y manifiesto" />

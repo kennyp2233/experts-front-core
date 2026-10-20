@@ -301,27 +301,29 @@ export function DataTable<T>({
           useFlexGap
           flexWrap="wrap"
         >
-          {searchable && (
-            <TextField
-              size="small"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder={searchPlaceholder}
-              sx={{ minWidth: { sm: 260 }, flex: { sm: '0 1 320px' } }}
-              slotProps={{
-                input: {
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchIcon fontSize="small" />
-                    </InputAdornment>
-                  ),
-                },
-              }}
-            />
-          )}
-          {filters}
-          <Box sx={{ flex: 1 }} />
-          <Stack direction="row" alignItems="center" spacing={0.5}>
+          {/* Buscador y filtros ocupan lo que sobra; el contador va a la derecha en la misma fila (si no entra, debajo). */}
+          <Stack direction="row" spacing={1.5} alignItems="center" useFlexGap flexWrap="wrap" sx={{ flex: '1 1 280px', minWidth: 0 }}>
+            {searchable && (
+              <TextField
+                size="small"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder={searchPlaceholder}
+                sx={{ minWidth: { sm: 220 }, flex: { xs: '1 1 100%', sm: '0 1 320px' } }}
+                slotProps={{
+                  input: {
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <SearchIcon fontSize="small" />
+                      </InputAdornment>
+                    ),
+                  },
+                }}
+              />
+            )}
+            {filters}
+          </Stack>
+          <Stack direction="row" alignItems="center" spacing={0.5} flexShrink={0} sx={{ ml: 'auto' }}>
             <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
               {initialLoading ? 'Cargando…' : countLabel}
               {pagination && !conTotal ? ` · página ${pagination.page}` : ''}

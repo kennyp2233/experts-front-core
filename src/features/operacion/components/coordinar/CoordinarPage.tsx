@@ -19,7 +19,7 @@ import {
   Stack,
   Typography,
 } from '@mui/material';
-import { Save as GrabarIcon } from '@mui/icons-material';
+import { ArrowBack as VolverIcon, Save as GrabarIcon } from '@mui/icons-material';
 import { AppPage } from '@/shared/components/ui';
 import { useToast } from '@/shared/providers';
 import { formatDate, getErrorMessage } from '@/shared/utils';
@@ -442,7 +442,7 @@ export function CoordinarPage({ id }: { id?: number }) {
     try {
       const r = id ? await operacionService.actualizarCoordinacion(id, dto) : await operacionService.crearCoordinacion(dto);
       setTocado(false);
-      toast.success(`Coordinación N° ${r.id} grabada. Queda abierta hasta el corte.`);
+      toast.success(`Coordinación N° ${(r as { numero?: number | null }).numero ?? r.id} grabada. Queda abierta hasta el corte.`);
       if (otra) {
         // "Grabar y nueva": otra coordinación del mismo día de vuelo.
         const vacio = formVacio();
@@ -491,7 +491,7 @@ export function CoordinarPage({ id }: { id?: number }) {
         <Alert severity="info">
           {coordinacion.origen === 'ACCESS'
             ? 'Esta coordinación viene del sistema viejo: mientras se usen los dos sistemas, se modifica allá.'
-            : 'Solo se modifica una coordinación abierta (antes del corte).'}{' '}
+            : 'Solo se modifica una coordinación abierta. Si ya se cortó, reábrela desde el detalle (⋯ → Reabrir guía).'}{' '}
           <Link href={`/operacion/coordinaciones/${id}`}>Volver al detalle</Link>
         </Alert>
       </AppPage>
@@ -503,8 +503,17 @@ export function CoordinarPage({ id }: { id?: number }) {
 
   return (
     <AppPage
-      title={id ? `Modificar coordinación N° ${id} · guía ${formatoAwb(coordinacion?.numeroGuia)}` : 'Nueva coordinación'}
-      actions={<Button onClick={cancelar}>Cancelar</Button>}
+      title={id ? `Modificar coordinación N° ${coordinacion?.numero ?? id} · guía ${formatoAwb(coordinacion?.numeroGuia)}` : 'Nueva coordinación'}
+      back={
+        <Button
+          size="small"
+          startIcon={<VolverIcon />}
+          onClick={cancelar}
+          sx={{ color: 'text.secondary', ml: -1, '&:hover': { color: 'text.primary', bgcolor: 'action.hover' } }}
+        >
+          {id ? 'Volver a la coordinación' : 'Coordinaciones'}
+        </Button>
+      }
     >
       <Stack spacing={2} sx={{ pb: 12 }}>
         {!id && (
@@ -518,6 +527,7 @@ export function CoordinarPage({ id }: { id?: number }) {
           onChange={cambiarCabecera}
           onConsignatario={alElegirConsignatario}
           errores={errores}
+          rutaAerolinea={parametros?.aerolinea?.ruta}
         />
 
         <AvisosCoordinacion
@@ -614,6 +624,9 @@ export function CoordinarPage({ id }: { id?: number }) {
             />
           )}
           <Stack direction="row" spacing={1}>
+            <Button variant="text" disabled={guardando} onClick={cancelar} sx={{ color: 'text.secondary' }}>
+              Cancelar
+            </Button>
             {!id && (
               <Button variant="outlined" disabled={guardando} onClick={() => grabar(true)}>
                 Grabar y nueva

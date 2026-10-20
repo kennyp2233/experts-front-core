@@ -19,12 +19,11 @@ import {
 } from '@mui/material';
 import {
   Add as NuevoIcon,
-  ArrowBack as VolverIcon,
   Close as CerrarIcon,
   Search as SearchIcon,
   SyncOutlined as SyncIcon,
 } from '@mui/icons-material';
-import { AppPage, DataTable, type DataTableColumn } from '@/shared/components/ui';
+import { AppPage, DataTable, VolverLink, type DataTableColumn } from '@/shared/components/ui';
 import { getErrorMessage } from '@/shared/utils';
 import { useEntidadesMaestros, useFichaMaestro, useListaMaestro } from '../hooks/useMaestros';
 import type { FilaMaestro } from '../types';
@@ -195,17 +194,19 @@ export function MaestroListaPage({ entidad }: { entidad: string }) {
     <AppPage
       title={pagina?.titulo ?? 'Datos maestros'}
       subtitle={pagina?.descripcion}
-      actions={
+      back={
         <>
+          <VolverLink href="/maestros">Datos maestros</VolverLink>
           {pagina && !edicion && (
             <Chip size="small" icon={<SyncIcon />} label="Solo lectura · sincronizado" variant="outlined" title={AVISO_SOLO_LECTURA} />
           )}
           {edicion?.modo === 'sombra' && (
             <Chip size="small" icon={<SyncIcon />} label="Lo del sistema viejo se cambia allá" variant="outlined" title={AVISO} />
           )}
-          <Button component={Link} href="/maestros" startIcon={<VolverIcon />}>
-            Datos maestros
-          </Button>
+        </>
+      }
+      actions={
+        <>
           {edicion && (
             <Button variant="contained" startIcon={<NuevoIcon />} onClick={() => actualizar({ nuevo: '1', id: undefined }, false)}>
               {edicion.femenino ? 'Nueva' : 'Nuevo'} {edicion.singular}

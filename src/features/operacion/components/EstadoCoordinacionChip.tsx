@@ -5,7 +5,7 @@ import type { EstadoCoordinacion, OrigenDocumento } from '../types/coordinacion'
 
 const ESTADOS: Record<EstadoCoordinacion, { label: string; color: 'info' | 'success' | 'error'; ayuda: string }> = {
   BORRADOR: { label: 'Abierta', color: 'info', ayuda: 'Todavía se puede modificar.' },
-  CORTADO: { label: 'Cortada', color: 'success', ayuda: 'Guía cortada: ya no se puede modificar.' },
+  CORTADO: { label: 'Cortada', color: 'success', ayuda: 'Guía cortada: no se modifica (se puede reabrir desde ⋯).' },
   ANULADO: { label: 'Anulada', color: 'error', ayuda: 'Anulada (en el sistema viejo: eliminada).' },
 };
 

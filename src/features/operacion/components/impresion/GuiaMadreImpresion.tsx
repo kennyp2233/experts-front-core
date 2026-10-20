@@ -20,20 +20,11 @@ import {
 import { Print as ImprimirIcon } from '@mui/icons-material';
 import api from '@/shared/services/api';
 import { getErrorMessage } from '@/shared/utils';
-import {
-  CELDAS_AGENCIA,
-  CELDAS_FINCAS,
-  CUADRO_AEROLINEA,
-  FILA_CARGO,
-  FILAS_CARGO_LIBRES,
-  GEOMETRIA_BASE,
-  GEOMETRIA_TURKISH,
-  type CeldaGeometria,
-} from './geometriaGuiaMadre';
+import { CELDAS_FINCAS, plantillaGuia, type CeldaGeometria, type PapelGuia, type PlantillaGuia } from './geometriaGuiaMadre';
 
 type Valores = 'aerolinea' | 'cliente';
 type Formato = 'blanca' | 'papel';
-type Papel = 'carta' | 'oficio' | 'a4';
+type Papel = PapelGuia;
 
 /** Respuesta de `GET /operacion/coordinaciones/:id/guia-madre/impresion` (ya formateada en el back). */
 interface ImpresionGuiaMadre {
@@ -117,21 +108,21 @@ const fullsTotal = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(2
 
 // ---------------------------------------------------------------- perfil por aerolínea (localStorage)
 
-const esTurkish = (d: ImpresionGuiaMadre) => /turkish/i.test(d.aerolinea.plantilla ?? '');
 const clavePerfil = (d: ImpresionGuiaMadre) =>
   `experts.impresion.guiaMadre.${(d.aerolinea.plantilla || d.aerolinea.nombre || 'general').trim().toUpperCase()}`;
 
 function perfilDefecto(d: ImpresionGuiaMadre): Perfil {
   const plantilla = d.aerolinea.plantilla ?? '';
+  const spec = plantillaGuia(plantilla);
   return {
-    // GMTurkishVirtual está en oficio; las demás en el papel de la impresora (carta/continuo).
-    papel: esTurkish(d) ? 'oficio' : 'carta',
+    // GMTurkishVirtual, GMKLMVirtual y GMQR están en oficio; las demás en el papel de la impresora (carta/continuo).
+    papel: spec.papel,
     dx: 0,
     dy: 0,
-    // Firma que traen las plantillas del viejo (preguntar al dueño quién firma hoy).
-    firma: /turkish|lan/i.test(plantilla) ? 'JAVIER BUSTOS' : 'MAURICIO PINCHAO',
-    // Solo las plantillas "Virtual" (guía neutra) imprimen el cuadro con la aerolínea.
-    cuadro: /virtual/i.test(plantilla),
+    // Firma que trae cada plantilla del viejo (preguntar al dueño quién firma hoy).
+    firma: spec.firma,
+    // Solo las plantillas "Virtual" (guía neutra) imprimen el cuadro con la aerolínea (y solo si la plantilla lo trae).
+    cuadro: spec.cuadro !== null && /virtual/i.test(plantilla),
   };
 }
 
@@ -177,7 +168,7 @@ function totalesImpresos(d: ImpresionGuiaMadre, op: Opciones): ImpresionGuiaMadr
  * Texto de cada celda de la Hoja1 de la plantilla GM*.xlt, con la misma
  * lógica de sus fórmulas (Hoja2/Hoja3 del viejo).
  */
-function celdasPapel(d: ImpresionGuiaMadre, op: Opciones): Record<string, string> {
+function celdasPapel(d: ImpresionGuiaMadre, op: Opciones, spec: PlantillaGuia): Record<string, string> {
   const pp = d.pago === 'PP';
   const t = totalesImpresos(d, op);
   const tramo = (i: number) => d.tramos[i] ?? { hasta: null, por: null };
@@ -220,8 +211,8 @@ function celdasPapel(d: ImpresionGuiaMadre, op: Opciones): Record<string, string
     B57: pp ? monto(t.flete) : 'COLLECT',
     F57: pp ? 'PREPAID' : monto(t.flete),
     // IVA (J63/K63) y "Tax" prepagado (B60 = K63).
-    J63: t.iva ? d.iva.codigo : '',
-    K63: pp && t.iva ? monto(t.iva) : '',
+    [`J${spec.filaIva}`]: t.iva ? d.iva.codigo : '',
+    [`K${spec.filaIva}`]: pp && t.iva ? monto(t.iva) : '',
     B60: pp && t.iva ? monto(t.iva) : '',
     // Total other charges due agent (B62/F62): solo con "Códigos de agencia" (ver totalesImpresos).
     B62: pp && t.dueAgent ? monto(t.dueAgent) : '',
@@ -248,18 +239,19 @@ function celdasPapel(d: ImpresionGuiaMadre, op: Opciones): Record<string, string
   }
 
   // Cargos de aerolínea: cada tipo en su fila (J rótulo, K valor); AUX2 en la primera libre.
+  // Una plantilla sin casillero de valor en la fila (K) no la usa; lo que no cabe no se imprime (como en el viejo).
   const usadas = new Set<number>();
   const pendientes: ImpresionGuiaMadre['cargosAerolinea'] = [];
   for (const x of d.cargosAerolinea) {
-    const fila = FILA_CARGO[x.tipo];
-    if (fila && !usadas.has(fila)) {
+    const fila = spec.filaCargo[x.tipo];
+    if (fila && !usadas.has(fila) && spec.geometria[`K${fila}`]) {
       usadas.add(fila);
       c[`J${fila}`] = x.codigo;
       c[`K${fila}`] = monto(x.valor);
     } else pendientes.push(x);
   }
   for (const x of pendientes) {
-    const fila = FILAS_CARGO_LIBRES.find((f) => !usadas.has(f));
+    const fila = spec.filasCargoLibres.find((f) => !usadas.has(f) && spec.geometria[`K${f}`]);
     if (!fila) break;
     usadas.add(fila);
     c[`J${fila}`] = x.codigo;
@@ -267,8 +259,8 @@ function celdasPapel(d: ImpresionGuiaMadre, op: Opciones): Record<string, string
   }
 
   if (op.codigos) {
-    d.cargosAgencia.slice(0, CELDAS_AGENCIA.length).forEach((x, i) => {
-      const [rotulo, valor] = CELDAS_AGENCIA[i];
+    d.cargosAgencia.slice(0, spec.celdasAgencia.length).forEach((x, i) => {
+      const [rotulo, valor] = spec.celdasAgencia[i];
       c[rotulo] = x.codigo;
       c[valor] = monto(x.valor);
     });
@@ -278,6 +270,8 @@ function celdasPapel(d: ImpresionGuiaMadre, op: Opciones): Record<string, string
       if (i < CELDAS_FINCAS.length) c[CELDAS_FINCAS[i]] = texto;
     });
   }
+  spec.retocar?.(c, d);
+  Object.assign(c, spec.fijos);
   return c;
 }
 
@@ -323,11 +317,11 @@ function Cuadricula({ w, h }: { w: number; h: number }) {
 }
 
 function HojaPapel({ d, op, perfil, cuadricula }: { d: ImpresionGuiaMadre; op: Opciones; perfil: Perfil; cuadricula: boolean }) {
-  const turkish = esTurkish(d);
-  const geo = turkish ? GEOMETRIA_TURKISH : GEOMETRIA_BASE;
-  const cuadro = perfil.cuadro ? (turkish ? CUADRO_AEROLINEA.turkish : CUADRO_AEROLINEA.base) : null;
+  const spec = plantillaGuia(d.aerolinea.plantilla);
+  const geo = spec.geometria;
+  const cuadro = perfil.cuadro ? spec.cuadro : null;
   const papel = PAPELES[perfil.papel];
-  const celdas = Object.entries(celdasPapel(d, op))
+  const celdas = Object.entries(celdasPapel(d, op, spec))
     .filter(([k, t]) => t && geo[k])
     .map(([k, t]) => ({ k, t, g: geo[k] }));
 
@@ -702,6 +696,7 @@ export function GuiaMadreImpresion({ id }: { id: number }) {
     if (Number.isFinite(n)) cambiarPerfil({ [k]: Math.round(n * 10) / 10 });
   };
 
+  const spec = d ? plantillaGuia(d.aerolinea.plantilla) : null;
   const op: Opciones = { fincas, codigos, firma: perfil?.firma ?? '' };
   const papel = perfil ? PAPELES[perfil.papel] : PAPELES.carta;
   const pagina =
@@ -743,13 +738,15 @@ export function GuiaMadreImpresion({ id }: { id: number }) {
               control={<Checkbox size="small" checked={codigos} onChange={(e) => setCodigos(e.target.checked)} />}
               label="Códigos de agencia"
             />
-            <TextField
-              size="small"
-              label="Firma"
-              value={perfil.firma}
-              onChange={(e) => cambiarPerfil({ firma: e.target.value })}
-              sx={{ width: 200 }}
-            />
+            {(formato === 'blanca' || spec?.geometria.P69) && (
+              <TextField
+                size="small"
+                label="Firma"
+                value={perfil.firma}
+                onChange={(e) => cambiarPerfil({ firma: e.target.value })}
+                sx={{ width: 200 }}
+              />
+            )}
             {formato === 'papel' && (
               <>
                 <TextField
@@ -784,10 +781,12 @@ export function GuiaMadreImpresion({ id }: { id: number }) {
                   slotProps={{ htmlInput: { step: 0.5 } }}
                   sx={{ width: 120 }}
                 />
-                <FormControlLabel
-                  control={<Checkbox size="small" checked={perfil.cuadro} onChange={(e) => cambiarPerfil({ cuadro: e.target.checked })} />}
-                  label="Cuadro de la aerolínea"
-                />
+                {spec?.cuadro && (
+                  <FormControlLabel
+                    control={<Checkbox size="small" checked={perfil.cuadro} onChange={(e) => cambiarPerfil({ cuadro: e.target.checked })} />}
+                    label="Cuadro de la aerolínea"
+                  />
+                )}
                 <FormControlLabel
                   control={<Checkbox size="small" checked={cuadricula} onChange={(e) => setCuadricula(e.target.checked)} />}
                   label="Ver cuadrícula"
@@ -798,7 +797,8 @@ export function GuiaMadreImpresion({ id }: { id: number }) {
         )}
         {d && formato === 'papel' && (
           <Typography variant="caption" color="text.secondary" component="div" sx={{ mt: 1 }}>
-            Papel, corrimiento, firma y cuadro se guardan en este navegador para {d.aerolinea.plantilla || d.aerolinea.nombre}.
+            Papel, corrimiento, firma y cuadro se guardan en este navegador para {d.aerolinea.plantilla || d.aerolinea.nombre}
+            {spec ? ` (posiciones de ${spec.archivo}${spec.propia ? '' : ': la aerolínea no tiene plantilla propia, se usa la de Atlas'})` : ''}.
             Imprimir con márgenes &quot;Ninguno&quot; y escala 100 %. X positivo mueve a la derecha; Y positivo, hacia abajo.
           </Typography>
         )}

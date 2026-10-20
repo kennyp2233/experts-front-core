@@ -57,13 +57,16 @@ const columnas: DataTableColumn<GuiaMadreFila>[] = [
     key: 'ingreso',
     label: 'Ingreso',
     value: (g) => (g.lote ? textoIngreso(g.lote.numero) : null),
+    // Sin N° no hay enlace: la fila entera ya abre el ingreso (antes salía un "—" subrayado como enlace).
     render: (g) =>
-      g.lote ? (
+      g.lote?.numero ? (
         <MuiLink component={Link} href={`/operacion/guias/ingresos/${g.lote.id}`} onClick={(e) => e.stopPropagation()} sx={nums}>
           {textoIngreso(g.lote.numero)}
         </MuiLink>
       ) : (
-        '—'
+        <Typography component="span" variant="body2" color="text.secondary">
+          {g.lote ? 'sin N°' : '—'}
+        </Typography>
       ),
   },
   { key: 'fechaIngreso', label: 'Fecha ingreso', value: (g) => formatDate(g.lote?.fecha) },
@@ -83,11 +86,11 @@ const columnas: DataTableColumn<GuiaMadreFila>[] = [
   {
     key: 'coordinacion',
     label: 'Coordinación',
-    value: (g) => g.coordinacion?.codigoAccess ?? g.coordinacion?.id ?? null,
+    value: (g) => g.coordinacion?.numero ?? null,
     render: (g) =>
       g.coordinacion ? (
         <MuiLink component={Link} href={`/operacion/coordinaciones/${g.coordinacion.id}`} onClick={(e) => e.stopPropagation()}>
-          N° {g.coordinacion.codigoAccess ?? g.coordinacion.id} · vuelo {formatDate(g.coordinacion.fechaVuelo)}
+          N° {g.coordinacion.numero} · vuelo {formatDate(g.coordinacion.fechaVuelo)}
         </MuiLink>
       ) : (
         ''

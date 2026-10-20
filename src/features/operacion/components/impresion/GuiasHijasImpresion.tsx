@@ -186,11 +186,13 @@ function Hoja({ d, g }: { d: Impresion; g: GuiaHijaImpresion }) {
 
 /**
  * Guías hijas por finca para imprimir (una House Air Waybill por guía hija,
- * hoja blanca A4): todas las de la coordinación o, con `guiaHija`, una sola.
+ * hoja blanca A4): todas las de la coordinación o, con `guiaHija`, una sola. Con `url` lee los
+ * datos de otro endpoint (mismo formato).
  */
-export function GuiasHijasImpresion({ id, guiaHija }: { id: number; guiaHija?: number }) {
-  const { data, error, isLoading } = useSWR<Impresion>(['operacion/impresion-hijas', id, guiaHija], async () =>
-    (await api.get(`/operacion/coordinaciones/${id}/guias-hijas/impresion`, { params: guiaHija ? { guiaHija } : {} })).data,
+export function GuiasHijasImpresion({ id, guiaHija, url }: { id: number; guiaHija?: number; url?: string }) {
+  // `url` (opcional): otro endpoint con los mismos datos, p. ej. el del portal de clientes.
+  const { data, error, isLoading } = useSWR<Impresion>(['operacion/impresion-hijas', id, guiaHija, url], async () =>
+    (await api.get(url ?? `/operacion/coordinaciones/${id}/guias-hijas/impresion`, { params: guiaHija ? { guiaHija } : {} })).data,
   );
 
   return (

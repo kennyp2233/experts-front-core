@@ -97,10 +97,6 @@ export default function Sidebar({ open = true, onClose, variant = 'permanent', c
           bgcolor: 'background.paper',
           borderRight: 1,
           borderColor: 'divider',
-          borderTopLeftRadius: 0,
-          borderTopRightRadius: 12,
-          borderBottomLeftRadius: 0,
-          borderBottomRightRadius: 0,
         },
       }}
     >

@@ -1,8 +1,10 @@
 import api from '@/shared/services/api';
 import type {
   ArchivoFlowerCargo,
+  CoordinacionAnulada,
   CoordinacionArmada,
   CoordinacionDetalle,
+  CorregirCoordinacionDto,
   GuardarCoordinacionDto,
   Opcion,
   ParametrosCoordinacion,
@@ -103,7 +105,7 @@ export const operacionService = {
   simular: async (dto: GuardarCoordinacionDto, id?: number): Promise<CoordinacionArmada> =>
     (await api.post('/operacion/coordinaciones/simular', dto, { params: params({ id }) })).data,
 
-  crearCoordinacion: async (dto: GuardarCoordinacionDto): Promise<{ id: number }> =>
+  crearCoordinacion: async (dto: GuardarCoordinacionDto): Promise<{ id: number; numero?: number | null }> =>
     (await api.post('/operacion/coordinaciones', dto)).data,
 
   actualizarCoordinacion: async (id: number, dto: GuardarCoordinacionDto): Promise<{ id: number }> =>
@@ -112,8 +114,27 @@ export const operacionService = {
   cortarCoordinacion: async (id: number): Promise<{ id: number; estado: 'CORTADO' }> =>
     (await api.post(`/operacion/coordinaciones/${id}/corte`)).data,
 
-  anularCoordinacion: async (id: number): Promise<{ id: number; anulada: true }> =>
-    (await api.delete(`/operacion/coordinaciones/${id}`)).data,
+  /** Deshace el corte: la guía vuelve a quedar abierta (no borra nada). */
+  reabrirCoordinacion: async (id: number, motivo?: string): Promise<{ id: number; estado: 'BORRADOR' }> =>
+    (await api.delete(`/operacion/coordinaciones/${id}/corte`, { params: params({ motivo }) })).data,
+
+  anularCoordinacion: async (id: number, motivo?: string): Promise<{ id: number; anulada: true }> =>
+    (await api.delete(`/operacion/coordinaciones/${id}`, { params: params({ motivo }) })).data,
+
+  coordinacionesAnuladas: async (desde?: string, hasta?: string): Promise<CoordinacionAnulada[]> =>
+    (await api.get('/operacion/coordinaciones/anuladas', { params: params({ desde, hasta }) })).data,
+
+  /** Factura / nota de las líneas y nota de la guía (también después del corte). */
+  corregirCoordinacion: async (id: number, dto: CorregirCoordinacionDto): Promise<{ id: number }> =>
+    (await api.patch(`/operacion/coordinaciones/${id}`, dto)).data,
+
+  /** Pasa líneas a otra coordinación abierta (las dos se recalculan). */
+  transferirLineas: async (id: number, idDestino: number, idsLinea: number[]) =>
+    (await api.post(`/operacion/coordinaciones/${id}/transferir`, { idDestino, idsLinea })).data as {
+      idOrigen: number;
+      idDestino: number;
+      lineas: number;
+    },
 
   archivoFlowerCargo: async (id: number): Promise<ArchivoFlowerCargo> =>
     (await api.get(`/operacion/coordinaciones/${id}/flowercargo`)).data,
@@ -131,7 +152,7 @@ export const operacionService = {
 
   /** Excel del día de vuelo, como los botones de la lista vieja. */
   descargarReporteDia: async (
-    tipo: 'programacion' | 'antinarcoticos',
+    tipo: 'programacion' | 'antinarcoticos' | 'reservas',
     dia: string,
     idAerolinea?: number,
   ): Promise<void> => {

@@ -1,5 +1,6 @@
+// Unidad de redondeo: `borderRadius: 1` en sx = 8px (con 12, `borderRadius: 2` daba 24px).
 export const shape = {
-  borderRadius: 12,
+  borderRadius: 8,
 };
 
 // Valores consistentes de borderRadius para toda la app

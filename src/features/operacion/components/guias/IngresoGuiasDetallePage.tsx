@@ -28,7 +28,6 @@ import {
   Typography,
 } from '@mui/material';
 import {
-  ArrowBack as VolverIcon,
   CheckCircleOutline as VerificadoIcon,
   ChevronLeft as AnteriorIcon,
   ChevronRight as SiguienteIcon,
@@ -36,7 +35,7 @@ import {
   Edit as ModificarIcon,
   MoreVert as AccionesIcon,
 } from '@mui/icons-material';
-import { AppPage } from '@/shared/components/ui';
+import { AppPage, VolverLink } from '@/shared/components/ui';
 import { useToast } from '@/shared/providers';
 import { formatDate, formatDateTime, getErrorMessage } from '@/shared/utils';
 import { useIngreso, useResumenStock } from '../../hooks/useStockGuias';
@@ -104,7 +103,7 @@ function Navegacion({ i }: { i: IngresoDetalle }) {
     );
   if (!i.anterior && !i.siguiente) return null;
   return (
-    <Stack direction="row" alignItems="center">
+    <Stack direction="row" alignItems="center" sx={{ borderLeft: 1, borderColor: 'divider', pl: 1 }}>
       {boton(i.anterior, 'Ingreso anterior', <AnteriorIcon fontSize="small" />)}
       {boton(i.siguiente, 'Ingreso siguiente', <SiguienteIcon fontSize="small" />)}
     </Stack>
@@ -126,22 +125,18 @@ export function IngresoGuiasDetallePage({ id }: { id: number }) {
   const [moviendo, setMoviendo] = useState<{ guia: GuiaDeIngreso; accion: MovimientoGuia } | null>(null);
   const [trabajando, setTrabajando] = useState(false);
 
-  const volver = (
-    <Button component={Link} href="/operacion/guias/ingresos" startIcon={<VolverIcon />}>
-      Ingresos
-    </Button>
-  );
+  const volver = <VolverLink href="/operacion/guias/ingresos">Ingresos de guías</VolverLink>;
 
   if (error) {
     return (
-      <AppPage title="Ingreso de guías" actions={volver}>
+      <AppPage title="Ingreso de guías" back={volver}>
         <Alert severity="error">{getErrorMessage(error)}</Alert>
       </AppPage>
     );
   }
   if (isLoading || !i) {
     return (
-      <AppPage title="Ingreso de guías" actions={volver}>
+      <AppPage title="Ingreso de guías" back={volver}>
         <Skeleton variant="rounded" height={260} />
       </AppPage>
     );
@@ -209,29 +204,31 @@ export function IngresoGuiasDetallePage({ id }: { id: number }) {
           <OrigenChip origen={i.origen} />
         </Stack>
       }
-      actions={
+      back={
         <>
-          <Navegacion i={i} />
-          {i.editable && i.estado !== 'ANULADO' && (
-            <>
-              <Tooltip title={puedeModificar ? '' : 'Un ingreso cancelado (todas sus guías usadas) no se modifica.'}>
-                <span>
-                  <Button variant="outlined" startIcon={<ModificarIcon />} disabled={!puedeModificar} onClick={() => setModificando(true)}>
-                    Modificar
-                  </Button>
-                </span>
-              </Tooltip>
-              <Tooltip title={puedeAnular ? '' : 'No se anula: tiene guías usadas (coordinadas o prestadas).'}>
-                <span>
-                  <Button color="error" startIcon={<AnularIcon />} disabled={!puedeAnular} onClick={() => setAnulando(true)}>
-                    Anular
-                  </Button>
-                </span>
-              </Tooltip>
-            </>
-          )}
           {volver}
+          <Navegacion i={i} />
         </>
+      }
+      actions={
+        i.editable && i.estado !== 'ANULADO' ? (
+          <>
+            <Tooltip title={puedeAnular ? '' : 'No se anula: tiene guías usadas (coordinadas o prestadas).'}>
+              <span>
+                <Button variant="outlined" color="error" startIcon={<AnularIcon />} disabled={!puedeAnular} onClick={() => setAnulando(true)}>
+                  Anular
+                </Button>
+              </span>
+            </Tooltip>
+            <Tooltip title={puedeModificar ? '' : 'Un ingreso usado (todas sus guías ya se usaron) no se modifica.'}>
+              <span>
+                <Button variant="outlined" startIcon={<ModificarIcon />} disabled={!puedeModificar} onClick={() => setModificando(true)}>
+                  Modificar
+                </Button>
+              </span>
+            </Tooltip>
+          </>
+        ) : undefined
       }
     >
       {!i.verificado && i.estado !== 'ANULADO' && i.estadoCalculado && (

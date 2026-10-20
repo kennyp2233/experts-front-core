@@ -15,6 +15,8 @@ export type OrigenDocumento = 'ACCESS' | 'SISTEMA';
 export interface CoordinacionResumen {
   id: number;
   codigoAccess: number | null;
+  /** N° que se muestra: el de Access o el del sistema nuevo (desde 900.000 en modo sombra). */
+  numero: number;
   origen: OrigenDocumento;
   numeroGuia: string | null;
   estado: EstadoCoordinacion;
@@ -88,6 +90,10 @@ export interface Liquidacion {
   /** Calculado por el servidor con las fórmulas del sistema viejo. */
   resumen: ResumenLiquidacion;
 }
+
+/** Tramos de la ruta como el viejo (From / To1-By1 / To2-By2 / To3-By3). */
+export const TIPOS_TRAMO = ['ORIGEN', 'DESTINO1', 'VIA1', 'DESTINO2', 'VIA2', 'DESTINO3', 'VIA3'] as const;
+export type TipoTramo = (typeof TIPOS_TRAMO)[number];
 
 export interface TramoRuta {
   orden: number | null;
@@ -217,7 +223,7 @@ export interface GuiaMadreFila {
   observaciones: string | null;
   /** Ingreso de guías (CGU) con el que nació. */
   lote: { id: number; codigoAccess: number | null; numero: number | null; fecha: string | null } | null;
-  coordinacion: { id: number; codigoAccess: number | null; fechaVuelo: string } | null;
+  coordinacion: { id: number; codigoAccess: number | null; numero: number; fechaVuelo: string } | null;
 }
 
 export interface GuiasMadrePagina {
@@ -380,7 +386,9 @@ export type TipoOpcion =
   | 'agencias'
   | 'aerolineas'
   | 'destinos'
-  | 'tipos-embarque';
+  | 'tipos-embarque'
+  | 'clientes'
+  | 'paises';
 
 export const CODIGOS_AGENCIA = ['cargoAwa', 'cargoCha', 'cargoPca', 'cargoTax', 'cargoMma', 'cargoHawb', 'cargoFitos'] as const;
 export type CodigoAgencia = (typeof CODIGOS_AGENCIA)[number];
@@ -402,6 +410,8 @@ export interface ParametrosCoordinacion {
       porPeso: boolean;
       sobrePesoCobrable: boolean;
     }>;
+    /** Ruta por defecto de la aerolínea (maestro): la de la coordinación si no se cambia. */
+    ruta: Array<{ tipoRuta: TipoTramo; codigo: string }>;
   } | null;
 }
 
@@ -450,6 +460,8 @@ export interface GuardarCoordinacionDto {
   cobroCliente?: ValoresLiquidacion;
   /** Vuelo y manifiesto (los da la aerolínea). */
   vuelo?: { vuelo?: string; salida?: string; llegada?: string; numeroManifiesto?: string; secuencial?: string };
+  /** Tramos de la ruta; sin ellos se usa la ruta de la aerolínea. */
+  rutas?: Array<{ tipoRuta: TipoTramo; codigo: string }>;
 }
 
 export interface ResumenLiquidacion {
@@ -519,4 +531,26 @@ export interface SugerenciaConsignatario {
     idAerolinea: number | null;
     fechaVuelo: string;
   } | null;
+}
+
+/** Coordinación anulada en el sistema nuevo (queda constancia: qué, quién, cuándo y por qué). */
+export interface CoordinacionAnulada {
+  id: number;
+  numero: number | null;
+  numeroGuia: string | null;
+  fechaVuelo: string | null;
+  aerolinea: RefMaestro | null;
+  consignatario: RefMaestro | null;
+  totalFulls: number | null;
+  totalCajas: number | null;
+  totalKgs: number | null;
+  motivo: string | null;
+  anuladoPor: string | null;
+  anuladoEn: string | null;
+}
+
+/** Correcciones que se pueden hacer también después del corte. */
+export interface CorregirCoordinacionDto {
+  nota?: string;
+  lineas?: Array<{ idLinea: number; factura?: string; nota?: string }>;
 }

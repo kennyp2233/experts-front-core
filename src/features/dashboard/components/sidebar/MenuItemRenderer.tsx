@@ -17,9 +17,14 @@ interface MenuItemRendererProps {
   colapsado?: boolean;
 }
 
+// Ítems compactos (36 px) para que el menú completo entre en una pantalla de 768 px de alto.
 const selectedSx = {
+  mx: 1,
+  mb: 0.25,
+  '& .MuiListItemIcon-root .MuiSvgIcon-root': { fontSize: 20 },
+  '& .MuiListItemText-primary': { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
   '&.Mui-selected': {
-    color: 'primary.main',
+    color: 'primary.dark',
     '& .MuiListItemIcon-root': { color: 'primary.main' },
     '& .MuiListItemText-primary': { fontWeight: 600 },
   },
@@ -51,9 +56,9 @@ export function MenuItemRenderer({
             selected={activo}
             aria-label={item.label}
             aria-current={activo ? 'page' : undefined}
-            sx={{ justifyContent: 'center', py: 1.25, ...selectedSx }}
+            sx={{ justifyContent: 'center', py: 1, ...selectedSx }}
           >
-            <ListItemIcon sx={{ minWidth: 0, color: activo ? 'primary.main' : 'text.primary' }}>{item.icon}</ListItemIcon>
+            <ListItemIcon sx={{ minWidth: 0, color: activo ? 'primary.main' : 'text.secondary' }}>{item.icon}</ListItemIcon>
           </ListItemButton>
         </Tooltip>
       </ListItem>
@@ -77,14 +82,14 @@ export function MenuItemRenderer({
             onClick={item.href ? onNavigate : () => context.toggleExpand(itemKey)}
             selected={selfActive}
             sx={{
-              pl: 2 + depth * 2,
-              py: 1.25,
+              pl: 1.5 + depth * 2,
+              py: 0.75,
               bgcolor: !selfActive && childActive ? 'action.hover' : undefined,
               ...selectedSx,
             }}
           >
             {item.icon && (
-              <ListItemIcon sx={{ minWidth: 40, color: selfActive ? 'primary.main' : 'text.primary' }}>
+              <ListItemIcon sx={{ minWidth: 36, color: selfActive ? 'primary.main' : 'text.secondary' }}>
                 {item.icon}
               </ListItemIcon>
             )}
@@ -113,10 +118,10 @@ export function MenuItemRenderer({
             onClick={onNavigate}
             selected={selfActive}
             aria-current={selfActive ? 'page' : undefined}
-            sx={{ pl: 2 + depth * 2, py: 1.25, ...selectedSx }}
+            sx={{ pl: 1.5 + depth * 2, py: 0.75, ...selectedSx }}
           >
             {item.icon && (
-              <ListItemIcon sx={{ minWidth: 40, color: selfActive ? 'primary.main' : 'text.primary' }}>
+              <ListItemIcon sx={{ minWidth: 36, color: selfActive ? 'primary.main' : 'text.secondary' }}>
                 {item.icon}
               </ListItemIcon>
             )}

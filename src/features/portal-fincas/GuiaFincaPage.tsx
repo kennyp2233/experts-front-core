@@ -16,7 +16,6 @@ import {
   DialogTitle,
   Grid,
   IconButton,
-  InputAdornment,
   Link as EnlaceMui,
   MenuItem,
   Paper,
@@ -36,16 +35,25 @@ const PATRON_DAE = /^\d{3}-\d{4}-\d{2}-\d{8}$/;
 const nf = new Intl.NumberFormat('es-EC', { maximumFractionDigits: 2 });
 const n = (s: string) => (s.trim() === '' ? undefined : Number(s.replace(',', '.')));
 
+/**
+ * Cajas por tipo, como en el portal de EBF: la finca dice cuántas cajas de cada
+ * tamaño manda y el sistema saca los fulls (cajas equivalentes) y las piezas.
+ * Los tipos y sus factores son los mismos que usa la oficina al coordinar (FB 1,
+ * HB 0,5, QB 0,25, EB 0,125 en la tabla de tipos de caja).
+ */
+type TipoCaja = GuiaFinca['tiposCaja'][number];
+const tiposDe = (g: GuiaFinca): TipoCaja[] => [...g.tiposCaja].sort((a, b) => b.factorFull - a.factorFull);
+const etiquetaTipo = (t: TipoCaja) => (t.codigo ? `${t.nombre} (${t.codigo})` : t.nombre);
+
+// La finca carga solo lo físico: factura, valor y tallos normalmente no los sube (tallos y valor
+// los calcula el sistema; la factura la pone la oficina en "Facturas y notas").
 interface Form {
   idFinca: number | '';
   idProducto: number | '';
-  fulls: string;
-  cajas: string;
+  /** Cajas por id de tipo de caja. */
+  cajas: Record<number, string>;
   kg: string;
   dae: string;
-  factura: string;
-  valor: string;
-  tallos: string;
 }
 
 const vacio = (g: GuiaFinca): Form => {
@@ -53,26 +61,53 @@ const vacio = (g: GuiaFinca): Form => {
   return {
     idFinca: f?.id ?? '',
     idProducto: f?.productos.length === 1 ? f.productos[0].id : '',
-    fulls: '',
-    cajas: '',
+    cajas: {},
     kg: '',
     dae: f?.dae?.dae ?? '',
-    factura: '',
-    valor: '',
-    tallos: '',
   };
 };
 
-const desdeLinea = (l: LineaFinca): Form => ({
+const entero = (s: string | undefined) => (!s || s.trim() === '' ? 0 : Number(s));
+
+/** Fulls y piezas de las cajas por tipo; el tipo, si todas son de uno solo. */
+function totalesCajas(cajasPorTipo: Record<number, string>, tipos: TipoCaja[]) {
+  const usados = tipos.filter((t) => entero(cajasPorTipo[t.id]) > 0);
+  return {
+    cajas: tipos.reduce((s, t) => s + entero(cajasPorTipo[t.id]), 0),
+    fulls: Math.round(tipos.reduce((s, t) => s + entero(cajasPorTipo[t.id]) * t.factorFull, 0) * 1000) / 1000,
+    idTipoCaja: usados.length === 1 ? usados[0].id : undefined,
+  };
+}
+
+/**
+ * Al corregir una línea (guarda fulls, cajas y el tipo si era uno solo) se
+ * reparte en tipos: el suyo, uno que cuadre, o dos (p. ej. tabacos y cuartos);
+ * si nada cuadra, el tipo más parecido.
+ */
+function repartir(fulls: number, cajas: number, idTipoCaja: number | null, tipos: TipoCaja[]): Record<number, string> {
+  if (cajas <= 0 || tipos.length === 0) return {};
+  if (idTipoCaja && tipos.some((t) => t.id === idTipoCaja)) return { [idTipoCaja]: String(cajas) };
+  const cerca = (a: number, b: number) => Math.abs(a - b) < 1e-6;
+  const uno = tipos.find((t) => cerca(cajas * t.factorFull, fulls));
+  if (uno) return { [uno.id]: String(cajas) };
+  for (let i = 0; i < tipos.length; i++) {
+    for (let j = i + 1; j < tipos.length; j++) {
+      const a = (fulls - cajas * tipos[j].factorFull) / (tipos[i].factorFull - tipos[j].factorFull);
+      if (a > 0 && a < cajas && cerca(a, Math.round(a))) {
+        return { [tipos[i].id]: String(Math.round(a)), [tipos[j].id]: String(cajas - Math.round(a)) };
+      }
+    }
+  }
+  const t = tipos.reduce((m, x) => (Math.abs(x.factorFull - fulls / cajas) < Math.abs(m.factorFull - fulls / cajas) ? x : m));
+  return { [t.id]: String(cajas) };
+}
+
+const desdeLinea = (l: LineaFinca, tipos: TipoCaja[]): Form => ({
   idFinca: l.idFinca,
   idProducto: l.idProducto ?? '',
-  fulls: l.fulls !== null ? String(l.fulls) : '',
-  cajas: String(l.cantidadCajas),
+  cajas: repartir(l.fulls ?? 0, l.cantidadCajas, l.idTipoCaja, tipos),
   kg: l.pesoKg !== null ? String(l.pesoKg) : '',
   dae: l.dae ?? '',
-  factura: l.factura ?? '',
-  valor: l.valor !== null ? String(l.valor) : '',
-  tallos: l.tallos !== null ? String(l.tallos) : '',
 });
 
 /** Lo que cargó la finca en la guía; las de la oficina (o con nota de la oficina) se ven pero no se tocan. */
@@ -101,9 +136,6 @@ function Linea({
           </Typography>
           <Typography variant="caption" color="text.secondary" component="div" sx={{ fontVariantNumeric: 'tabular-nums' }}>
             DAE {l.dae ?? '—'} · guía hija {l.guiaHija}
-            {l.factura ? ` · factura ${l.factura}` : ''}
-            {l.valor !== null ? ` · $ ${nf.format(l.valor)}` : ''}
-            {l.tallos !== null ? ` · ${l.tallos} tallos` : ''}
           </Typography>
           {l.nota && (
             <Alert severity="warning" icon={false} sx={{ mt: 1, py: 0 }}>
@@ -138,8 +170,8 @@ function Linea({
 
 /**
  * Cargar en una guía (lo de la web vieja): finca, producto (solo los de la
- * finca), fulls, cajas, kg (si no se ponen, cajas × kg por caja), la DAE (se
- * propone la vigente del registro de la finca), factura, valor y tallos.
+ * finca), fulls, cajas, kg (si no se ponen, cajas × kg por caja) y la DAE (se
+ * propone la vigente del registro de la finca).
  */
 export function GuiaFincaPage({ id }: { id: number }) {
   const toast = useToast();
@@ -180,35 +212,39 @@ export function GuiaFincaPage({ id }: { id: number }) {
     });
   };
 
-  const cajas = n(form.cajas);
-  const fulls = n(form.fulls);
-  const kgSugerido = cajas !== undefined ? Math.round(cajas * g.kgPorCaja * 100) / 100 : undefined;
+  const tipos = tiposDe(g);
+  const { cajas, fulls, idTipoCaja } = totalesCajas(form.cajas, tipos);
+  // Igual que la oficina al coordinar: kg = fulls × cajas por full × kg por caja.
+  const kgPorFull = g.cajasPorFull * g.kgPorCaja;
+  const kgSugerido = cajas > 0 ? Math.round(fulls * kgPorFull * 100) / 100 : undefined;
   // Qué falta en cada campo (se muestra debajo del campo al intentar grabar).
   const faltan = {
     finca: form.idFinca === '' ? 'Elige la finca.' : null,
     producto: form.idProducto === '' ? (finca ? 'Elige el producto.' : 'Primero elige la finca.') : null,
-    fulls: fulls === undefined || !Number.isFinite(fulls) ? 'Escribe los fulls (ej. 1,5).' : null,
-    cajas: cajas === undefined ? 'Escribe las cajas.' : !Number.isInteger(cajas) ? 'Solo números enteros.' : null,
+    cajas: cajas === 0 ? 'Escribe cuántas cajas de cada tipo.' : null,
     dae: PATRON_DAE.test(form.dae) ? null : form.dae ? 'Faltan dígitos: 055-AAAA-40-XXXXXXXX.' : 'Escribe la DAE.',
   };
   const hayFaltantes = Object.values(faltan).some(Boolean);
-  // Un full es una caja grande (una media son 0,5): más fulls que cajas casi siempre es que están al revés.
-  const alReves = fulls !== undefined && cajas !== undefined && cajas > 0 && fulls > cajas;
 
   const guardar = async (e: React.FormEvent) => {
     e.preventDefault();
     setIntentado(true);
     if (hayFaltantes) return;
+    // Al corregir se conserva la factura que ya tuviera la línea (p. ej. la que puso la oficina). Tallos y
+    // valor también, salvo que cambien fulls o cajas: entonces el sistema los vuelve a calcular.
+    const previa = editando ? g.lineas.find((l) => l.id === editando) : undefined;
+    const mismaCarga = previa && previa.fulls === fulls && previa.cantidadCajas === cajas;
     const carga: CargaFinca = {
       idFinca: form.idFinca as number,
       idProducto: form.idProducto as number,
-      fulls: n(form.fulls)!,
-      cantidadCajas: cajas!,
+      fulls,
+      cantidadCajas: cajas,
+      idTipoCaja,
       pesoKg: n(form.kg),
       dae: form.dae,
-      factura: form.factura.trim() || undefined,
-      valor: n(form.valor),
-      tallos: n(form.tallos),
+      factura: previa?.factura || undefined,
+      valor: mismaCarga ? (previa.valor ?? undefined) : undefined,
+      tallos: mismaCarga ? (previa.tallos ?? undefined) : undefined,
     };
     setTrabajando(true);
     try {
@@ -321,32 +357,33 @@ export function GuiaFincaPage({ id }: { id: number }) {
               ))}
             </TextField>
           </Grid>
-          <Grid size={{ xs: 6, sm: 4 }}>
-            <TextField
-              fullWidth
-              required
-              label="Fulls"
-              value={form.fulls}
-              error={err('fulls')}
-              helperText={ayuda('fulls', alReves ? '¿Más fulls que cajas? Revisa.' : undefined)}
-              onChange={(e) => cambiar({ fulls: e.target.value })}
-              slotProps={{
-                htmlInput: { inputMode: 'decimal' },
-                formHelperText: { sx: { color: alReves && !err('fulls') ? 'warning.dark' : undefined } },
-              }}
-            />
-          </Grid>
-          <Grid size={{ xs: 6, sm: 4 }}>
-            <TextField
-              fullWidth
-              required
-              label="Cajas"
-              value={form.cajas}
-              error={err('cajas')}
-              helperText={ayuda('cajas')}
-              onChange={(e) => cambiar({ cajas: e.target.value.replace(/\D/g, '') })}
-              slotProps={{ htmlInput: { inputMode: 'numeric' } }}
-            />
+          <Grid size={{ xs: 12 }}>
+            <Typography variant="body2" fontWeight={600} sx={{ mb: 1 }}>
+              Cajas por tipo
+            </Typography>
+            <Grid container spacing={1.5}>
+              {tipos.map((t) => (
+                <Grid key={t.id} size={{ xs: 6, sm: 3 }}>
+                  <TextField
+                    fullWidth
+                    label={etiquetaTipo(t)}
+                    value={form.cajas[t.id] ?? ''}
+                    error={err('cajas')}
+                    placeholder="0"
+                    onChange={(e) => cambiar({ cajas: { ...form.cajas, [t.id]: e.target.value.replace(/\D/g, '') } })}
+                    slotProps={{ htmlInput: { inputMode: 'numeric' }, inputLabel: { shrink: true } }}
+                  />
+                </Grid>
+              ))}
+            </Grid>
+            {/* Como EBF: las cajas equivalentes (fulls) y las piezas salen solas. */}
+            <Typography
+              variant="body2"
+              color={err('cajas') ? 'error' : 'text.secondary'}
+              sx={{ mt: 1, fontVariantNumeric: 'tabular-nums' }}
+            >
+              {err('cajas') ? faltan.cajas : `= ${nf.format(fulls)} fulls · ${cajas} ${cajas === 1 ? 'pieza' : 'piezas'}`}
+            </Typography>
           </Grid>
           <Grid size={{ xs: 12, sm: 4 }}>
             <TextField
@@ -356,14 +393,14 @@ export function GuiaFincaPage({ id }: { id: number }) {
               placeholder={kgSugerido !== undefined ? nf.format(kgSugerido) : ''}
               helperText={
                 form.kg.trim() === '' && kgSugerido !== undefined
-                  ? `Si lo dejas vacío se ponen ${nf.format(kgSugerido)} kg (${g.kgPorCaja} por caja).`
-                  : `Si lo dejas vacío: ${g.kgPorCaja} kg por caja.`
+                  ? `Si lo dejas vacío se ponen ${nf.format(kgSugerido)} kg (${nf.format(kgPorFull)} por full).`
+                  : `Si lo dejas vacío: ${nf.format(kgPorFull)} kg por full.`
               }
               onChange={(e) => cambiar({ kg: e.target.value })}
               slotProps={{ htmlInput: { inputMode: 'decimal' }, inputLabel: { shrink: true } }}
             />
           </Grid>
-          <Grid size={{ xs: 12 }}>
+          <Grid size={{ xs: 12, sm: 8 }}>
             <TextField
               fullWidth
               required
@@ -395,27 +432,6 @@ export function GuiaFincaPage({ id }: { id: number }) {
               }}
             />
           </Grid>
-          <Grid size={{ xs: 12, sm: 4 }}>
-            <TextField fullWidth label="Factura" value={form.factura} onChange={(e) => cambiar({ factura: e.target.value })} />
-          </Grid>
-          <Grid size={{ xs: 6, sm: 4 }}>
-            <TextField
-              fullWidth
-              label="Valor"
-              value={form.valor}
-              onChange={(e) => cambiar({ valor: e.target.value })}
-              slotProps={{ htmlInput: { inputMode: 'decimal' }, input: { startAdornment: <InputAdornment position="start">$</InputAdornment> } }}
-            />
-          </Grid>
-          <Grid size={{ xs: 6, sm: 4 }}>
-            <TextField
-              fullWidth
-              label="Tallos"
-              value={form.tallos}
-              onChange={(e) => cambiar({ tallos: e.target.value.replace(/\D/g, '') })}
-              slotProps={{ htmlInput: { inputMode: 'numeric' } }}
-            />
-          </Grid>
         </Grid>
         {intentado && hayFaltantes && (
           <Alert severity="error" sx={{ mt: 2 }}>
@@ -426,6 +442,7 @@ export function GuiaFincaPage({ id }: { id: number }) {
           {editando && (
             <Button
               size="large"
+              sx={{ color: 'text.secondary' }}
               onClick={() => {
                 setEditando(null);
                 setForm(vacio(g));
@@ -466,7 +483,7 @@ export function GuiaFincaPage({ id }: { id: number }) {
                 enCorreccion={editando === l.id}
                 onCorregir={() => {
                   setEditando(l.id);
-                  setForm(desdeLinea(l));
+                  setForm(desdeLinea(l, tipos));
                   setIntentado(false);
                   formulario.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }}

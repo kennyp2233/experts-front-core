@@ -6,7 +6,7 @@ import type { EstadoIngreso, GuiaDeIngreso } from '../../types/coordinacion';
 const INGRESO: Record<EstadoIngreso, { label: string; color: 'info' | 'warning' | 'success' | 'error'; ayuda: string }> = {
   INGRESADO: { label: 'Ingresado', color: 'info', ayuda: 'Ninguna guía coordinada todavía.' },
   GUIAS_COORDINADAS: { label: 'Guías coordinadas', color: 'warning', ayuda: 'Algunas guías coordinadas; quedan por usar.' },
-  CANCELADO: { label: 'Cancelado', color: 'success', ayuda: 'Todas sus guías ya se usaron (coordinadas, o prestadas y devueltas).' },
+  CANCELADO: { label: 'Usado', color: 'success', ayuda: 'Todas sus guías ya se usaron (coordinadas, o prestadas y devueltas).' },
   ANULADO: { label: 'Anulado', color: 'error', ayuda: 'Ingreso anulado: sus guías no se usan.' },
 };
 
