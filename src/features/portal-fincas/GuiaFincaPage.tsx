@@ -28,10 +28,8 @@ import {
 import { ArrowBack as VolverIcon, DeleteOutline as BorrarIcon, Edit as CorregirIcon } from '@mui/icons-material';
 import { useToast } from '@/shared/providers';
 import { formatDate, getErrorMessage } from '@/shared/utils';
-import { formatearDae } from '@/features/operacion/components/coordinar/formulario';
 import { awb, type CargaFinca, diaVuelo, type GuiaFinca, type LineaFinca, portalService, useGuiaFinca } from './portal';
 
-const PATRON_DAE = /^\d{3}-\d{4}-\d{2}-\d{8}$/;
 const nf = new Intl.NumberFormat('es-EC', { maximumFractionDigits: 2 });
 const n = (s: string) => (s.trim() === '' ? undefined : Number(s.replace(',', '.')));
 
@@ -44,6 +42,19 @@ const n = (s: string) => (s.trim() === '' ? undefined : Number(s.replace(',', '.
 type TipoCaja = GuiaFinca['tiposCaja'][number];
 const tiposDe = (g: GuiaFinca): TipoCaja[] => [...g.tiposCaja].sort((a, b) => b.factorFull - a.factorFull);
 const etiquetaTipo = (t: TipoCaja) => (t.codigo ? `${t.nombre} (${t.codigo})` : t.nombre);
+
+/**
+ * Como en EBF, la DAE no se escribe: es una de las que la finca tiene en su
+ * registro vigentes para el destino y la fecha del vuelo (la primera es la que
+ * propone el sistema). Sin ninguna, primero se registra en Mis DAE.
+ */
+type FincaGuia = GuiaFinca['fincas'][number];
+const daesDe = (f: FincaGuia | undefined) => (f ? (f.daes ?? (f.dae ? [f.dae] : [])) : []);
+/** La DAE que había si sigue valiendo; si no, la que propone el registro. */
+const daeElegida = (f: FincaGuia | undefined, actual?: string | null) => {
+  const ds = daesDe(f);
+  return ds.find((d) => d.dae === actual)?.dae ?? ds[0]?.dae ?? '';
+};
 
 // La finca carga solo lo físico: factura, valor y tallos normalmente no los sube (tallos y valor
 // los calcula el sistema; la factura la pone la oficina en "Facturas y notas").
@@ -63,7 +74,7 @@ const vacio = (g: GuiaFinca): Form => {
     idProducto: f?.productos.length === 1 ? f.productos[0].id : '',
     cajas: {},
     kg: '',
-    dae: f?.dae?.dae ?? '',
+    dae: daeElegida(f),
   };
 };
 
@@ -102,12 +113,15 @@ function repartir(fulls: number, cajas: number, idTipoCaja: number | null, tipos
   return { [t.id]: String(cajas) };
 }
 
-const desdeLinea = (l: LineaFinca, tipos: TipoCaja[]): Form => ({
+const desdeLinea = (l: LineaFinca, tipos: TipoCaja[], g: GuiaFinca): Form => ({
   idFinca: l.idFinca,
   idProducto: l.idProducto ?? '',
   cajas: repartir(l.fulls ?? 0, l.cantidadCajas, l.idTipoCaja, tipos),
   kg: l.pesoKg !== null ? String(l.pesoKg) : '',
-  dae: l.dae ?? '',
+  dae: daeElegida(
+    g.fincas.find((f) => f.id === l.idFinca),
+    l.dae,
+  ),
 });
 
 /** Lo que cargó la finca en la guía; las de la oficina (o con nota de la oficina) se ven pero no se tocan. */
@@ -170,8 +184,8 @@ function Linea({
 
 /**
  * Cargar en una guía (lo de la web vieja): finca, producto (solo los de la
- * finca), fulls, cajas, kg (si no se ponen, cajas × kg por caja) y la DAE (se
- * propone la vigente del registro de la finca).
+ * finca), fulls, cajas, kg (si no se ponen, cajas × kg por caja) y la DAE
+ * (una de las vigentes del registro de la finca, como en EBF).
  */
 export function GuiaFincaPage({ id }: { id: number }) {
   const toast = useToast();
@@ -207,8 +221,7 @@ export function GuiaFincaPage({ id }: { id: number }) {
     cambiar({
       idFinca,
       idProducto: f?.productos.length === 1 ? f.productos[0].id : '',
-      // La DAE vigente de esa finca, si la que había era la propuesta de otra.
-      dae: f?.dae?.dae ?? (g.fincas.some((x) => x.dae?.dae === form.dae) ? '' : form.dae),
+      dae: daeElegida(f),
     });
   };
 
@@ -217,12 +230,20 @@ export function GuiaFincaPage({ id }: { id: number }) {
   // Igual que la oficina al coordinar: kg = fulls × cajas por full × kg por caja.
   const kgPorFull = g.cajasPorFull * g.kgPorCaja;
   const kgSugerido = cajas > 0 ? Math.round(fulls * kgPorFull * 100) / 100 : undefined;
+  const opcionesDae = daesDe(finca);
+  const daeActual = opcionesDae.find((d) => d.dae === form.dae);
   // Qué falta en cada campo (se muestra debajo del campo al intentar grabar).
   const faltan = {
     finca: form.idFinca === '' ? 'Elige la finca.' : null,
     producto: form.idProducto === '' ? (finca ? 'Elige el producto.' : 'Primero elige la finca.') : null,
     cajas: cajas === 0 ? 'Escribe cuántas cajas de cada tipo.' : null,
-    dae: PATRON_DAE.test(form.dae) ? null : form.dae ? 'Faltan dígitos: 055-AAAA-40-XXXXXXXX.' : 'Escribe la DAE.',
+    dae: !finca
+      ? 'Primero elige la finca.'
+      : opcionesDae.length === 0
+        ? 'No tienes una DAE vigente para este vuelo.'
+        : form.dae
+          ? null
+          : 'Elige la DAE.',
   };
   const hayFaltantes = Object.values(faltan).some(Boolean);
 
@@ -401,36 +422,46 @@ export function GuiaFincaPage({ id }: { id: number }) {
             />
           </Grid>
           <Grid size={{ xs: 12, sm: 8 }}>
-            <TextField
-              fullWidth
-              required
-              label="DAE"
-              value={form.dae}
-              error={err('dae')}
-              placeholder="055-AAAA-40-XXXXXXXX"
-              onChange={(e) => cambiar({ dae: formatearDae(e.target.value, form.dae) })}
-              helperText={
-                err('dae') ? (
-                  faltan.dae
-                ) : finca?.dae && finca.dae.dae === form.dae ? (
-                  `De tu registro de DAE, vigente hasta ${formatDate(finca.dae.hasta)}.`
-                ) : finca && !finca.dae ? (
-                  <>
-                    No tienes una DAE vigente para este destino: escríbela o{' '}
-                    <EnlaceMui component={Link} href="/portal/daes" color="inherit" underline="always">
-                      regístrala en Mis DAE
-                    </EnlaceMui>
-                    .
-                  </>
-                ) : (
-                  ' '
-                )
-              }
-              slotProps={{
-                htmlInput: { inputMode: 'numeric', spellCheck: false, style: { fontVariantNumeric: 'tabular-nums' } },
-                formHelperText: { sx: { color: finca && !finca.dae && !err('dae') ? 'warning.dark' : undefined } },
-              }}
-            />
+            {finca && opcionesDae.length === 0 ? (
+              // Sin DAE registrada para este vuelo no se puede cargar (como en EBF).
+              <Alert severity={intentado ? 'error' : 'warning'}>
+                No tienes una DAE vigente para el destino y la fecha de este vuelo.{' '}
+                <EnlaceMui component={Link} href="/portal/daes" color="inherit" underline="always" fontWeight={600}>
+                  Regístrala en Mis DAE
+                </EnlaceMui>{' '}
+                y vuelve a esta guía.
+              </Alert>
+            ) : (
+              <TextField
+                select
+                fullWidth
+                required
+                label="DAE"
+                value={form.dae}
+                disabled={!finca}
+                error={err('dae') && !!finca}
+                onChange={(e) => cambiar({ dae: e.target.value })}
+                helperText={ayuda(
+                  'dae',
+                  !finca
+                    ? 'Primero elige la finca.'
+                    : daeActual
+                      ? `De tu registro de DAE, vigente hasta ${formatDate(daeActual.hasta)}.`
+                      : undefined,
+                )}
+                // La vigencia ya va debajo: en el campo, solo el número.
+                slotProps={{ select: { renderValue: (v) => String(v), sx: { fontVariantNumeric: 'tabular-nums' } } }}
+              >
+                {opcionesDae.map((d) => (
+                  <MenuItem key={d.dae} value={d.dae} sx={{ fontVariantNumeric: 'tabular-nums' }}>
+                    {d.dae}
+                    <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+                      hasta {formatDate(d.hasta)}
+                    </Typography>
+                  </MenuItem>
+                ))}
+              </TextField>
+            )}
           </Grid>
         </Grid>
         {intentado && hayFaltantes && (
@@ -483,7 +514,7 @@ export function GuiaFincaPage({ id }: { id: number }) {
                 enCorreccion={editando === l.id}
                 onCorregir={() => {
                   setEditando(l.id);
-                  setForm(desdeLinea(l, tipos));
+                  setForm(desdeLinea(l, tipos, g));
                   setIntentado(false);
                   formulario.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }}
