@@ -20,6 +20,13 @@ export interface GuiaAbierta {
   misCajas: number;
 }
 
+/** Una DAE del registro de la finca que vale para el vuelo (fechas AAAA-MM-DD). */
+export interface DaeVigenteFinca {
+  dae: string;
+  desde: string;
+  hasta: string;
+}
+
 export interface LineaFinca {
   id: number;
   idFinca: number;
@@ -56,7 +63,10 @@ export interface GuiaFinca {
     id: number;
     nombre: string;
     productos: Array<{ id: number; nombre: string }>;
-    dae: { dae: string; desde: string; hasta: string } | null;
+    /** La que propone el registro (la primera de `daes`). */
+    dae: DaeVigenteFinca | null;
+    /** Sus DAE vigentes para este vuelo: elige una, no la escribe (un back anterior no la manda). */
+    daes?: DaeVigenteFinca[];
   }>;
   lineas: LineaFinca[];
 }
