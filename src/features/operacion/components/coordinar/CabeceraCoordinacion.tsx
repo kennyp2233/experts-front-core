@@ -30,14 +30,14 @@ interface Props {
 }
 
 /** Tramos en el orden de la ventana vieja: From · To1 By1 · To2 By2 · To3 By3. */
-const TRAMOS: Array<{ tipo: TipoTramo; label: string; ayuda: string }> = [
-  { tipo: 'ORIGEN', label: 'Desde', ayuda: 'Aeropuerto' },
-  { tipo: 'DESTINO1', label: 'A', ayuda: 'Aeropuerto' },
-  { tipo: 'VIA1', label: 'Por', ayuda: 'Aerolínea que vuela' },
-  { tipo: 'DESTINO2', label: 'A', ayuda: '2.º tramo' },
-  { tipo: 'VIA2', label: 'Por', ayuda: 'Aerolínea' },
-  { tipo: 'DESTINO3', label: 'A', ayuda: '3.er tramo' },
-  { tipo: 'VIA3', label: 'Por', ayuda: 'Aerolínea' },
+const TRAMOS: Array<{ tipo: TipoTramo; label: string; titulo: string }> = [
+  { tipo: 'ORIGEN', label: 'Origen', titulo: 'Aeropuerto de salida' },
+  { tipo: 'DESTINO1', label: 'Destino', titulo: 'Aeropuerto del primer tramo' },
+  { tipo: 'VIA1', label: 'Vía', titulo: 'Aerolínea que vuela el primer tramo (va en el manifiesto)' },
+  { tipo: 'DESTINO2', label: 'Destino 2', titulo: 'Aeropuerto del segundo tramo' },
+  { tipo: 'VIA2', label: 'Vía 2', titulo: 'Aerolínea del segundo tramo' },
+  { tipo: 'DESTINO3', label: 'Destino 3', titulo: 'Aeropuerto del tercer tramo' },
+  { tipo: 'VIA3', label: 'Vía 3', titulo: 'Aerolínea del tercer tramo' },
 ];
 
 const textoRuta = (r: Partial<Record<TipoTramo, string>>) =>
@@ -66,7 +66,10 @@ function resumenVuelo(c: CabeceraForm) {
  */
 export function CabeceraCoordinacion({ valor: c, onChange, onConsignatario, errores, rutaAerolinea }: Props) {
   const porDefecto = Object.fromEntries((rutaAerolinea ?? []).map((r) => [r.tipoRuta, r.codigo])) as Partial<Record<TipoTramo, string>>;
-  const rutaPropia = TRAMOS.some((t) => c.ruta[t.tipo].trim());
+  const cargada = TRAMOS.some((t) => c.ruta[t.tipo].trim());
+  // Al modificar llega la ruta guardada: si es igual a la de la aerolínea, no es "propia".
+  const igualAerolinea = !!rutaAerolinea?.length && TRAMOS.every((t) => (c.ruta[t.tipo].trim() || '') === (porDefecto[t.tipo] ?? ''));
+  const rutaPropia = cargada && !igualAerolinea;
   return (
     <Paper variant="outlined" sx={{ p: 2 }}>
       <Grid container spacing={1.5}>
@@ -219,29 +222,31 @@ export function CabeceraCoordinacion({ valor: c, onChange, onConsignatario, erro
                 key={t.tipo}
                 size="small"
                 label={t.label}
-                helperText={t.ayuda}
+                title={t.titulo}
                 value={c.ruta[t.tipo]}
                 placeholder={porDefecto[t.tipo] ?? ''}
                 onChange={(e) => onChange({ ruta: { ...c.ruta, [t.tipo]: e.target.value.toUpperCase() } })}
                 slotProps={{ htmlInput: { maxLength: 3 }, inputLabel: { shrink: true } }}
-                sx={{ width: 76 }}
+                sx={{ width: 84 }}
               />
             ))}
             <Stack sx={{ pt: 0.5 }}>
               <Typography variant="caption" color="text.secondary">
                 {rutaPropia
-                  ? 'Ruta propia de esta guía.'
-                  : `Vacía = la de la aerolínea${textoRuta(porDefecto) ? ` (${textoRuta(porDefecto)})` : ''}.`}
+                  ? 'Ruta propia de esta guía (distinta de la de la aerolínea).'
+                  : cargada
+                    ? `La de la aerolínea (${textoRuta(porDefecto)}).`
+                    : `Vacía = la de la aerolínea${textoRuta(porDefecto) ? ` (${textoRuta(porDefecto)})` : ''}.`}
               </Typography>
               <Typography variant="caption" color="text.secondary">
                 El manifiesto es de la aerolínea que vuela (&quot;Por&quot;).
               </Typography>
-              {rutaPropia ? (
+              {cargada && !igualAerolinea ? (
                 <Button size="small" sx={{ alignSelf: 'flex-start', px: 0 }} onClick={() => onChange({ ruta: rutaVacia() })}>
                   Usar la de la aerolínea
                 </Button>
               ) : (
-                rutaAerolinea?.length ? (
+                rutaAerolinea?.length && !cargada ? (
                   <Button size="small" sx={{ alignSelf: 'flex-start', px: 0 }} onClick={() => onChange({ ruta: { ...rutaVacia(), ...porDefecto } })}>
                     Cambiar la ruta
                   </Button>

@@ -105,7 +105,7 @@ export const operacionService = {
   simular: async (dto: GuardarCoordinacionDto, id?: number): Promise<CoordinacionArmada> =>
     (await api.post('/operacion/coordinaciones/simular', dto, { params: params({ id }) })).data,
 
-  crearCoordinacion: async (dto: GuardarCoordinacionDto): Promise<{ id: number }> =>
+  crearCoordinacion: async (dto: GuardarCoordinacionDto): Promise<{ id: number; numero?: number | null }> =>
     (await api.post('/operacion/coordinaciones', dto)).data,
 
   actualizarCoordinacion: async (id: number, dto: GuardarCoordinacionDto): Promise<{ id: number }> =>

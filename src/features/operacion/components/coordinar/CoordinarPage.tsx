@@ -442,7 +442,7 @@ export function CoordinarPage({ id }: { id?: number }) {
     try {
       const r = id ? await operacionService.actualizarCoordinacion(id, dto) : await operacionService.crearCoordinacion(dto);
       setTocado(false);
-      toast.success(`Coordinación N° ${r.id} grabada. Queda abierta hasta el corte.`);
+      toast.success(`Coordinación N° ${(r as { numero?: number | null }).numero ?? r.id} grabada. Queda abierta hasta el corte.`);
       if (otra) {
         // "Grabar y nueva": otra coordinación del mismo día de vuelo.
         const vacio = formVacio();
@@ -503,7 +503,7 @@ export function CoordinarPage({ id }: { id?: number }) {
 
   return (
     <AppPage
-      title={id ? `Modificar coordinación N° ${id} · guía ${formatoAwb(coordinacion?.numeroGuia)}` : 'Nueva coordinación'}
+      title={id ? `Modificar coordinación N° ${coordinacion?.numero ?? id} · guía ${formatoAwb(coordinacion?.numeroGuia)}` : 'Nueva coordinación'}
       actions={<Button onClick={cancelar}>Cancelar</Button>}
     >
       <Stack spacing={2} sx={{ pb: 12 }}>
