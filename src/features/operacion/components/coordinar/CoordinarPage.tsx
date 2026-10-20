@@ -518,6 +518,7 @@ export function CoordinarPage({ id }: { id?: number }) {
           onChange={cambiarCabecera}
           onConsignatario={alElegirConsignatario}
           errores={errores}
+          rutaAerolinea={parametros?.aerolinea?.ruta}
         />
 
         <AvisosCoordinacion

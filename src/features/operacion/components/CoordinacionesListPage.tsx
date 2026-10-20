@@ -32,6 +32,7 @@ import type { CoordinacionResumen, EstadoCoordinacion } from '../types/coordinac
 import { operacionService } from '../services/operacion.service';
 import { formatoAwb, kg, nombreCorto, num, ordenDelDia, usd } from '../utils/formato';
 import { OpcionAutocomplete } from './coordinar/OpcionAutocomplete';
+import { AnuladasTabla } from './AnuladasTabla';
 import { ETIQUETA_ESTADO, EstadoCoordinacionChip } from './EstadoCoordinacionChip';
 
 const PAGE_SIZE = 50;
@@ -45,6 +46,7 @@ const PESTANAS: Array<{ valor: '' | EstadoCoordinacion; label: string }> = [
   { valor: '', label: 'Todas' },
   { valor: 'BORRADOR', label: 'Por cortar' },
   { valor: 'CORTADO', label: 'Cortadas' },
+  { valor: 'ANULADO', label: 'Anuladas' },
 ];
 
 /** Día ± n, en "YYYY-MM-DD". */
@@ -64,10 +66,10 @@ const columnas: DataTableColumn<CoordinacionResumen>[] = [
     key: 'numero',
     label: 'N°',
     description: 'N° de coordinación (Doc. en el sistema viejo)',
-    value: (c) => c.codigoAccess ?? c.id,
+    value: (c) => c.numero,
     render: (c) => (
       <Typography variant="body2" color="text.secondary" sx={nums}>
-        {c.codigoAccess ?? c.id}
+        {c.numero}
       </Typography>
     ),
     mobile: 'hidden',
@@ -311,6 +313,9 @@ export function CoordinacionesListPage() {
           </Button>
         </Stack>
       </Stack>
+      {filtros.estado === 'ANULADO' ? (
+        <AnuladasTabla dia={dia} />
+      ) : (
       <DataTable
         id="operacion-coordinaciones"
         // Con un día elegido, la fecha de vuelo sobra.
@@ -393,6 +398,7 @@ export function CoordinacionesListPage() {
           pageSize: PAGE_SIZE,
         }}
       />
+      )}
     </AppPage>
   );
 }

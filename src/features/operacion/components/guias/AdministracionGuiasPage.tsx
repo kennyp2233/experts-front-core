@@ -83,11 +83,11 @@ const columnas: DataTableColumn<GuiaMadreFila>[] = [
   {
     key: 'coordinacion',
     label: 'Coordinación',
-    value: (g) => g.coordinacion?.codigoAccess ?? g.coordinacion?.id ?? null,
+    value: (g) => g.coordinacion?.numero ?? null,
     render: (g) =>
       g.coordinacion ? (
         <MuiLink component={Link} href={`/operacion/coordinaciones/${g.coordinacion.id}`} onClick={(e) => e.stopPropagation()}>
-          N° {g.coordinacion.codigoAccess ?? g.coordinacion.id} · vuelo {formatDate(g.coordinacion.fechaVuelo)}
+          N° {g.coordinacion.numero} · vuelo {formatDate(g.coordinacion.fechaVuelo)}
         </MuiLink>
       ) : (
         ''

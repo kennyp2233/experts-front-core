@@ -17,6 +17,7 @@ import {
   Menu,
   MenuItem,
   Stack,
+  TextField,
   Tooltip,
   Typography,
 } from '@mui/material';
@@ -28,6 +29,8 @@ import {
   Edit as ModificarIcon,
   MoreHoriz as MasIcon,
   KeyboardArrowDown as AbrirIcon,
+  ReceiptLongOutlined as FacturaIcon,
+  SwapHoriz as TransferirIcon,
 } from '@mui/icons-material';
 import { useToast } from '@/shared/providers';
 import { getErrorMessage } from '@/shared/utils';
@@ -35,25 +38,31 @@ import { operacionService } from '../../services/operacion.service';
 import type { CoordinacionDetalle } from '../../types/coordinacion';
 import { formatoAwb, usd } from '../../utils/formato';
 import { ArchivoFlowerCargo } from './ArchivoFlowerCargo';
+import { CorregirDialog } from './CorregirDialog';
+import { TransferirDialog } from './TransferirDialog';
 
 /** Documentos imprimibles: cada uno abre su hoja en una pestaña nueva. */
 const IMPRESIONES = [
   { ruta: 'guia-madre', nombre: 'Guía madre', ayuda: 'Hoja blanca o papel de guía' },
   { ruta: 'guias-hijas', nombre: 'Guías hijas por finca', ayuda: 'Una House Air Waybill por guía hija' },
   { ruta: 'manifiesto', nombre: 'Manifiesto', ayuda: 'Consolidated cargo manifest' },
+  { ruta: 'liquidacion-cliente', nombre: 'Liquidación al cliente', ayuda: 'Lo que se le cobra: valores del cliente + handling' },
 ] as const;
+const NECESITA_HIJAS: ReadonlyArray<string> = ['guias-hijas', 'manifiesto'];
 
 /**
  * Acciones de la coordinación. Abierta (sistema nuevo): Modificar y Cortar
  * guía a la vista; FlowerCargo y Anular en "⋯". Cortada: el archivo de
- * FlowerCargo es lo que sigue. Las del sistema viejo se ven pero no se tocan.
+ * FlowerCargo es lo que sigue; facturas y notas se corrigen también después
+ * del corte. Las del sistema viejo se ven pero no se tocan.
  * "Imprimir" (guía madre, guías hijas, manifiesto) está antes y después del
  * corte, como el "Pre-Corte de AWB" del viejo.
  */
 export function AccionesCoordinacion({ c, onCambio }: { c: CoordinacionDetalle; onCambio: () => void }) {
   const router = useRouter();
   const toast = useToast();
-  const [dialogo, setDialogo] = useState<'cortar' | 'anular' | 'flowercargo' | null>(null);
+  const [dialogo, setDialogo] = useState<'cortar' | 'anular' | 'flowercargo' | 'corregir' | 'transferir' | null>(null);
+  const [motivo, setMotivo] = useState('');
   const [menu, setMenu] = useState<HTMLElement | null>(null);
   const [menuImprimir, setMenuImprimir] = useState<HTMLElement | null>(null);
   const [trabajando, setTrabajando] = useState(false);
@@ -72,7 +81,7 @@ export function AccionesCoordinacion({ c, onCambio }: { c: CoordinacionDetalle; 
         setDialogo(null);
         onCambio();
       } else {
-        await operacionService.anularCoordinacion(c.id);
+        await operacionService.anularCoordinacion(c.id, motivo.trim() || undefined);
         toast.success(`Coordinación anulada: la guía ${guia} vuelve a quedar libre.`);
         router.push('/operacion/coordinaciones');
       }
@@ -98,7 +107,7 @@ export function AccionesCoordinacion({ c, onCambio }: { c: CoordinacionDetalle; 
       </Button>
       <Menu anchorEl={menuImprimir} open={menuImprimir !== null} onClose={() => setMenuImprimir(null)}>
         {IMPRESIONES.map((x) => {
-          const deshabilitado = x.ruta !== 'guia-madre' && !hayHijas;
+          const deshabilitado = NECESITA_HIJAS.includes(x.ruta) && !hayHijas;
           return (
             <MenuItem key={x.ruta} disabled={deshabilitado} onClick={() => abrirImpresion(x.ruta)}>
               <ListItemText primary={x.nombre} secondary={deshabilitado ? 'La coordinación no tiene guías hijas' : x.ayuda} />
@@ -138,8 +147,33 @@ export function AccionesCoordinacion({ c, onCambio }: { c: CoordinacionDetalle; 
               <ListItemText>Archivo FlowerCargo</ListItemText>
             </MenuItem>
             <MenuItem
+              disabled={!hayHijas}
               onClick={() => {
                 setMenu(null);
+                setDialogo('corregir');
+              }}
+            >
+              <ListItemIcon>
+                <FacturaIcon fontSize="small" />
+              </ListItemIcon>
+              <ListItemText>Facturas y notas</ListItemText>
+            </MenuItem>
+            <MenuItem
+              disabled={!hayHijas}
+              onClick={() => {
+                setMenu(null);
+                setDialogo('transferir');
+              }}
+            >
+              <ListItemIcon>
+                <TransferirIcon fontSize="small" />
+              </ListItemIcon>
+              <ListItemText>Pasar cajas a otra guía</ListItemText>
+            </MenuItem>
+            <MenuItem
+              onClick={() => {
+                setMenu(null);
+                setMotivo('');
                 setDialogo('anular');
               }}
               sx={{ color: 'error.main' }}
@@ -163,6 +197,18 @@ export function AccionesCoordinacion({ c, onCambio }: { c: CoordinacionDetalle; 
               Archivo FlowerCargo
             </Button>
           )}
+          {c.origen === 'SISTEMA' && c.estado === 'CORTADO' && hayHijas && (
+            <Button startIcon={<FacturaIcon />} variant="outlined" onClick={() => setDialogo('corregir')}>
+              Facturas y notas
+            </Button>
+          )}
+        </>
+      )}
+
+      {c.origen === 'SISTEMA' && (
+        <>
+          <CorregirDialog c={c} abierto={dialogo === 'corregir'} onCerrar={() => setDialogo(null)} onCambio={onCambio} />
+          {abierta && <TransferirDialog c={c} abierto={dialogo === 'transferir'} onCerrar={() => setDialogo(null)} onCambio={onCambio} />}
         </>
       )}
 
@@ -208,10 +254,21 @@ export function AccionesCoordinacion({ c, onCambio }: { c: CoordinacionDetalle; 
       <Dialog open={dialogo === 'anular'} onClose={() => setDialogo(null)} maxWidth="xs" fullWidth>
         <DialogTitle>¿Anular la coordinación?</DialogTitle>
         <DialogContent>
-          <Typography variant="body2">
-            Se borran sus guías hijas y la guía {guia} vuelve al stock como libre. Los números de guía hija usados no se
-            reutilizan.
-          </Typography>
+          <Stack spacing={2}>
+            <Typography variant="body2">
+              Se borran sus guías hijas y la guía {guia} vuelve al stock como libre. Los números de guía hija usados no se
+              reutilizan. Queda constancia de quién la anuló, cuándo y lo que tenía.
+            </Typography>
+            <TextField
+              label="Motivo (opcional)"
+              value={motivo}
+              onChange={(e) => setMotivo(e.target.value)}
+              size="small"
+              fullWidth
+              placeholder="P. ej. la aerolínea cambió el número de guía"
+              inputProps={{ maxLength: 200 }}
+            />
+          </Stack>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDialogo(null)} disabled={trabajando}>

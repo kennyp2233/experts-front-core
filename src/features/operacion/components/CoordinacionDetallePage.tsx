@@ -260,7 +260,7 @@ export function CoordinacionDetallePage({ id }: { id: number }) {
 
   return (
     <AppPage
-      title={`Coordinación N° ${c.codigoAccess ?? c.id} · ${formatoAwb(c.numeroGuia)}`}
+      title={`Coordinación N° ${c.numero} · ${formatoAwb(c.numeroGuia)}`}
       subtitle={
         <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
           <EstadoCoordinacionChip estado={c.estado} />
