@@ -214,7 +214,7 @@ export function IngresoGuiasDetallePage({ id }: { id: number }) {
           <Navegacion i={i} />
           {i.editable && i.estado !== 'ANULADO' && (
             <>
-              <Tooltip title={puedeModificar ? '' : 'Un ingreso cancelado (todas sus guías usadas) no se modifica.'}>
+              <Tooltip title={puedeModificar ? '' : 'Un ingreso usado (todas sus guías ya se usaron) no se modifica.'}>
                 <span>
                   <Button variant="outlined" startIcon={<ModificarIcon />} disabled={!puedeModificar} onClick={() => setModificando(true)}>
                     Modificar

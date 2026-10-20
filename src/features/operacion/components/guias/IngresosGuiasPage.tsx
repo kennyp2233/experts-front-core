@@ -21,7 +21,7 @@ const nums = { fontVariantNumeric: 'tabular-nums' } as const;
 const PESTANAS: Array<{ valor: PestanaIngreso; label: string }> = [
   { valor: 'todos', label: 'Ingresos de guías' },
   { valor: 'activos', label: 'Activos' },
-  { valor: 'cancelados', label: 'Cancelados' },
+  { valor: 'cancelados', label: 'Usados' },
   { valor: 'anulados', label: 'Anulados' },
 ];
 
