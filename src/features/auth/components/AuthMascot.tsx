@@ -84,6 +84,7 @@ export default function AuthMascot({ isShy = false }: { isShy?: boolean }) {
                     rx="8"
                     ry="5"
                     fill={blushColor}
+                    initial={{ opacity: 0.6 }}
                     animate={{ opacity: isShy ? 0.9 : 0.6 }}
                     transition={{ duration: 0.4, ease: "easeInOut" }}
                 />
@@ -93,6 +94,7 @@ export default function AuthMascot({ isShy = false }: { isShy?: boolean }) {
                     rx="8"
                     ry="5"
                     fill={blushColor}
+                    initial={{ opacity: 0.6 }}
                     animate={{ opacity: isShy ? 0.9 : 0.6 }}
                     transition={{ duration: 0.4, ease: "easeInOut" }}
                 />
@@ -105,6 +107,7 @@ export default function AuthMascot({ isShy = false }: { isShy?: boolean }) {
                         cy="0"
                         rx="7"
                         fill={strokeColor}
+                        initial={{ ry: 10 }}
                         animate={{
                             ry: isShy ? 1.5 : 10
                         }}
@@ -118,6 +121,7 @@ export default function AuthMascot({ isShy = false }: { isShy?: boolean }) {
                         cy="0"
                         rx="7"
                         fill={strokeColor}
+                        initial={{ ry: 10 }}
                         animate={{
                             ry: isShy ? 1.5 : 10
                         }}
@@ -130,6 +134,7 @@ export default function AuthMascot({ isShy = false }: { isShy?: boolean }) {
                     {/* Moving White Pupils (fade out when shy) */}
                     <motion.g
                         transform={`translate(${mousePos.x}, ${mousePos.y})`}
+                        initial={{ opacity: 1 }}
                         animate={{
                             opacity: isShy ? 0 : 1
                         }}

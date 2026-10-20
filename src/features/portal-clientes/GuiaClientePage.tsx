@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import {
   Alert,
   Box,
@@ -18,7 +17,8 @@ import {
   TableRow,
   Typography,
 } from '@mui/material';
-import { ArrowBack as VolverIcon, Print as ImprimirIcon } from '@mui/icons-material';
+import { PrintOutlined as ImprimirIcon } from '@mui/icons-material';
+import { VolverLink } from '@/shared/components/ui';
 import { getErrorMessage } from '@/shared/utils';
 import { EstadoChip } from './MisGuiasPage';
 import { LiquidacionCard } from './LiquidacionCard';
@@ -43,7 +43,7 @@ function Seccion({ titulo, acciones, children }: { titulo: string; acciones?: Re
   return (
     <Box component="section">
       <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
-        <Typography variant="h6" fontWeight={700} sx={{ flex: 1 }}>
+        <Typography variant="subtitle1" component="h2" fontWeight={600} sx={{ flex: 1 }}>
           {titulo}
         </Typography>
         {acciones}
@@ -62,7 +62,7 @@ function Cabecera({ g }: { g: GuiaCliente }) {
   return (
     <Paper variant="outlined" sx={{ p: 2 }}>
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} alignItems={{ sm: 'center' }} sx={{ mb: 2 }}>
-        <Typography variant="h5" component="h1" fontWeight={700} sx={{ flex: 1 }}>
+        <Typography variant="h5" component="h1" fontWeight={600} sx={{ flex: 1, fontSize: { xs: '1.125rem', sm: '1.25rem' } }}>
           Guía {formatoGuia(g.numeroGuia)}
         </Typography>
         <EstadoChip estado={g.estado} />
@@ -175,9 +175,9 @@ export function GuiaClientePage({ id }: { id: number }) {
   const { data: g, error, isLoading, mutate } = useGuiaCliente(id);
 
   const volver = (
-    <Button component={Link} href="/portal-clientes" startIcon={<VolverIcon />} sx={{ alignSelf: 'flex-start' }}>
-      Mis guías
-    </Button>
+    <Box sx={{ mb: -1.5 }}>
+      <VolverLink href="/portal-clientes">Mis guías</VolverLink>
+    </Box>
   );
 
   if (error) {
@@ -222,20 +222,20 @@ export function GuiaClientePage({ id }: { id: number }) {
         <GuiasHijas g={g} />
       </Seccion>
 
+      {/* El título y el botón van al ancho de la liquidación, no de la pantalla. */}
+      <Box sx={{ maxWidth: 720, width: '100%' }}>
       <Seccion
         titulo="Lo que se le cobra"
         acciones={
           g.liquidacion ? (
-            <Button variant="contained" startIcon={<ImprimirIcon />} onClick={() => abrirHoja(`/portal-clientes/imprimir/guias/${g.id}/liquidacion`)}>
+            <Button variant="outlined" startIcon={<ImprimirIcon />} onClick={() => abrirHoja(`/portal-clientes/imprimir/guias/${g.id}/liquidacion`)}>
               Imprimir liquidación
             </Button>
           ) : undefined
         }
       >
         {g.liquidacion ? (
-          <Box sx={{ maxWidth: 720 }}>
-            <LiquidacionCard liquidacion={g.liquidacion} />
-          </Box>
+          <LiquidacionCard liquidacion={g.liquidacion} />
         ) : (
           <Alert severity="info">
             {g.estado === 'EN_PREPARACION'
@@ -244,6 +244,7 @@ export function GuiaClientePage({ id }: { id: number }) {
           </Alert>
         )}
       </Seccion>
+      </Box>
     </Stack>
   );
 }

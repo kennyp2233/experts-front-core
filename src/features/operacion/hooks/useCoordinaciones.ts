@@ -2,11 +2,11 @@ import useSWR from 'swr';
 import { operacionService } from '../services/operacion.service';
 import type { CoordinacionDetalle, CoordinacionFiltros, CoordinacionPagina } from '../types/coordinacion';
 
-/** Lista paginada; conserva la página anterior mientras carga la siguiente. */
-export const useCoordinaciones = (filtros: CoordinacionFiltros) => {
+/** Lista paginada; conserva la página anterior mientras carga la siguiente. Con `null` no consulta. */
+export const useCoordinaciones = (filtros: CoordinacionFiltros | null) => {
   const { data, error, isLoading, isValidating, mutate } = useSWR<CoordinacionPagina>(
-    ['operacion/coordinaciones', JSON.stringify(filtros)],
-    () => operacionService.listarCoordinaciones(filtros),
+    filtros ? ['operacion/coordinaciones', JSON.stringify(filtros)] : null,
+    () => operacionService.listarCoordinaciones(filtros!),
     { keepPreviousData: true, revalidateOnFocus: false },
   );
   return { pagina: data, error, isLoading, isValidating, mutate };

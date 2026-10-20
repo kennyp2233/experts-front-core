@@ -1,4 +1,6 @@
-import { Components, Theme } from '@mui/material/styles';
+import { alpha, Components, Theme } from '@mui/material/styles';
+
+const TONOS = ['primary', 'secondary', 'success', 'error', 'warning', 'info'] as const;
 
 // Tablas: cabecera neutra (el color de marca queda para acciones y selección),
 // celdas compactas y contenedor con scroll para que ninguna columna quede
@@ -23,7 +25,7 @@ export const createTableComponents = (mode: 'light' | 'dark'): Components<Theme>
                     fontSize: '0.75rem',
                     textTransform: 'uppercase',
                     letterSpacing: '0.04em',
-                    padding: '10px 12px',
+                    padding: '8px 12px',
                     whiteSpace: 'nowrap',
                     '&:first-of-type': {
                         paddingLeft: 16,
@@ -39,7 +41,7 @@ export const createTableComponents = (mode: 'light' | 'dark'): Components<Theme>
         styleOverrides: {
             root: ({ theme }) => ({
                 '& .MuiTableCell-body': {
-                    padding: '10px 12px',
+                    padding: '8px 12px',
                     borderBottom: `1px solid ${theme.palette.divider}`,
                     fontSize: '0.875rem',
                     color: theme.palette.text.primary,
@@ -49,6 +51,10 @@ export const createTableComponents = (mode: 'light' | 'dark'): Components<Theme>
                     '&:last-of-type': {
                         paddingRight: 16,
                     },
+                },
+                // Los botones de ícono de una fila no la hacen más alta que las demás.
+                '& .MuiTableCell-body .MuiIconButton-sizeSmall': {
+                    margin: '-4px 0',
                 },
                 '& .MuiTableRow-root': {
                     transition: 'background-color 0.15s ease',
@@ -61,13 +67,9 @@ export const createTableComponents = (mode: 'light' | 'dark'): Components<Theme>
                         borderBottom: 'none',
                     },
                     '&.Mui-selected': {
-                        backgroundColor: mode === 'light'
-                            ? 'rgba(255, 107, 53, 0.08)'
-                            : 'rgba(255, 138, 91, 0.12)',
+                        backgroundColor: alpha(theme.palette.primary.main, mode === 'light' ? 0.08 : 0.12),
                         '&:hover': {
-                            backgroundColor: mode === 'light'
-                                ? 'rgba(255, 107, 53, 0.12)'
-                                : 'rgba(255, 138, 91, 0.16)',
+                            backgroundColor: alpha(theme.palette.primary.main, mode === 'light' ? 0.12 : 0.16),
                         },
                     },
                 },
@@ -84,7 +86,7 @@ export const createTableComponents = (mode: 'light' | 'dark'): Components<Theme>
     MuiTableContainer: {
         styleOverrides: {
             root: ({ theme }) => ({
-                borderRadius: 12,
+                borderRadius: 10,
                 border: `1px solid ${theme.palette.divider}`,
                 overflow: 'auto',
                 backgroundColor: theme.palette.background.paper,
@@ -96,80 +98,50 @@ export const createTableComponents = (mode: 'light' | 'dark'): Components<Theme>
         styleOverrides: {
             root: ({ theme }) => ({
                 borderTop: `1px solid ${theme.palette.divider}`,
-                backgroundColor: mode === 'light' 
-                    ? 'rgba(255, 107, 53, 0.02)' 
-                    : 'rgba(255, 138, 91, 0.04)',
-                '& .MuiTablePagination-toolbar': {
-                    padding: '12px 24px',
-                    minHeight: 64,
-                },
                 '& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows': {
                     fontSize: '0.875rem',
                     color: theme.palette.text.secondary,
                     margin: 0,
                 },
-                '& .MuiTablePagination-select': {
-                    borderRadius: 8,
-                    paddingTop: 8,
-                    paddingBottom: 8,
-                },
-                '& .MuiIconButton-root': {
-                    borderRadius: 8,
-                    '&:hover': {
-                        backgroundColor: mode === 'light'
-                            ? 'rgba(255, 107, 53, 0.08)'
-                            : 'rgba(255, 138, 91, 0.12)',
-                    },
-                    '&.Mui-disabled': {
-                        opacity: 0.3,
-                    },
-                },
             }),
         },
     },
+    // Chips de estado en un solo estilo tonal: fondo suave y texto del color.
+    // Sólidos saturados y bordes de colores mezclados competían con los datos.
     MuiChip: {
         styleOverrides: {
-            root: ({ theme }) => ({
-                fontWeight: 600,
-                fontSize: '0.75rem',
-                height: 24,
-                borderRadius: 6,
-                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                '&.MuiChip-filled': {
-                    '&.MuiChip-colorSuccess': {
-                        backgroundColor: mode === 'light' 
-                            ? theme.palette.success.main 
-                            : theme.palette.success.dark,
-                        color: '#fff',
-                    },
-                    '&.MuiChip-colorError': {
-                        backgroundColor: mode === 'light' 
-                            ? theme.palette.error.main 
-                            : theme.palette.error.dark,
-                        color: '#fff',
-                    },
-                    '&.MuiChip-colorWarning': {
-                        backgroundColor: mode === 'light' 
-                            ? theme.palette.warning.main 
-                            : theme.palette.warning.dark,
-                        color: '#000',
-                    },
-                    '&.MuiChip-colorInfo': {
-                        backgroundColor: mode === 'light' 
-                            ? theme.palette.info.main 
-                            : theme.palette.info.dark,
-                        color: '#fff',
-                    },
-                },
-                '&.MuiChip-outlined': {
-                    borderWidth: 1,
-                },
+            root: ({ theme, ownerState }) => {
+                const c = ownerState.color;
+                const tono = c && (TONOS as readonly string[]).includes(c) ? theme.palette[c as (typeof TONOS)[number]] : null;
+                return {
+                    fontWeight: 600,
+                    fontSize: '0.75rem',
+                    height: ownerState.size === 'small' ? 22 : 26,
+                    borderRadius: 6,
+                    ...(tono && {
+                        backgroundColor: alpha(tono.main, mode === 'light' ? 0.12 : 0.2),
+                        color: mode === 'light' ? tono.dark : tono.light,
+                        border: '1px solid transparent',
+                        '& .MuiChip-icon': { color: 'inherit' },
+                        '&.MuiChip-clickable:hover': { backgroundColor: alpha(tono.main, mode === 'light' ? 0.2 : 0.28) },
+                    }),
+                    ...(!tono && ownerState.variant === 'outlined' && {
+                        borderColor: mode === 'light' ? '#CBD5E1' : 'rgba(255, 255, 255, 0.2)',
+                        color: theme.palette.text.secondary,
+                    }),
+                };
+            },
+            label: ({ ownerState }) => ({
+                paddingLeft: ownerState.size === 'small' ? 7 : 10,
+                paddingRight: ownerState.size === 'small' ? 7 : 10,
             }),
+            icon: {
+                marginLeft: 6,
+                marginRight: -2,
+                fontSize: 15,
+            },
             deleteIcon: {
                 fontSize: '1rem',
-                '&:hover': {
-                    opacity: 0.7,
-                },
             },
         },
     },

@@ -2,6 +2,7 @@
 
 import { AppBar, Toolbar, IconButton, Typography, Box } from '@mui/material';
 import { Menu as MenuIcon } from '@mui/icons-material';
+import { MarcaExperts } from '@/shared/components/ui/MarcaExperts';
 
 interface MobileHeaderProps {
     onMenuClick: () => void;
@@ -12,7 +13,7 @@ interface MobileHeaderProps {
  * Mobile header component with hamburger menu button.
  * Only rendered on mobile viewports.
  */
-export function MobileHeader({ onMenuClick, title = 'Experts Core' }: MobileHeaderProps) {
+export function MobileHeader({ onMenuClick, title = 'Experts' }: MobileHeaderProps) {
     return (
         <AppBar
             position="sticky"
@@ -27,15 +28,18 @@ export function MobileHeader({ onMenuClick, title = 'Experts Core' }: MobileHead
                 <IconButton
                     edge="start"
                     color="inherit"
-                    aria-label="open navigation menu"
+                    aria-label="Abrir el menú"
                     onClick={onMenuClick}
                     sx={{
-                        mr: 2,
+                        mr: 1,
                         color: 'text.primary',
                     }}
                 >
                     <MenuIcon />
                 </IconButton>
+                <Box sx={{ mr: 1.25, display: 'flex' }}>
+                    <MarcaExperts size={28} />
+                </Box>
 
                 <Typography
                     variant="h6"

@@ -16,7 +16,6 @@ import {
   DialogTitle,
   Grid,
   IconButton,
-  InputAdornment,
   Link as EnlaceMui,
   MenuItem,
   Paper,
@@ -36,6 +35,7 @@ const PATRON_DAE = /^\d{3}-\d{4}-\d{2}-\d{8}$/;
 const nf = new Intl.NumberFormat('es-EC', { maximumFractionDigits: 2 });
 const n = (s: string) => (s.trim() === '' ? undefined : Number(s.replace(',', '.')));
 
+// La finca carga solo lo físico: factura, valor y tallos normalmente no los sube (si hacen falta, los pone la oficina).
 interface Form {
   idFinca: number | '';
   idProducto: number | '';
@@ -43,9 +43,6 @@ interface Form {
   cajas: string;
   kg: string;
   dae: string;
-  factura: string;
-  valor: string;
-  tallos: string;
 }
 
 const vacio = (g: GuiaFinca): Form => {
@@ -57,9 +54,6 @@ const vacio = (g: GuiaFinca): Form => {
     cajas: '',
     kg: '',
     dae: f?.dae?.dae ?? '',
-    factura: '',
-    valor: '',
-    tallos: '',
   };
 };
 
@@ -70,9 +64,6 @@ const desdeLinea = (l: LineaFinca): Form => ({
   cajas: String(l.cantidadCajas),
   kg: l.pesoKg !== null ? String(l.pesoKg) : '',
   dae: l.dae ?? '',
-  factura: l.factura ?? '',
-  valor: l.valor !== null ? String(l.valor) : '',
-  tallos: l.tallos !== null ? String(l.tallos) : '',
 });
 
 /** Lo que cargó la finca en la guía; las de la oficina (o con nota de la oficina) se ven pero no se tocan. */
@@ -101,9 +92,6 @@ function Linea({
           </Typography>
           <Typography variant="caption" color="text.secondary" component="div" sx={{ fontVariantNumeric: 'tabular-nums' }}>
             DAE {l.dae ?? '—'} · guía hija {l.guiaHija}
-            {l.factura ? ` · factura ${l.factura}` : ''}
-            {l.valor !== null ? ` · $ ${nf.format(l.valor)}` : ''}
-            {l.tallos !== null ? ` · ${l.tallos} tallos` : ''}
           </Typography>
           {l.nota && (
             <Alert severity="warning" icon={false} sx={{ mt: 1, py: 0 }}>
@@ -138,8 +126,8 @@ function Linea({
 
 /**
  * Cargar en una guía (lo de la web vieja): finca, producto (solo los de la
- * finca), fulls, cajas, kg (si no se ponen, cajas × kg por caja), la DAE (se
- * propone la vigente del registro de la finca), factura, valor y tallos.
+ * finca), fulls, cajas, kg (si no se ponen, cajas × kg por caja) y la DAE (se
+ * propone la vigente del registro de la finca).
  */
 export function GuiaFincaPage({ id }: { id: number }) {
   const toast = useToast();
@@ -199,6 +187,8 @@ export function GuiaFincaPage({ id }: { id: number }) {
     e.preventDefault();
     setIntentado(true);
     if (hayFaltantes) return;
+    // Al corregir se conservan factura, valor y tallos que ya tuviera la línea (p. ej. los que puso la oficina).
+    const previa = editando ? g.lineas.find((l) => l.id === editando) : undefined;
     const carga: CargaFinca = {
       idFinca: form.idFinca as number,
       idProducto: form.idProducto as number,
@@ -206,9 +196,9 @@ export function GuiaFincaPage({ id }: { id: number }) {
       cantidadCajas: cajas!,
       pesoKg: n(form.kg),
       dae: form.dae,
-      factura: form.factura.trim() || undefined,
-      valor: n(form.valor),
-      tallos: n(form.tallos),
+      factura: previa?.factura || undefined,
+      valor: previa?.valor ?? undefined,
+      tallos: previa?.tallos ?? undefined,
     };
     setTrabajando(true);
     try {
@@ -395,27 +385,6 @@ export function GuiaFincaPage({ id }: { id: number }) {
               }}
             />
           </Grid>
-          <Grid size={{ xs: 12, sm: 4 }}>
-            <TextField fullWidth label="Factura" value={form.factura} onChange={(e) => cambiar({ factura: e.target.value })} />
-          </Grid>
-          <Grid size={{ xs: 6, sm: 4 }}>
-            <TextField
-              fullWidth
-              label="Valor"
-              value={form.valor}
-              onChange={(e) => cambiar({ valor: e.target.value })}
-              slotProps={{ htmlInput: { inputMode: 'decimal' }, input: { startAdornment: <InputAdornment position="start">$</InputAdornment> } }}
-            />
-          </Grid>
-          <Grid size={{ xs: 6, sm: 4 }}>
-            <TextField
-              fullWidth
-              label="Tallos"
-              value={form.tallos}
-              onChange={(e) => cambiar({ tallos: e.target.value.replace(/\D/g, '') })}
-              slotProps={{ htmlInput: { inputMode: 'numeric' } }}
-            />
-          </Grid>
         </Grid>
         {intentado && hayFaltantes && (
           <Alert severity="error" sx={{ mt: 2 }}>
@@ -426,6 +395,7 @@ export function GuiaFincaPage({ id }: { id: number }) {
           {editando && (
             <Button
               size="large"
+              sx={{ color: 'text.secondary' }}
               onClick={() => {
                 setEditando(null);
                 setForm(vacio(g));

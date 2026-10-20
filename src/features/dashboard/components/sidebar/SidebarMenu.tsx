@@ -29,14 +29,14 @@ export function SidebarMenu({ sections, context, onNavigate, colapsado = false }
             <ListSubheader
               disableSticky
               sx={{
-                pl: 2,
+                pl: 2.5,
                 mt: index > 0 ? 1 : 0,
-                lineHeight: '32px',
+                lineHeight: '28px',
                 bgcolor: 'transparent',
                 textTransform: 'uppercase',
                 letterSpacing: 0.5,
-                fontSize: 12,
-                fontWeight: 700,
+                fontSize: 11,
+                fontWeight: 600,
                 color: 'text.secondary',
               }}
             >

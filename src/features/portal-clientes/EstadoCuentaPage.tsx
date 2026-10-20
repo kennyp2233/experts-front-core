@@ -5,7 +5,6 @@ import {
   Alert,
   Box,
   Button,
-  Chip,
   CircularProgress,
   MenuItem,
   Paper,
@@ -19,9 +18,12 @@ import {
   TableHead,
   TableRow,
   TextField,
+  ToggleButton,
+  ToggleButtonGroup,
   Typography,
 } from '@mui/material';
-import { Download as ExcelIcon, Print as ImprimirIcon } from '@mui/icons-material';
+import { FileDownloadOutlined as ExcelIcon, PrintOutlined as ImprimirIcon } from '@mui/icons-material';
+import { TotalAPagar } from './LiquidacionCard';
 import { useToast } from '@/shared/providers';
 import { getErrorMessage } from '@/shared/utils';
 import {
@@ -108,28 +110,33 @@ export function EstadoCuentaPage() {
             <TextField size="small" type="date" label="Hasta" value={hasta} onChange={(e) => setHasta(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
           </Stack>
           <Stack spacing={1}>
-            {grupos.map((g) => (
-              <Stack key={g.titulo} direction="row" alignItems="center" gap={1} flexWrap="wrap">
-                <Typography variant="body2" color="text.secondary" sx={{ minWidth: 120 }}>
-                  {g.titulo}
-                </Typography>
-                {g.periodos.map((p) => {
-                  const activo = p.desde === desde && p.hasta === hasta;
-                  return (
-                    <Chip
-                      key={p.etiqueta}
-                      label={p.etiqueta}
-                      color={activo ? 'primary' : 'default'}
-                      variant={activo ? 'filled' : 'outlined'}
-                      onClick={() => {
-                        setDesde(p.desde);
-                        setHasta(p.hasta);
-                      }}
-                    />
-                  );
-                })}
-              </Stack>
-            ))}
+            {grupos.map((g) => {
+              const activo = g.periodos.find((p) => p.desde === desde && p.hasta === hasta)?.etiqueta ?? null;
+              return (
+                <Stack key={g.titulo} direction="row" alignItems="center" gap={1} flexWrap="wrap">
+                  <Typography variant="body2" color="text.secondary" sx={{ minWidth: 120 }}>
+                    {g.titulo}
+                  </Typography>
+                  <ToggleButtonGroup
+                    exclusive
+                    value={activo}
+                    onChange={(_, etiqueta: string | null) => {
+                      const p = g.periodos.find((x) => x.etiqueta === etiqueta);
+                      if (!p) return;
+                      setDesde(p.desde);
+                      setHasta(p.hasta);
+                    }}
+                    aria-label={`Períodos de ${g.titulo}`}
+                  >
+                    {g.periodos.map((p) => (
+                      <ToggleButton key={p.etiqueta} value={p.etiqueta}>
+                        {p.etiqueta}
+                      </ToggleButton>
+                    ))}
+                  </ToggleButtonGroup>
+                </Stack>
+              );
+            })}
           </Stack>
           {!periodoValido && <Alert severity="warning">Elija un período: la fecha “Desde” no puede ser posterior a “Hasta”.</Alert>}
         </Stack>
@@ -178,11 +185,24 @@ export function EstadoCuentaPage() {
                   <TableBody>
                     {filas.map((f) => (
                       <TableRow key={f.id} hover>
-                        {COLUMNAS_COBRO.map((c) => (
-                          <TableCell key={c.key} sx={{ textAlign: c.align, whiteSpace: c.align === 'right' || c.key === 'fecha' || c.key === 'guia' ? 'nowrap' : undefined }}>
-                            {c.celda(f)}
-                          </TableCell>
-                        ))}
+                        {COLUMNAS_COBRO.map((c) => {
+                          const v = c.celda(f);
+                          // Marca y destino en una línea (con el texto completo al pasar el mouse): partidos daban filas de 5 renglones.
+                          const texto = c.key === 'marca' || c.key === 'destino';
+                          return (
+                            <TableCell
+                              key={c.key}
+                              title={texto && typeof v === 'string' ? v : undefined}
+                              sx={{
+                                textAlign: c.align,
+                                whiteSpace: 'nowrap',
+                                ...(texto && { maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }),
+                              }}
+                            >
+                              {v}
+                            </TableCell>
+                          );
+                        })}
                       </TableRow>
                     ))}
                   </TableBody>
@@ -197,14 +217,7 @@ export function EstadoCuentaPage() {
                   </TableFooter>
                 </Table>
               </TableContainer>
-              <Paper variant="outlined" sx={{ p: 2, bgcolor: 'primary.main', color: 'primary.contrastText' }}>
-                <Stack direction="row" justifyContent="space-between" alignItems="center">
-                  <Typography fontWeight={700}>Total a pagar del período</Typography>
-                  <Typography variant="h5" fontWeight={700}>
-                    {usd(data.totales.totalCobrar)}
-                  </Typography>
-                </Stack>
-              </Paper>
+              <TotalAPagar etiqueta="Total a pagar del período" valor={usd(data.totales.totalCobrar)} />
               <Typography variant="caption" color="text.secondary">
                 Total a pagar = total de la guía + handling (el handling se cobra aparte del total de la guía). Valores en dólares (USD).
               </Typography>

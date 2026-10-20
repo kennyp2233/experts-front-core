@@ -89,7 +89,7 @@ export function CorteDefinitivoPage() {
       subtitle="El día que se apaga el sistema viejo: pasar a modo activo y alinear los contadores con los últimos números que usó."
       maxWidth={1100}
       actions={
-        <Button startIcon={<RefrescarIcon />} onClick={() => mutate()} disabled={isValidating}>
+        <Button variant="outlined" startIcon={<RefrescarIcon />} onClick={() => mutate()} disabled={isValidating}>
           Actualizar
         </Button>
       }
@@ -118,7 +118,7 @@ export function CorteDefinitivoPage() {
               <Chip
                 label={sombra ? 'MODO SOMBRA' : 'MODO ACTIVO'}
                 color={sombra ? 'info' : 'warning'}
-                sx={{ fontWeight: 700, fontSize: '1rem', height: 40, px: 1 }}
+                sx={{ fontWeight: 700, letterSpacing: '0.04em', flexShrink: 0 }}
               />
               <Box>
                 <AlertTitle sx={{ mb: 0.25 }}>
@@ -174,7 +174,7 @@ export function CorteDefinitivoPage() {
                         ) : alineado(c) ? (
                           <Chip size="small" color="success" variant="outlined" label="Alineado" />
                         ) : rangoPropio(c) ? (
-                          <Chip size="small" color="info" variant="outlined" label="Rango propio (sombra)" />
+                          <Chip size="small" variant="outlined" label="Rango propio (sombra)" />
                         ) : (
                           <Chip size="small" color="warning" variant="outlined" label="Por alinear" />
                         )}

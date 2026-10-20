@@ -1,48 +1,50 @@
 'use client';
 
 import Link from 'next/link';
-import { Box, Button, Card, Divider, Stack, Typography } from '@mui/material';
+import { Box, Button, Card, Divider, List, ListItemButton, ListItemIcon, ListItemText, Stack, Typography } from '@mui/material';
 import {
-  AddCircleOutline as AddIcon,
-  DescriptionOutlined as DaesIcon,
+  Add as AddIcon,
+  BadgeOutlined as DaesIcon,
+  ChevronRight as IrIcon,
   FactCheckOutlined as FitoIcon,
+  ReceiptLongOutlined as IngresoIcon,
+  RequestQuoteOutlined as EstadoCuentaIcon,
 } from '@mui/icons-material';
 
 interface QuickActionsProps {
   isAdmin: boolean;
 }
 
+/** Una acción principal (coordinar) y el resto como lista de enlaces, no como botones grandes. */
 export function QuickActions({ isAdmin }: QuickActionsProps) {
+  const enlaces = [
+    { href: '/operacion/guias/ingresos', label: 'Ingreso de guías', icon: <IngresoIcon /> },
+    { href: '/operacion/daes', label: 'DAEs', icon: <DaesIcon /> },
+    { href: '/operacion/cuentas/estado-cuenta', label: 'Estado de cuenta', icon: <EstadoCuentaIcon /> },
+    ...(isAdmin ? [{ href: '/admin/fito', label: 'Certificados FITO', icon: <FitoIcon /> }] : []),
+  ];
   return (
-    <Card variant="outlined" sx={{ '&:hover': { transform: 'none' } }}>
+    <Card>
       <Box sx={{ px: 2, py: 1.5 }}>
         <Typography variant="subtitle1" component="h2" fontWeight={600}>
           Accesos rápidos
         </Typography>
-        <Typography variant="caption" color="text.secondary">
-          Tareas frecuentes
-        </Typography>
       </Box>
       <Divider />
-      <Stack spacing={1} sx={{ p: 2 }}>
-        <Button
-          component={Link}
-          href="/ebf/coordinaciones/nueva"
-          variant="contained"
-          startIcon={<AddIcon />}
-          fullWidth
-        >
+      <Stack sx={{ p: 1.5 }} spacing={1}>
+        <Button component={Link} href="/operacion/coordinaciones/nueva" variant="contained" startIcon={<AddIcon />} fullWidth>
           Nueva coordinación
         </Button>
-        {isAdmin && (
-          <Button component={Link} href="/admin/fito" variant="outlined" startIcon={<FitoIcon />} fullWidth>
-            Generar FITO
-          </Button>
-        )}
-        <Button component={Link} href="/ebf/daes" variant="outlined" startIcon={<DaesIcon />} fullWidth>
-          Ver DAEs
-        </Button>
       </Stack>
+      <List disablePadding sx={{ px: 1, pb: 1 }}>
+        {enlaces.map((e) => (
+          <ListItemButton key={e.href} component={Link} href={e.href} sx={{ py: 0.75 }}>
+            <ListItemIcon sx={{ color: 'text.secondary', '& .MuiSvgIcon-root': { fontSize: 20 } }}>{e.icon}</ListItemIcon>
+            <ListItemText primary={e.label} slotProps={{ primary: { variant: 'body2' } }} />
+            <IrIcon fontSize="small" sx={{ color: 'text.disabled' }} />
+          </ListItemButton>
+        ))}
+      </List>
     </Card>
   );
 }

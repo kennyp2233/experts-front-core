@@ -42,6 +42,14 @@ export const createFeedbackComponents = (mode: 'light' | 'dark'): Components<The
       standardError: alertTone(mode, 'error'),
       standardWarning: alertTone(mode, 'warning'),
       standardInfo: alertTone(mode, 'info'),
+      // Outlined: mismo tono, fondo blanco (antes el info salía azul y desentonaba).
+      outlinedSuccess: { ...alertTone(mode, 'success'), backgroundColor: 'transparent' },
+      outlinedError: { ...alertTone(mode, 'error'), backgroundColor: 'transparent' },
+      outlinedWarning: { ...alertTone(mode, 'warning'), backgroundColor: 'transparent' },
+      outlinedInfo: { ...alertTone(mode, 'info'), backgroundColor: 'transparent' },
+      message: {
+        padding: '6px 0',
+      },
     },
   },
   MuiSnackbar: {
@@ -58,8 +66,8 @@ export const createFeedbackComponents = (mode: 'light' | 'dark'): Components<The
   },
   MuiDialog: {
     styleOverrides: {
-      paper: ({ theme }) => ({
-        borderRadius: 16,
+      paper: () => ({
+        borderRadius: 14,
         boxShadow: mode === 'light'
           ? '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
           : '0 20px 25px -5px rgba(0, 0, 0, 0.7), 0 10px 10px -5px rgba(0, 0, 0, 0.5)',
@@ -70,9 +78,9 @@ export const createFeedbackComponents = (mode: 'light' | 'dark'): Components<The
   MuiDialogTitle: {
     styleOverrides: {
       root: ({ theme }) => ({
-        fontSize: '1.25rem',
+        fontSize: '1.125rem',
         fontWeight: 600,
-        padding: '24px 24px 16px',
+        padding: '20px 24px 12px',
         color: theme.palette.text.primary,
       }),
     },
@@ -80,8 +88,8 @@ export const createFeedbackComponents = (mode: 'light' | 'dark'): Components<The
   MuiDialogContent: {
     styleOverrides: {
       root: {
-        padding: '20px 24px',
-        fontSize: '0.9375rem',
+        padding: '8px 24px 16px',
+        fontSize: '0.875rem',
       },
     },
   },
@@ -92,10 +100,10 @@ export const createFeedbackComponents = (mode: 'light' | 'dark'): Components<The
           ? 'rgba(30, 41, 59, 0.95)'
           : 'rgba(241, 245, 249, 0.95)',
         color: mode === 'light' ? '#F1F5F9' : '#1E293B',
-        fontSize: '0.8125rem',
+        fontSize: '0.75rem',
         fontWeight: 500,
-        borderRadius: 8,
-        padding: '8px 12px',
+        borderRadius: 6,
+        padding: '6px 10px',
         boxShadow: mode === 'light'
           ? '0 4px 6px rgba(0, 0, 0, 0.1)'
           : '0 4px 6px rgba(0, 0, 0, 0.4)',

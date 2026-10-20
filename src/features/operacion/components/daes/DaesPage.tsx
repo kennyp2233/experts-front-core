@@ -209,7 +209,7 @@ export function DaesPage() {
   };
 
   const columnas: DataTableColumn<DaeRegistro>[] = [
-    { key: 'finca', label: 'Finca', pinned: true, mobile: 'title', value: (d) => d.finca, maxWidth: 260 },
+    { key: 'finca', label: 'Finca', pinned: true, mobile: 'title', value: (d) => d.finca, maxWidth: 240 },
     { key: 'pais', label: 'País', value: (d) => d.nombrePais ?? d.pais, render: (d) => `${d.nombrePais ?? d.pais} (${d.pais})`, maxWidth: 200 },
     { key: 'desde', label: 'Desde', value: (d) => formatDate(d.desde) },
     { key: 'hasta', label: 'Hasta', value: (d) => formatDate(d.hasta), mobile: 'subtitle' },
@@ -245,7 +245,7 @@ export function DaesPage() {
       render: (d) =>
         d.origenRegistro === 'SISTEMA_VIEJO' ? (
           <Tooltip title={d.editable ? 'Viene del sistema viejo' : 'Viene del sistema viejo: mientras ese sistema mande, se cambia allá'}>
-            <Chip size="small" variant="outlined" color="warning" label="Sistema viejo" />
+            <Chip size="small" variant="outlined" label="Sistema viejo" />
           </Tooltip>
         ) : (
           <Chip size="small" variant="outlined" color="primary" label="Creada aquí" />

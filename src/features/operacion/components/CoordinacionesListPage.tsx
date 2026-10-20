@@ -13,6 +13,8 @@ import {
   Tab,
   Tabs,
   TextField,
+  ToggleButton,
+  ToggleButtonGroup,
   Tooltip,
   Typography,
 } from '@mui/material';
@@ -267,18 +269,25 @@ export function CoordinacionesListPage() {
         justifyContent="space-between"
         flexWrap="wrap"
         useFlexGap
-        spacing={1}
+        columnGap={2}
+        rowGap={1}
         sx={{ mb: 2, borderBottom: 1, borderColor: 'divider' }}
       >
-        <Tabs value={filtros.estado ?? ''} onChange={(_, v) => actualizar({ estado: v || undefined })}>
+        <Tabs
+          value={filtros.estado ?? ''}
+          onChange={(_, v) => actualizar({ estado: v || undefined })}
+          variant="scrollable"
+          allowScrollButtonsMobile
+          sx={{ maxWidth: '100%' }}
+        >
           {PESTANAS.map((p) => (
             <Tab key={p.valor} value={p.valor} label={p.label} />
           ))}
         </Tabs>
         {/* El día de vuelo, como el filtro de la lista vieja. */}
-        <Stack direction="row" alignItems="center" spacing={0.5} sx={{ pb: 0.5 }}>
+        <Stack direction="row" alignItems="center" spacing={0.5} flexWrap="wrap" useFlexGap sx={{ pb: 1 }}>
           <Typography variant="body2" color="text.secondary" sx={{ mr: 0.5 }}>
-            Vuelo:
+            Vuelo
           </Typography>
           <Tooltip title="Día anterior">
             <span>
@@ -293,7 +302,7 @@ export function CoordinacionesListPage() {
             value={dia ?? ''}
             onChange={(e) => actualizar({ dia: e.target.value || undefined })}
             slotProps={{ htmlInput: { 'aria-label': 'Día de vuelo' } }}
-            sx={{ width: 150 }}
+            sx={{ width: 150, '& .MuiOutlinedInput-input': { py: 0.75 } }}
           />
           <Tooltip title="Día siguiente">
             <span>
@@ -302,15 +311,21 @@ export function CoordinacionesListPage() {
               </IconButton>
             </span>
           </Tooltip>
-          <Button size="small" variant={dia === hoy ? 'contained' : 'text'} onClick={() => actualizar({ dia: hoy })}>
-            Hoy
-          </Button>
-          <Button size="small" variant={dia === manana ? 'contained' : 'text'} onClick={() => actualizar({ dia: manana })}>
-            Mañana
-          </Button>
-          <Button size="small" variant={!dia ? 'contained' : 'text'} onClick={() => actualizar({ dia: undefined })}>
-            Todos los días
-          </Button>
+          <ToggleButtonGroup
+            exclusive
+            value={dia === hoy ? 'hoy' : dia === manana ? 'manana' : !dia ? 'todos' : null}
+            onChange={(_, v: string | null) => {
+              if (v === 'hoy') actualizar({ dia: hoy });
+              else if (v === 'manana') actualizar({ dia: manana });
+              else if (v === 'todos') actualizar({ dia: undefined });
+            }}
+            aria-label="Atajos de día de vuelo"
+            sx={{ ml: 0.5 }}
+          >
+            <ToggleButton value="hoy">Hoy</ToggleButton>
+            <ToggleButton value="manana">Mañana</ToggleButton>
+            <ToggleButton value="todos">Todos los días</ToggleButton>
+          </ToggleButtonGroup>
         </Stack>
       </Stack>
       {filtros.estado === 'ANULADO' ? (
@@ -331,13 +346,13 @@ export function CoordinacionesListPage() {
         dense
         totals={totales}
         filters={
-          <Stack direction="row" flexWrap="wrap" useFlexGap spacing={1} sx={{ width: '100%' }}>
+          <Stack direction="row" flexWrap="wrap" useFlexGap spacing={1} sx={{ flex: '1 1 640px' }}>
             <TextField
               size="small"
               value={texto}
               onChange={(e) => setTexto(e.target.value)}
               placeholder="Guía, guía hija, DAE, N°, marca, finca"
-              sx={{ minWidth: 220, flex: '1 1 220px' }}
+              sx={{ minWidth: 200, flex: '1 1 200px', maxWidth: { sm: 320 } }}
               slotProps={{
                 input: {
                   startAdornment: (
@@ -348,7 +363,7 @@ export function CoordinacionesListPage() {
                 },
               }}
             />
-            <Box sx={{ width: 180 }}>
+            <Box sx={{ width: { xs: '100%', sm: 170 } }}>
               <OpcionAutocomplete
                 tipo="aerolineas"
                 label="Aerolínea"
@@ -356,7 +371,7 @@ export function CoordinacionesListPage() {
                 onChange={(id) => actualizar({ aerolinea: id ? String(id) : undefined })}
               />
             </Box>
-            <Box sx={{ width: 230 }}>
+            <Box sx={{ width: { xs: '100%', sm: 210 } }}>
               <OpcionAutocomplete
                 tipo="consignatarios"
                 label="Consignatario"
@@ -365,7 +380,7 @@ export function CoordinacionesListPage() {
               />
             </Box>
             {/* Los dos botones de la lista vieja: salen para el día elegido (y la aerolínea, si se filtró). */}
-            <Stack direction="row" spacing={1} alignItems="center" sx={{ ml: 'auto' }}>
+            <Stack direction="row" spacing={1} alignItems="center">
               {(
                 [
                   ['programacion', 'Programación', 'Programación de vuelo (Excel): por guía, fulls, peso, peso cobrable y promedios del día'],

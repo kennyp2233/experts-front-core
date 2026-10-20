@@ -170,7 +170,8 @@ export function MisGuiasPage() {
                 {items.map((g) => (
                   <TableRow key={g.id} hover sx={{ cursor: 'pointer' }} onClick={() => router.push(`/portal-clientes/guias/${g.id}`)}>
                     <TableCell sx={{ whiteSpace: 'nowrap', fontWeight: 600 }}>
-                      <Link href={`/portal-clientes/guias/${g.id}`} style={{ color: 'inherit' }}>
+                      {/* La fila entera abre la guía; el enlace queda para teclado y "abrir en otra pestaña", sin subrayado. */}
+                      <Link href={`/portal-clientes/guias/${g.id}`} style={{ color: 'inherit', textDecoration: 'none' }}>
                         {formatoGuia(g.numeroGuia)}
                       </Link>
                     </TableCell>

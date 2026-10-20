@@ -114,6 +114,10 @@ export const operacionService = {
   cortarCoordinacion: async (id: number): Promise<{ id: number; estado: 'CORTADO' }> =>
     (await api.post(`/operacion/coordinaciones/${id}/corte`)).data,
 
+  /** Deshace el corte: la guía vuelve a quedar abierta (no borra nada). */
+  reabrirCoordinacion: async (id: number, motivo?: string): Promise<{ id: number; estado: 'BORRADOR' }> =>
+    (await api.delete(`/operacion/coordinaciones/${id}/corte`, { params: params({ motivo }) })).data,
+
   anularCoordinacion: async (id: number, motivo?: string): Promise<{ id: number; anulada: true }> =>
     (await api.delete(`/operacion/coordinaciones/${id}`, { params: params({ motivo }) })).data,
 

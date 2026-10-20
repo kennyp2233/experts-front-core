@@ -1,6 +1,6 @@
 'use client';
 
-import { Button, Stack, TextField, Tooltip } from '@mui/material';
+import { Stack, TextField, ToggleButton, ToggleButtonGroup, Tooltip } from '@mui/material';
 import { ATAJOS_PERIODO, hoyIso, type Periodo } from '../../utils/cuentas';
 
 interface Props {
@@ -16,6 +16,8 @@ interface Props {
  */
 export function PeriodoSelector({ desde, hasta, onChange }: Props) {
   const hoy = hoyIso();
+  const rangos = ATAJOS_PERIODO.map((a) => ({ ...a, r: a.rango(desde, hoy) }));
+  const activo = rangos.find((a) => a.r.desde === desde && a.r.hasta === hasta)?.clave ?? null;
   return (
     <Stack direction="row" flexWrap="wrap" useFlexGap spacing={1} alignItems="center">
       <TextField
@@ -36,19 +38,21 @@ export function PeriodoSelector({ desde, hasta, onChange }: Props) {
         slotProps={{ inputLabel: { shrink: true } }}
         sx={{ width: 160 }}
       />
-      <Stack direction="row" flexWrap="wrap" useFlexGap spacing={0.5}>
-        {ATAJOS_PERIODO.map((a) => {
-          const r = a.rango(desde, hoy);
-          const activo = r.desde === desde && r.hasta === hasta;
-          return (
-            <Tooltip key={a.clave} title={a.ayuda}>
-              <Button size="small" variant={activo ? 'contained' : 'outlined'} onClick={() => onChange(r)} sx={{ whiteSpace: 'nowrap' }}>
-                {a.label}
-              </Button>
-            </Tooltip>
-          );
-        })}
-      </Stack>
+      <ToggleButtonGroup
+        exclusive
+        value={activo}
+        onChange={(_, clave: string | null) => {
+          const a = rangos.find((x) => x.clave === clave);
+          if (a) onChange(a.r);
+        }}
+        aria-label="Atajos de período"
+      >
+        {rangos.map((a) => (
+          <Tooltip key={a.clave} title={a.ayuda}>
+            <ToggleButton value={a.clave}>{a.label}</ToggleButton>
+          </Tooltip>
+        ))}
+      </ToggleButtonGroup>
     </Stack>
   );
 }

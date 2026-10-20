@@ -226,8 +226,10 @@ export function VentasPage() {
         </Button>
       }
     >
-      <Stack direction="row" flexWrap="wrap" useFlexGap spacing={1.5} alignItems="center" sx={{ mb: 2 }}>
-        <PeriodoSelector desde={desde} hasta={hasta} onChange={(p) => actualizar({ desde: p.desde, hasta: p.hasta })} />
+      {/* Primero el período, después los filtros: cada grupo en su fila (antes se partían al azar). */}
+      <Stack spacing={1.5} sx={{ mb: 2 }}>
+      <PeriodoSelector desde={desde} hasta={hasta} onChange={(p) => actualizar({ desde: p.desde, hasta: p.hasta })} />
+      <Stack direction="row" flexWrap="wrap" useFlexGap spacing={1.5} alignItems="center">
         <Box sx={{ width: 200 }}>
           <OpcionAutocomplete
             tipo="aerolineas"
@@ -251,6 +253,7 @@ export function VentasPage() {
             slotProps={{ typography: { variant: 'body2' } }}
           />
         </Tooltip>
+      </Stack>
       </Stack>
 
       {error && (

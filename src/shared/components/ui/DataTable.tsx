@@ -299,29 +299,30 @@ export function DataTable<T>({
           spacing={1.5}
           alignItems={{ xs: 'stretch', sm: 'center' }}
           useFlexGap
-          flexWrap="wrap"
         >
-          {searchable && (
-            <TextField
-              size="small"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder={searchPlaceholder}
-              sx={{ minWidth: { sm: 260 }, flex: { sm: '0 1 320px' } }}
-              slotProps={{
-                input: {
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchIcon fontSize="small" />
-                    </InputAdornment>
-                  ),
-                },
-              }}
-            />
-          )}
-          {filters}
-          <Box sx={{ flex: 1 }} />
-          <Stack direction="row" alignItems="center" spacing={0.5}>
+          {/* Buscador y filtros ocupan lo que sobra; el contador queda siempre en la misma fila, a la derecha. */}
+          <Stack direction="row" spacing={1.5} alignItems="center" useFlexGap flexWrap="wrap" sx={{ flex: 1, minWidth: 0 }}>
+            {searchable && (
+              <TextField
+                size="small"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder={searchPlaceholder}
+                sx={{ minWidth: { sm: 260 }, flex: { xs: '1 1 100%', sm: '0 1 320px' } }}
+                slotProps={{
+                  input: {
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <SearchIcon fontSize="small" />
+                      </InputAdornment>
+                    ),
+                  },
+                }}
+              />
+            )}
+            {filters}
+          </Stack>
+          <Stack direction="row" alignItems="center" spacing={0.5} flexShrink={0}>
             <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
               {initialLoading ? 'Cargando…' : countLabel}
               {pagination && !conTotal ? ` · página ${pagination.page}` : ''}

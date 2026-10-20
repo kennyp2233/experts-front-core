@@ -51,7 +51,8 @@ export const createPalette = (mode: PaletteMode): PaletteOptions => ({
   action: {
     active: mode === 'light' ? '#64748B' : '#94A3B8',
     hover: mode === 'light' ? '#F1F5F9' : '#334155',
-    selected: mode === 'light' ? '#E0E7FF' : '#3730A3',
+    // Tono de la marca (antes índigo: desentonaba con el naranja).
+    selected: mode === 'light' ? 'rgba(255, 107, 53, 0.1)' : 'rgba(255, 138, 91, 0.16)',
     disabled: mode === 'light' ? '#CBD5E1' : '#475569',
     disabledBackground: mode === 'light' ? '#F1F5F9' : '#1E293B',
   },
