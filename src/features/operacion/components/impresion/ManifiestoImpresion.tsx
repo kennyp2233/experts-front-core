@@ -52,7 +52,7 @@ const nf2 = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFr
 type Formato = 'general' | 'lan';
 
 /** Aerolíneas con `||FormatoLAN` en `aerPlantilla` del viejo (LAN CARGO, LATAM): salen con el "Formato LAN". */
-const esLan = (aerolinea: string | null) => /(lan|latam)/i.test(aerolinea ?? '');
+const esLan = (aerolinea: string | null) => /\b(lan|latam)\b/i.test(aerolinea ?? '');
 
 // Formato general: A4 horizontal; el encabezado de la tabla se repite en cada hoja y el pie lleva el número de página.
 const PAGINA_GENERAL = `
