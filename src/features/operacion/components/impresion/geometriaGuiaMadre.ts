@@ -7,9 +7,12 @@
  * (0 general, 1 izquierda, 2 centro, 3 derecha). El texto va abajo en la
  * celda (alineación vertical por defecto de Excel).
  *
- * - BASE: `GMATLAS VIRTUAL.xlt` (la misma geometría IATA de LAN, QR, KLM,
- *   Emirates… salvo textos fijos y firma).
+ * - BASE: `GMATLAS VIRTUAL.xlt` (geometría por defecto, la de casi todas las
+ *   aerolíneas).
  * - TURKISH: `GMTurkishVirtual.xlt` (misma lógica, filas recalibradas, oficio).
+ * - LAN (`GMLan.xlt`), KLM (`GMKLMVirtual.xlt`), QR (`GMQR.xlt`), Emirates
+ *   (`GMFFF176.xlt`) y DEFAULT (`GMDefault.xlt`): más abajo; `plantillaGuia()`
+ *   elige por la `plantillaGuiaMadre` de la aerolínea.
  *
  * La fila 43 (cálculos sueltos de la plantilla, 1 mm de alto) y las celdas de
  * medidas (Impresión Medidas, sin uso desde 2017) no se incluyen.
@@ -160,3 +163,325 @@ export const FILA_CARGO: Readonly<Record<string, number>> = {
   AUX1: 62,
 };
 export const FILAS_CARGO_LIBRES = [59, 61, 62, 57, 58, 60] as const;
+
+// ---------------------------------------------------------------------------
+// Otras plantillas por aerolínea (Hoja1 de cada GM*.xlt, mismo método que BASE:
+// anchos de columna 1/256 de carácter × 7 px, alto de fila en twips/15 px, a 96 dpi → mm).
+// Las que no están acá (GMCP de MSC no existe en la copia del viejo) usan BASE.
+// ---------------------------------------------------------------------------
+
+const sin = (g: Geometria, ...celdas: string[]): Geometria =>
+  Object.fromEntries(Object.entries(g).filter(([k]) => !celdas.includes(k)));
+
+/** `GMLan.xlt` (LAN): idéntica a BASE celda por celda (0 mm de diferencia); solo le faltan I65 y N68 (agente/empresa). */
+export const GEOMETRIA_LAN: Geometria = sin(GEOMETRIA_BASE, 'I65', 'N68');
+
+/**
+ * `GMKLMVirtual.xlt` (KLM): como BASE hasta la fila 51; desde la 52 las filas bajan menos (B52 3,2 mm de alto, y de
+ * la fila 53 en adelante 1,3-1,4 mm más arriba); K3 sin combinar (RUC a la izquierda); sin G31/O45/I65/N68; con K24
+ * ("URN 161388"); O44 en negrita. `GMQR.xlt` (Qatar) es igual a esta más I65 y N68.
+ */
+export const GEOMETRIA_KLM: Geometria = {
+  B3: [14.3, 10.9, 9.3, 4.5, 12, 1, 0], C3: [23.5, 10.9, 13.5, 4.5, 8, 1, 0], D3: [37, 10.9, 9, 4.5, 12, 1, 0],
+  I3: [87.6, 10.9, 4.8, 4.5, 11, 1, 0], K3: [104.7, 10.9, 7.4, 4.5, 10, 1, 0],
+  O3: [139.7, 10.9, 14.3, 4.5, 12, 1, 0], B7: [14.3, 17.6, 9.3, 3.5, 9, 1, 0], B8: [14.3, 21.1, 9.3, 3.5, 9, 1, 0],
+  B9: [14.3, 24.7, 9.3, 3.5, 9, 1, 0], B10: [14.3, 28.2, 9.3, 3.5, 9, 1, 0], B11: [14.3, 31.7, 9.3, 3.5, 9, 1, 0],
+  B17: [14.3, 40.5, 9.3, 4.5, 9, 1, 0], B18: [14.3, 45, 9.3, 4.5, 9, 1, 0], B19: [14.3, 49.5, 9.3, 4.5, 9, 1, 0],
+  B20: [14.3, 54, 9.3, 4.5, 9, 1, 0], B21: [14.3, 58.5, 9.3, 4.5, 10, 1, 0], B23: [14.3, 65.8, 9.3, 3.5, 9, 1, 0],
+  K23: [104.7, 65.8, 7.4, 3.5, 8, 1, 0], N23: [130.9, 65.8, 8.7, 3.5, 8, 1, 0], B24: [14.3, 69.3, 9.3, 4.5, 9, 1, 0],
+  K24: [104.7, 69.3, 7.4, 4.5, 10, 1, 0], N24: [130.9, 69.3, 8.7, 4.5, 8, 1, 0],
+  B25: [14.3, 73.8, 9.3, 4.5, 9, 1, 0], N25: [130.9, 73.8, 8.7, 4.5, 8, 1, 0], N26: [130.9, 78.3, 8.7, 3.5, 8, 1, 0],
+  B27: [14.3, 81.8, 9.3, 3.5, 9, 1, 0], N27: [130.9, 81.8, 8.7, 3.5, 8, 1, 0], B29: [14.3, 87.7, 9.3, 4.5, 8, 1, 0],
+  G29: [65.9, 87.7, 14.3, 4.5, 10, 1, 0], B31: [14.3, 96, 9.3, 4.5, 10, 1, 0], C31: [23.5, 96, 13.5, 4.5, 8, 1, 0],
+  J31: [92.3, 96, 12.4, 4.5, 8, 1, 3], K31: [104.7, 96, 7.4, 4.5, 8, 1, 2], L31: [112.2, 96, 4.2, 4.5, 8, 1, 2],
+  M31: [116.4, 96, 14.5, 4.5, 8, 1, 2], O31: [139.7, 96, 14.3, 4.5, 9, 1, 1], R31: [170.6, 96, 9, 4.5, 9, 1, 3],
+  B33: [14.3, 104.3, 9.3, 4.5, 10, 1, 0], K33: [104.7, 104.3, 7.4, 4.5, 10, 1, 3],
+  B35: [14.3, 109.8, 9.3, 3.2, 8, 0, 0], F35: [50.5, 109.8, 15.3, 3.2, 8, 0, 0],
+  J35: [92.3, 109.8, 12.4, 3.2, 8, 0, 0], O35: [139.7, 109.8, 14.3, 3.2, 8, 0, 0],
+  B36: [14.3, 113, 9.3, 3.2, 8, 0, 0], F36: [50.5, 113, 15.3, 3.2, 8, 0, 0], J36: [92.3, 113, 12.4, 3.2, 8, 0, 0],
+  O36: [139.7, 113, 14.3, 3.2, 8, 0, 0], B37: [14.3, 116.2, 9.3, 3.2, 8, 0, 0],
+  F37: [50.5, 116.2, 15.3, 3.2, 8, 0, 0], J37: [92.3, 116.2, 12.4, 3.2, 8, 0, 0],
+  O37: [139.7, 116.2, 14.3, 3.2, 8, 0, 0], B38: [14.3, 119.4, 9.3, 3.2, 8, 0, 0],
+  F38: [50.5, 119.4, 15.3, 3.2, 8, 0, 0], J38: [92.3, 119.4, 12.4, 3.2, 8, 0, 0],
+  O38: [139.7, 119.4, 14.3, 3.2, 8, 0, 0], O44: [139.7, 132.1, 14.3, 4.5, 8, 1, 0],
+  B45: [14.3, 136.6, 9.3, 4.5, 10, 1, 1], C45: [23.5, 136.6, 13.5, 4.5, 10, 1, 1], D45: [37, 136.6, 9, 4.5, 8, 1, 1],
+  G45: [65.9, 136.6, 14.3, 4.5, 10, 1, 2], I45: [87.6, 136.6, 17.2, 4.5, 10, 1, 2],
+  K45: [104.7, 136.6, 26.2, 4.5, 10, 1, 2], B46: [14.3, 141.1, 9.3, 4.5, 8, 0, 0],
+  F46: [50.5, 141.1, 15.3, 4.5, 8, 0, 0], J46: [92.3, 141.1, 12.4, 4.5, 8, 0, 0],
+  O46: [139.7, 141.1, 14.3, 4.5, 8, 1, 0], B47: [14.3, 145.6, 9.3, 4.5, 8, 0, 0],
+  F47: [50.5, 145.6, 15.3, 4.5, 8, 0, 0], J47: [92.3, 145.6, 12.4, 4.5, 8, 0, 0],
+  B48: [14.3, 150.1, 9.3, 4.5, 8, 0, 0], F48: [50.5, 150.1, 15.3, 4.5, 8, 0, 0],
+  J48: [92.3, 150.1, 12.4, 4.5, 8, 0, 0], B49: [14.3, 154.6, 9.3, 4.5, 8, 0, 0],
+  F49: [50.5, 154.6, 15.3, 4.5, 8, 0, 0], J49: [92.3, 154.6, 12.4, 4.5, 8, 0, 0],
+  B50: [14.3, 159, 9.3, 3.5, 8, 0, 0], F50: [50.5, 159, 15.3, 3.5, 8, 0, 0], J50: [92.3, 159, 12.4, 3.5, 8, 0, 0],
+  B51: [14.3, 162.6, 9.3, 4.5, 8, 0, 0], F51: [50.5, 162.6, 15.3, 4.5, 8, 0, 0],
+  J51: [92.3, 162.6, 12.4, 4.5, 8, 0, 0], B52: [14.3, 167.1, 9.3, 3.2, 8, 0, 0],
+  F52: [50.5, 167.1, 15.3, 3.2, 8, 0, 0], J52: [92.3, 167.1, 12.4, 3.2, 8, 0, 0],
+  B53: [14.3, 170.2, 9.3, 4.5, 8, 0, 0], F53: [50.5, 170.2, 15.3, 4.5, 8, 0, 0],
+  J53: [92.3, 170.2, 12.4, 4.5, 8, 0, 0], B54: [14.3, 174.7, 9.3, 5.6, 8, 0, 0],
+  F54: [50.5, 174.7, 15.3, 5.6, 8, 0, 0], J54: [92.3, 174.7, 12.4, 5.6, 8, 0, 0],
+  O54: [139.7, 174.7, 14.3, 5.6, 12, 1, 0], B55: [14.3, 180.3, 9.3, 4.5, 10, 1, 1],
+  C55: [23.5, 180.3, 13.5, 4.5, 10, 1, 1], D55: [37, 180.3, 9, 4.5, 8, 1, 1], F55: [50.5, 180.3, 15.3, 4.5, 8, 0, 0],
+  K55: [104.7, 180.3, 26.2, 4.5, 10, 1, 2], B57: [14.3, 188.3, 22.8, 4.5, 10, 1, 2],
+  F57: [50.5, 188.3, 29.6, 4.5, 10, 1, 2], J57: [92.3, 188.3, 12.4, 4.5, 8, 1, 0],
+  K57: [104.7, 188.3, 26.2, 4.5, 10, 1, 1], N57: [130.9, 188.3, 8.7, 4.5, 8, 1, 0],
+  O57: [139.7, 188.3, 14.3, 4.5, 10, 1, 1], P57: [153.9, 188.3, 16.7, 4.5, 8, 1, 2],
+  R57: [170.6, 188.3, 17.7, 4.5, 10, 1, 1], J58: [92.3, 192.8, 12.4, 4.8, 8, 1, 0],
+  K58: [104.7, 192.8, 26.2, 4.8, 10, 1, 1], N58: [130.9, 192.8, 8.7, 4.8, 8, 1, 0],
+  O58: [139.7, 192.8, 14.3, 4.8, 10, 1, 1], P58: [153.9, 192.8, 16.7, 4.8, 8, 1, 2],
+  R58: [170.6, 192.8, 17.7, 4.8, 10, 1, 1], J59: [92.3, 197.6, 12.4, 4.8, 8, 1, 0],
+  K59: [104.7, 197.6, 26.2, 4.8, 10, 1, 1], N59: [130.9, 197.6, 8.7, 4.8, 8, 1, 0],
+  O59: [139.7, 197.6, 14.3, 4.8, 10, 1, 1], P59: [153.9, 197.6, 16.7, 4.8, 8, 1, 2],
+  R59: [170.6, 197.6, 17.7, 4.8, 10, 1, 1], B60: [14.3, 202.5, 22.8, 4.5, 10, 1, 2],
+  J60: [92.3, 202.5, 12.4, 4.5, 8, 1, 0], K60: [104.7, 202.5, 26.2, 4.5, 10, 1, 1],
+  N60: [130.9, 202.5, 8.7, 4.5, 8, 1, 0], O60: [139.7, 202.5, 14.3, 4.5, 10, 1, 1],
+  J61: [92.3, 207, 12.4, 3.8, 8, 1, 0], K61: [104.7, 207, 26.2, 3.8, 10, 1, 1],
+  B62: [14.3, 210.7, 22.8, 4.5, 10, 1, 2], F62: [50.5, 210.7, 29.6, 4.5, 10, 1, 2],
+  J62: [92.3, 210.7, 12.4, 4.5, 8, 1, 0], K62: [104.7, 210.7, 26.2, 4.5, 10, 1, 1],
+  J63: [92.3, 215.2, 12.4, 3.8, 8, 1, 0], K63: [104.7, 215.2, 26.2, 3.8, 10, 1, 1],
+  B64: [14.3, 219, 22.8, 5, 10, 1, 2], F64: [50.5, 219, 29.6, 5, 10, 1, 2], M64: [116.4, 219, 14.5, 5, 10, 1, 0],
+  B68: [14.3, 235.3, 22.8, 5.3, 10, 1, 2], F68: [50.5, 235.3, 29.6, 5.3, 11, 1, 2],
+  I69: [87.6, 240.6, 4.8, 5, 11, 1, 0], M69: [116.4, 240.6, 14.5, 5, 10, 1, 0],
+  P69: [153.9, 240.6, 8.7, 5, 10, 1, 0], P70: [153.9, 245.6, 8.7, 9.8, 12, 1, 0],
+};
+export const GEOMETRIA_QR: Geometria = {
+  ...GEOMETRIA_KLM,
+  I65: [87.6, 224, 4.8, 4.5, 10, 1, 0],
+  N68: [130.9, 235.3, 8.7, 5.3, 10, 1, 0],
+};
+
+/** `GMFFF176.xlt` (Emirates): BASE sin G31 ni O45, K3 sin combinar, B68 en 11 pt y P70 de 10,1 mm de alto. */
+export const GEOMETRIA_EMIRATES: Geometria = {
+  ...sin(GEOMETRIA_BASE, 'G31', 'O45'),
+  K3: [104.7, 10.9, 7.4, 4.5, 10, 1, 0],
+  B68: [14.3, 236.6, 22.8, 5.3, 11, 1, 2],
+  P70: [153.9, 246.9, 8.7, 10.1, 12, 1, 0],
+};
+
+/**
+ * `GMDefault.xlt` (AERCARIBE, TAMPA y las que no tienen plantilla propia en el viejo): otro diseño. Sin número de guía
+ * (B3/D3/O3/P70), sin firma (P69), sin IVA en la fila 63 (va en la 60) y sin I65/M64/N68; con "RUC #" en G1/H1, el
+ * agente en I64 y 6 códigos de agencia. Todo corrido ~4,2 mm hacia arriba y 1,8 / 6,1 mm hacia la derecha respecto de BASE.
+ */
+export const GEOMETRIA_DEFAULT: Geometria = {
+  G1: [67.7, 0, 14.3, 11.2, 11, 1, 2], H1: [82, 0, 36.2, 11.2, 12, 1, 2], C3: [25.4, 6.7, 13.5, 4.5, 8, 1, 0],
+  B7: [16.1, 13.4, 9.3, 3.5, 9, 1, 0], B8: [16.1, 16.9, 9.3, 3.5, 9, 1, 0], B9: [16.1, 20.4, 9.3, 3.5, 9, 1, 0],
+  B10: [16.1, 23.9, 9.3, 3.5, 9, 1, 0], B11: [16.1, 27.4, 9.3, 3.5, 9, 1, 0], B17: [16.1, 36.2, 9.3, 4.5, 9, 1, 0],
+  B18: [16.1, 40.7, 9.3, 4.5, 9, 1, 0], B19: [16.1, 45.2, 9.3, 4.5, 9, 1, 0], B20: [16.1, 49.7, 9.3, 4.5, 9, 1, 0],
+  B21: [16.1, 54.2, 9.3, 4.5, 10, 1, 0], B23: [16.1, 61.6, 9.3, 3.5, 9, 1, 0], K23: [110.8, 61.6, 7.4, 3.5, 8, 1, 0],
+  N23: [137, 61.6, 8.7, 3.5, 8, 1, 0], B24: [16.1, 65.1, 9.3, 4.5, 9, 1, 0], N24: [137, 65.1, 8.7, 4.5, 8, 1, 0],
+  B25: [16.1, 69.6, 9.3, 4.5, 9, 1, 0], N25: [137, 69.6, 8.7, 4.5, 8, 1, 0], N26: [137, 74.1, 8.7, 3.5, 8, 1, 0],
+  B27: [16.1, 77.6, 9.3, 3.5, 9, 1, 0], N27: [137, 77.6, 8.7, 3.5, 8, 1, 0], B29: [16.1, 83.5, 9.3, 4.5, 10, 1, 0],
+  G29: [67.7, 83.5, 14.3, 4.5, 10, 1, 0], B31: [16.1, 91.8, 9.3, 4.5, 10, 1, 0],
+  C31: [25.4, 91.8, 13.5, 4.5, 10, 1, 0], G31: [67.7, 91.8, 14.3, 4.5, 10, 1, 0],
+  J31: [98.4, 91.8, 12.4, 4.5, 8, 1, 3], K31: [110.8, 91.8, 7.4, 4.5, 8, 1, 2],
+  L31: [118.2, 91.8, 4.2, 4.5, 8, 1, 2], M31: [122.5, 91.8, 14.5, 4.5, 8, 1, 2],
+  O31: [145.7, 91.8, 14.3, 4.5, 9, 0, 1], R31: [176.7, 91.8, 9, 4.5, 9, 1, 3], B33: [16.1, 100, 9.3, 4.5, 10, 1, 0],
+  K33: [110.8, 100, 7.4, 4.5, 10, 1, 3], B35: [16.1, 105.6, 9.3, 3.2, 8, 0, 0],
+  F35: [52.4, 105.6, 15.3, 3.2, 8, 0, 0], J35: [98.4, 105.6, 12.4, 3.2, 8, 0, 0],
+  O35: [145.7, 105.6, 14.3, 3.2, 8, 0, 0], B36: [16.1, 108.8, 9.3, 3.2, 8, 0, 0],
+  F36: [52.4, 108.8, 15.3, 3.2, 8, 0, 0], J36: [98.4, 108.8, 12.4, 3.2, 8, 0, 0],
+  O36: [145.7, 108.8, 14.3, 3.2, 8, 0, 0], B37: [16.1, 112, 9.3, 3.2, 8, 0, 0], F37: [52.4, 112, 15.3, 3.2, 8, 0, 0],
+  J37: [98.4, 112, 12.4, 3.2, 8, 0, 0], O37: [145.7, 112, 14.3, 3.2, 8, 0, 0], B38: [16.1, 115.1, 9.3, 3.2, 8, 0, 0],
+  F38: [52.4, 115.1, 15.3, 3.2, 8, 0, 0], J38: [98.4, 115.1, 12.4, 3.2, 8, 0, 0],
+  O38: [145.7, 115.1, 14.3, 3.2, 8, 0, 0], O44: [145.7, 127.8, 14.3, 4.5, 8, 0, 0],
+  B45: [16.1, 132.3, 9.3, 4.5, 10, 1, 1], C45: [25.4, 132.3, 13.5, 4.5, 10, 1, 1],
+  D45: [38.9, 132.3, 9, 4.5, 8, 1, 1], G45: [67.7, 132.3, 14.3, 4.5, 10, 1, 2],
+  I45: [89.4, 132.3, 21.4, 4.5, 10, 1, 2], K45: [110.8, 132.3, 26.2, 4.5, 10, 1, 2],
+  O45: [145.7, 132.3, 14.3, 4.5, 8, 1, 0], B46: [16.1, 136.8, 9.3, 4.5, 8, 0, 0],
+  F46: [52.4, 136.8, 15.3, 4.5, 8, 0, 0], J46: [98.4, 136.8, 12.4, 4.5, 8, 0, 0],
+  O46: [145.7, 136.8, 14.3, 4.5, 8, 1, 0], B47: [16.1, 141.3, 9.3, 4.5, 8, 0, 0],
+  F47: [52.4, 141.3, 15.3, 4.5, 8, 0, 0], J47: [98.4, 141.3, 12.4, 4.5, 8, 0, 0],
+  B48: [16.1, 145.8, 9.3, 4.5, 8, 0, 0], F48: [52.4, 145.8, 15.3, 4.5, 8, 0, 0],
+  J48: [98.4, 145.8, 12.4, 4.5, 8, 0, 0], B49: [16.1, 150.3, 9.3, 4.5, 8, 0, 0],
+  F49: [52.4, 150.3, 15.3, 4.5, 8, 0, 0], J49: [98.4, 150.3, 12.4, 4.5, 8, 0, 0],
+  B50: [16.1, 154.8, 9.3, 3.5, 8, 0, 0], F50: [52.4, 154.8, 15.3, 3.5, 8, 0, 0],
+  J50: [98.4, 154.8, 12.4, 3.5, 8, 0, 0], B51: [16.1, 158.3, 9.3, 4.5, 8, 0, 0],
+  F51: [52.4, 158.3, 15.3, 4.5, 8, 0, 0], J51: [98.4, 158.3, 12.4, 4.5, 8, 0, 0],
+  B52: [16.1, 162.8, 9.3, 4.5, 8, 0, 0], F52: [52.4, 162.8, 15.3, 4.5, 8, 0, 0],
+  J52: [98.4, 162.8, 12.4, 4.5, 8, 0, 0], B53: [16.1, 167.3, 9.3, 4.5, 8, 0, 0],
+  F53: [52.4, 167.3, 15.3, 4.5, 8, 0, 0], J53: [98.4, 167.3, 12.4, 4.5, 8, 0, 0],
+  O53: [145.7, 167.3, 14.3, 4.5, 8, 1, 0], B54: [16.1, 171.8, 9.3, 5.6, 8, 0, 0],
+  F54: [52.4, 171.8, 15.3, 5.6, 8, 0, 0], J54: [98.4, 171.8, 12.4, 5.6, 8, 0, 0],
+  O54: [145.7, 171.8, 14.3, 5.6, 12, 1, 0], B55: [16.1, 177.4, 9.3, 4.5, 10, 1, 1],
+  C55: [25.4, 177.4, 13.5, 4.5, 10, 1, 1], D55: [38.9, 177.4, 9, 4.5, 8, 1, 1],
+  F55: [52.4, 177.4, 15.3, 4.5, 8, 0, 0], K55: [110.8, 177.4, 26.2, 4.5, 10, 1, 2],
+  B57: [16.1, 185.4, 22.8, 4.5, 10, 1, 2], F57: [52.4, 185.4, 29.6, 4.5, 10, 1, 2],
+  J57: [98.4, 185.4, 12.4, 4.5, 8, 1, 0], K57: [110.8, 185.4, 26.2, 4.5, 10, 1, 1],
+  N57: [137, 185.4, 8.7, 4.5, 8, 1, 0], O57: [145.7, 185.4, 14.3, 4.5, 10, 1, 1],
+  P57: [160, 185.4, 16.7, 4.5, 8, 1, 2], R57: [176.7, 185.4, 17.7, 4.5, 10, 1, 1],
+  J58: [98.4, 189.9, 12.4, 4.8, 8, 1, 0], K58: [110.8, 189.9, 26.2, 4.8, 10, 1, 1],
+  N58: [137, 189.9, 8.7, 4.8, 8, 1, 0], O58: [145.7, 189.9, 14.3, 4.8, 10, 1, 1],
+  P58: [160, 189.9, 16.7, 4.8, 8, 1, 2], R58: [176.7, 189.9, 17.7, 4.8, 10, 1, 1],
+  J59: [98.4, 194.7, 12.4, 4.8, 8, 1, 0], K59: [110.8, 194.7, 26.2, 4.8, 10, 1, 1],
+  N59: [137, 194.7, 8.7, 4.8, 8, 1, 0], O59: [145.7, 194.7, 14.3, 4.8, 10, 1, 1],
+  B60: [16.1, 199.5, 22.8, 4.5, 10, 1, 2], J60: [98.4, 199.5, 12.4, 4.5, 8, 1, 0],
+  K60: [110.8, 199.5, 26.2, 4.5, 10, 1, 1], N60: [137, 199.5, 8.7, 4.5, 8, 1, 0],
+  O60: [145.7, 199.5, 14.3, 4.5, 10, 1, 1], J61: [98.4, 204, 12.4, 3.8, 8, 1, 0],
+  K61: [110.8, 204, 26.2, 3.8, 10, 1, 1], B62: [16.1, 207.8, 22.8, 4.5, 10, 1, 2],
+  F62: [52.4, 207.8, 29.6, 4.5, 10, 1, 2], J62: [98.4, 207.8, 12.4, 4.5, 8, 1, 0],
+  B64: [16.1, 216.1, 22.8, 5, 10, 1, 2], F64: [52.4, 216.1, 29.6, 5, 10, 1, 2], I64: [89.4, 216.1, 105, 5, 10, 1, 2],
+  B68: [16.1, 233.3, 22.8, 4.5, 10, 1, 2], F68: [52.4, 233.3, 29.6, 4.5, 10, 1, 2],
+  I69: [89.4, 237.8, 9, 5, 11, 1, 0], M69: [122.5, 237.8, 14.5, 5, 10, 1, 0],
+};
+
+/** Cuadro de texto de cada plantilla (ancla de Excel con sus desplazamientos: esquina y ancho exactos; alto como BASE). */
+export const CUADRO_LAN = { x: 125.6, y: 19.5, w: 49.2, h: 22.4 } as const;
+export const CUADRO_KLM = { x: 127.2, y: 18.4, w: 57.7, h: 22.4 } as const;
+/** El de Emirates mide 17,2 mm de ancho en la plantilla: el texto de la aerolínea no entra, por eso no se imprime por defecto. */
+export const CUADRO_EMIRATES = { x: 140.7, y: 18.4, w: 17.2, h: 22.4 } as const;
+
+// ---------------------------------------------------------------------------
+// Plantilla de guía por aerolínea
+// ---------------------------------------------------------------------------
+
+export type PapelGuia = 'carta' | 'oficio' | 'a4';
+
+/** Lo que necesitan los retoques de una plantilla (subconjunto de la respuesta de impresión de la guía madre). */
+export interface DatosPlantilla {
+  tramos: ReadonlyArray<{ hasta: string | null; por: string | null }>;
+  agente: { lineas: readonly string[] };
+  aerolinea: { ruc: string | null };
+}
+
+export interface PlantillaGuia {
+  /** Archivo del viejo de donde sale la geometría. */
+  archivo: string;
+  /** false: la plantilla de la aerolínea no tiene geometría propia (o no existe en la copia del viejo) y se usa la de Atlas. */
+  propia: boolean;
+  geometria: Geometria;
+  /** Cuadro de texto de la aerolínea; null si la plantilla no lo trae. */
+  cuadro: { readonly x: number; readonly y: number; readonly w: number; readonly h: number } | null;
+  /** Papel de la plantilla (Excel: 5 = oficio; 259 = el de la impresora → carta). */
+  papel: PapelGuia;
+  /** Firma que trae la plantilla (P69). */
+  firma: string;
+  /** Textos fijos propios de la plantilla (celda → texto); pisan a los generales. */
+  fijos: Readonly<Record<string, string>>;
+  /** Fila de cada cargo de aerolínea, filas libres para el resto e IVA (rótulo J, valor K). */
+  filaCargo: Readonly<Record<string, number>>;
+  filasCargoLibres: readonly number[];
+  filaIva: number;
+  /** (rótulo, valor) de los códigos de agencia, en el orden de la lista. */
+  celdasAgencia: ReadonlyArray<readonly [string, string]>;
+  /** Celdas que esta plantilla arma distinto que Atlas. */
+  retocar?: (c: Record<string, string>, d: DatosPlantilla) => void;
+}
+
+const ATLAS: PlantillaGuia = {
+  archivo: 'GMATLAS VIRTUAL.xlt',
+  propia: true,
+  geometria: GEOMETRIA_BASE,
+  cuadro: CUADRO_AEROLINEA.base,
+  papel: 'carta',
+  firma: 'MAURICIO PINCHAO',
+  fijos: {},
+  filaCargo: FILA_CARGO,
+  filasCargoLibres: FILAS_CARGO_LIBRES,
+  filaIva: 63,
+  celdasAgencia: CELDAS_AGENCIA,
+};
+
+const TURKISH: PlantillaGuia = {
+  ...ATLAS,
+  archivo: 'GMTurkishVirtual.xlt',
+  geometria: GEOMETRIA_TURKISH,
+  cuadro: CUADRO_AEROLINEA.turkish,
+  papel: 'oficio',
+  firma: 'JAVIER BUSTOS',
+};
+
+const LAN: PlantillaGuia = {
+  ...ATLAS,
+  archivo: 'GMLan.xlt',
+  geometria: GEOMETRIA_LAN,
+  cuadro: CUADRO_LAN,
+  firma: 'JAVIER BUSTOS',
+};
+
+const KLM: PlantillaGuia = {
+  ...ATLAS,
+  archivo: 'GMKLMVirtual.xlt',
+  geometria: GEOMETRIA_KLM,
+  cuadro: CUADRO_KLM,
+  papel: 'oficio',
+  firma: 'JAVIER BUSTOS',
+  fijos: { K24: 'URN 161388' },
+};
+
+const QR: PlantillaGuia = {
+  ...KLM,
+  archivo: 'GMQR.xlt',
+  geometria: GEOMETRIA_QR,
+  firma: 'MAURICIO PINCHAO',
+};
+
+const EMIRATES: PlantillaGuia = {
+  ...ATLAS,
+  archivo: 'GMFFF176.xlt',
+  geometria: GEOMETRIA_EMIRATES,
+  cuadro: CUADRO_EMIRATES,
+  // B31 de la plantilla es =Hoja2!B13 (el "To2" de la ruta) en vez del "To" (B9) de las demás: se respeta
+  // si hay tercer tramo; si no, se imprime el primer destino para no dejar el casillero vacío.
+  retocar: (c, d) => {
+    c.B31 = d.tramos[2]?.hasta || d.tramos[0]?.hasta || '';
+  },
+};
+
+const DEFAULT: PlantillaGuia = {
+  ...ATLAS,
+  archivo: 'GMDefault.xlt',
+  geometria: GEOMETRIA_DEFAULT,
+  cuadro: null,
+  firma: '',
+  fijos: { O31: '.', O46: 'FRESH FLOWERS', O53: 'KEEP COOL BETWEEN 5º - 8º' },
+  // Guía aérea en la 57, combustible 58, seguridad 59, IVA 60 y otros 61; AUX1/AUX2/auxiliar no tienen casillero de valor.
+  filaCargo: { COSTO_GUIA: 57, COMBUSTIBLE: 58, SEGURIDAD: 59, OTROS: 61 },
+  filasCargoLibres: [],
+  filaIva: 60,
+  // Hoja3!K10:K15 → 6 códigos (sin FITO), en N57..N60 y P57, P58.
+  celdasAgencia: [
+    ['N57', 'O57'],
+    ['N58', 'O58'],
+    ['N59', 'O59'],
+    ['N60', 'O60'],
+    ['P57', 'R57'],
+    ['P58', 'R58'],
+  ],
+  retocar: (c, d) => {
+    c.G1 = 'RUC #';
+    c.H1 = d.aerolinea.ruc ?? '';
+    c.I64 = d.agente.lineas[0] ?? '';
+    // G31 = primer embarque (To1 By1) + 3 espacios + segundo (To2 By2); no repite el primer destino.
+    const emb = (i: number) => [d.tramos[i]?.hasta, d.tramos[i]?.por].filter(Boolean).join(' ');
+    c.G31 = `${emb(1)}   ${emb(2)}`.trim();
+  },
+};
+
+const REGISTRO: Readonly<Record<string, PlantillaGuia>> = {
+  'GMATLAS VIRTUAL': ATLAS,
+  GMTURKISHVIRTUAL: TURKISH,
+  GMLAN: LAN,
+  GMKLMVIRTUAL: KLM,
+  GMQR: QR,
+  GMFFF176: EMIRATES,
+  GMDEFAULT: DEFAULT,
+};
+
+/**
+ * Plantilla de guía (geometría, papel, firma, textos fijos) según `plantillaGuiaMadre` de la aerolínea
+ * ("GMLan", "GMQR", "GMATLAS VIRTUAL"…; sin extensión, mayúsculas o minúsculas).
+ * - Sin plantilla (vacía): `GMDefault`, como el viejo (`ITSSystem.Proc_66FB00`: aerPlantilla en blanco → "GMDefault";
+ *   es el caso de AERCARIBE y TAMPA).
+ * - Con nombre que no se reconoce (p. ej. MSC → `GMCP`, que no está en la copia del viejo): Atlas, como siempre,
+ *   salvo que el nombre diga "Turkish" (la de Turkish, como antes).
+ */
+export function plantillaGuia(nombre: string | null | undefined): PlantillaGuia {
+  const n = (nombre ?? '').trim().replace(/\.(xlt|xls)$/i, '').replace(/\s+/g, ' ').toUpperCase();
+  if (!n) return DEFAULT;
+  const p = REGISTRO[n];
+  if (p) return p;
+  if (/TURKISH/.test(n)) return TURKISH;
+  // Sin plantilla propia: Atlas; la firma de las "Lan"/"Turkish" desconocidas sigue siendo la de siempre.
+  return { ...ATLAS, propia: false, firma: /turkish|lan/i.test(n) ? 'JAVIER BUSTOS' : ATLAS.firma };
+}
