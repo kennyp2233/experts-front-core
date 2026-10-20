@@ -1,7 +1,7 @@
 import React, { useMemo, useRef, useState } from 'react';
 import {
     Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Divider, Paper, Stack,
-    Step, StepLabel, Stepper, Typography, useMediaQuery, useTheme
+    Step, StepLabel, Stepper, Tooltip, Typography, useMediaQuery, useTheme
 } from '@mui/material';
 import {
     ArrowBack as BackIcon,
@@ -18,7 +18,7 @@ import { useFitoGuias, useFitoGuiasHijas } from '../hooks/useFito';
 import { useProductMappings } from '../hooks/useProductMappings';
 import { fitoCatalogService, fitoService } from '../services/fito.service';
 import {
-    FitoGuide, FitoGuiaHija, FitoXmlConfig, GuiaHijaAgregada, ProductMapping, PuertoEcuador, PuertoInternacional
+    FitoGuide, FitoGuiaHija, FitoXmlConfig, FuenteFito, GuiaHijaAgregada, ProductMapping, PuertoEcuador, PuertoInternacional
 } from '../types/fito.types';
 import {
     aggregateHijas, CONFIG_GROUPS, ConfigGroupKey, DEFAULT_FITO_CONFIG, distinctProductCodes, formatNumber,
@@ -29,6 +29,7 @@ import { FitoConfigStep } from './FitoConfigStep';
 import { FitoSummaryStep } from './FitoSummaryStep';
 
 interface FitoGuideTableProps {
+    fuente: FuenteFito;
     onGenerate: (docNumero: number, config: FitoXmlConfig, productMappings: ProductMapping[], guiasHijas: GuiaHijaAgregada[]) => void;
     disabled?: boolean;
 }
@@ -38,10 +39,14 @@ const STEPS = ['Datos del certificado', 'Productos', 'Confirmar'];
 const CLOSED_GROUPS: Record<ConfigGroupKey, boolean> = { ruta: false, consignatario: false, solicitud: false };
 
 const guiaDestino = (g: FitoGuide) => g.docFITODestino || g.docDestino || '';
+/** La fecha del FITO es la de vuelo (en Access docFecha es la de asignación). */
+const fechaVuelo = (g: FitoGuide) => g.docFechaVuelo || g.docFecha;
 
 const GUIA_COLUMNS: DataTableColumn<FitoGuide>[] = [
     { key: 'guia', label: 'Guía', value: g => g.docNumGuia, pinned: true, mobile: 'title' },
-    { key: 'fecha', label: 'Fecha', value: g => formatDate(g.docFecha) },
+    // En Access el N° de coordinación es el propio docNumero.
+    { key: 'numero', label: 'N°', description: 'N° de coordinación', value: g => g.numero ?? g.docNumero, mobile: 'hidden' },
+    { key: 'fecha', label: 'Fecha de vuelo', value: g => formatDate(fechaVuelo(g)), mobile: 'subtitle' },
     {
         key: 'destino',
         label: 'Destino',
@@ -59,12 +64,26 @@ const HIJA_COLUMNS: DataTableColumn<FitoGuiaHija>[] = [
     { key: 'finca', label: 'Finca', value: h => h.plaNombre ?? '' },
     { key: 'ruc', label: 'RUC finca', value: h => h.plaRUC ?? '', defaultHidden: true },
     { key: 'cajas', label: 'Cajas', align: 'right', value: h => h.detCajas, render: h => formatNumber(h.detCajas) },
-    { key: 'stems', label: 'Stems', align: 'right', value: h => h.detNumStems, render: h => formatNumber(h.detNumStems) }
+    {
+        key: 'stems',
+        label: 'Stems',
+        align: 'right',
+        value: h => h.detNumStems,
+        // Las fincas no cargan tallos: si la línea no los tiene se calculan (fulls × tallos por full), como la web vieja.
+        render: h =>
+            h.stemsSugeridos ? (
+                <Tooltip title="La línea no tenía tallos: calculados con fulls × tallos por full">
+                    <Box component="span" sx={{ fontStyle: 'italic', color: 'text.secondary' }}>{formatNumber(h.detNumStems)}</Box>
+                </Tooltip>
+            ) : (
+                formatNumber(h.detNumStems)
+            )
+    }
 ];
 
 const HOW_TO_STEPS = [
     { title: 'Elige una guía madre', text: 'Búscala en la lista por número de guía o destino.' },
-    { title: 'Revisa los datos', text: 'Ruta, consignatario y productos vienen precargados de Access; corrige solo lo marcado.' },
+    { title: 'Revisa los datos', text: 'Fecha de vuelo, ruta, consignatario y productos vienen precargados; corrige solo lo marcado.' },
     { title: 'Genera el FITO', text: 'El XML para Agrocalidad se descarga automáticamente al terminar.' }
 ];
 
@@ -102,12 +121,12 @@ const Stat: React.FC<{ label: string; value: string }> = ({ label, value }) => (
     </Box>
 );
 
-export const FitoGuideTable: React.FC<FitoGuideTableProps> = ({ onGenerate, disabled }) => {
-    const { guias, isLoading, isError, mutate: reloadGuias } = useFitoGuias();
+export const FitoGuideTable: React.FC<FitoGuideTableProps> = ({ fuente, onGenerate, disabled }) => {
+    const { guias, isLoading, isError, mutate: reloadGuias } = useFitoGuias(fuente);
     const [selectedMadre, setSelectedMadre] = useState<FitoGuide | null>(null);
     const {
         hijas, isLoading: isLoadingHijas, isError: hijasError, mutate: reloadHijas
-    } = useFitoGuiasHijas(selectedMadre?.docNumero ?? null);
+    } = useFitoGuiasHijas(fuente, selectedMadre?.docNumero ?? null);
 
     // Responsive
     const theme = useTheme();
@@ -161,7 +180,7 @@ export const FitoGuideTable: React.FC<FitoGuideTableProps> = ({ onGenerate, disa
             return;
         }
         setResolvingDestino(true);
-        fitoService.getDestino(fitoDestino)
+        fitoService.getDestino(fuente, fitoDestino)
             .then(destino => {
                 // Caso especial: TSE -> buscar ASTANA
                 const searchTerm = fitoDestino.toUpperCase() === 'TSE'
@@ -203,12 +222,12 @@ export const FitoGuideTable: React.FC<FitoGuideTableProps> = ({ onGenerate, disa
     const handleOpenWizard = () => {
         if (!selectedMadre) return;
         if (initializedFor !== selectedMadre.docNumero) {
-            // Precarga: fecha de la guía; consignatario desde marFITO de las hijas
+            // Precarga: fecha de vuelo de la guía; consignatario desde marFITO de las hijas
             // ("NOMBRE||DIRECCIÓN..."), con el nombre de la marca de la guía como respaldo.
             const fito = parseMarFito(hijas[0]?.marFITO);
             const next: FitoXmlConfig = {
                 ...config,
-                fechaEmbarque: toIsoDate(selectedMadre.docFecha),
+                fechaEmbarque: toIsoDate(fechaVuelo(selectedMadre)),
                 nombreConsignatario: fito.nombre || selectedMadre.consignatarioNombre || '',
                 direccionConsignatario: fito.direccion
             };
@@ -282,7 +301,7 @@ export const FitoGuideTable: React.FC<FitoGuideTableProps> = ({ onGenerate, disa
                         selectedRowId={selectedMadre ? String(selectedMadre.docNumero) : null}
                         searchable
                         searchPlaceholder="Buscar guía o destino…"
-                        emptyMessage="No hay guías madre disponibles en Access."
+                        emptyMessage={fuente === 'access' ? 'No hay guías madre disponibles en Access.' : 'No hay coordinaciones en el sistema.'}
                         maxHeight="calc(100vh - 330px)"
                     />
                 </Box>
@@ -307,7 +326,7 @@ export const FitoGuideTable: React.FC<FitoGuideTableProps> = ({ onGenerate, disa
                                                 {selectedMadre.docNumGuia}
                                             </Typography>
                                             <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" sx={{ mt: 0.75 }}>
-                                                <Chip size="small" variant="outlined" icon={<CalendarIcon />} label={formatDate(selectedMadre.docFecha)} />
+                                                <Chip size="small" variant="outlined" icon={<CalendarIcon />} label={`Vuelo ${formatDate(fechaVuelo(selectedMadre))}`} />
                                                 {guiaDestino(selectedMadre) && (
                                                     <Chip size="small" variant="outlined" icon={<PlaceIcon />} label={`Destino ${guiaDestino(selectedMadre)}`} />
                                                 )}

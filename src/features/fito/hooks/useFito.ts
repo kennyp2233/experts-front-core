@@ -1,16 +1,13 @@
 import { useMemo } from 'react';
 import useSWR from 'swr';
 import { fitoService } from '../services/fito.service';
-import { FitoJob, FitoGuiaHija, RememberedMapping } from '../types/fito.types';
-
-// Simple fetcher wrapper, or rely on service if SWR config differs
-const fetcher = () => fitoService.getGuias();
+import { FitoJob, FitoGuiaHija, FuenteFito, RememberedMapping } from '../types/fito.types';
 
 const NO_HIJAS: FitoGuiaHija[] = [];
 const NO_MAPEOS: RememberedMapping[] = [];
 
-export const useFitoGuias = () => {
-    const { data, error, isLoading, mutate } = useSWR('/fito/guias', fetcher);
+export const useFitoGuias = (fuente: FuenteFito) => {
+    const { data, error, isLoading, mutate } = useSWR(['/fito/guias', fuente], () => fitoService.getGuias(fuente));
 
     return {
         guias: data,
@@ -20,10 +17,10 @@ export const useFitoGuias = () => {
     };
 };
 
-export const useFitoGuiasHijas = (docNumero: number | null) => {
+export const useFitoGuiasHijas = (fuente: FuenteFito, docNumero: number | null) => {
     const { data, error, isLoading, mutate } = useSWR<FitoGuiaHija[]>(
-        docNumero ? `/fito/guias/${docNumero}/hijas` : null,
-        () => fitoService.getGuiasHijas(docNumero!)
+        docNumero ? ['/fito/guias/hijas', fuente, docNumero] : null,
+        () => fitoService.getGuiasHijas(fuente, docNumero!)
     );
 
     // Filter out hijas with 0 stems or 0 cajas.

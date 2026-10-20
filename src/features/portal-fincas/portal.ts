@@ -28,6 +28,7 @@ export interface LineaFinca {
   producto: string | null;
   fulls: number | null;
   cantidadCajas: number;
+  idTipoCaja: number | null;
   pesoKg: number | null;
   dae: string | null;
   factura: string | null;
@@ -48,6 +49,9 @@ export interface GuiaFinca {
   destino: { codigo: string | null; nombre: string } | null;
   destinoFinal: { codigo: string | null; nombre: string } | null;
   kgPorCaja: number;
+  /** Los mismos tipos de caja y parámetros que usa la oficina al coordinar. */
+  cajasPorFull: number;
+  tiposCaja: Array<{ id: number; codigo: string | null; nombre: string; factorFull: number }>;
   fincas: Array<{
     id: number;
     nombre: string;
@@ -62,6 +66,7 @@ export interface CargaFinca {
   idProducto: number;
   fulls: number;
   cantidadCajas: number;
+  idTipoCaja?: number;
   pesoKg?: number;
   dae: string;
   factura?: string;

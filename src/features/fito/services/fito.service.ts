@@ -1,23 +1,26 @@
 import api from '../../../shared/services/api';
 import {
-    FitoDestino, FitoGuide, FitoGuiaHija, FitoJob, GenerateFitoDto, GenerationResponse,
+    FitoDestino, FitoGuide, FitoGuiaHija, FitoJob, FuenteFito, GenerateFitoDto, GenerationResponse,
     ProductCatalogItem, PuertoEcuador, PuertoInternacional, RememberedMapping
 } from '../types/fito.types';
 
+/** Rutas por fuente: `/fito/sistema/…` (Postgres) o `/fito/…` (Access directo, deprecado). */
+const base = (fuente: FuenteFito) => (fuente === 'sistema' ? '/fito/sistema' : '/fito');
+
 export const fitoService = {
-    getGuias: async (): Promise<FitoGuide[]> => {
-        const { data } = await api.get<FitoGuide[]>('/fito/guias');
+    getGuias: async (fuente: FuenteFito): Promise<FitoGuide[]> => {
+        const { data } = await api.get<FitoGuide[]>(`${base(fuente)}/guias`);
         return data;
     },
 
-    getGuiasHijas: async (docNumero: number): Promise<FitoGuiaHija[]> => {
-        const { data } = await api.get<FitoGuiaHija[]>(`/fito/guias/${docNumero}/hijas`);
+    getGuiasHijas: async (fuente: FuenteFito, docNumero: number): Promise<FitoGuiaHija[]> => {
+        const { data } = await api.get<FitoGuiaHija[]>(`${base(fuente)}/guias/${docNumero}/hijas`);
         return data;
     },
 
-    /** Destino de PIN_auxDestinos por código (docFITODestino de la guía). */
-    getDestino: async (codigo: string): Promise<FitoDestino | null> => {
-        const { data } = await api.get<FitoDestino | null>(`/fito/destino/${encodeURIComponent(codigo)}`);
+    /** Destino por código (docFITODestino de la guía). */
+    getDestino: async (fuente: FuenteFito, codigo: string): Promise<FitoDestino | null> => {
+        const { data } = await api.get<FitoDestino | null>(`${base(fuente)}/destino/${encodeURIComponent(codigo)}`);
         return data;
     },
 

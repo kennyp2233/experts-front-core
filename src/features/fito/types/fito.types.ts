@@ -1,10 +1,22 @@
+/**
+ * De dónde se leen las guías: el sistema nuevo (Postgres: lo que llega del viejo
+ * por el sync y lo nuevo) o, deprecado, Access directo (respaldo hasta apagarlo).
+ */
+export type FuenteFito = 'sistema' | 'access';
+
 export interface FitoGuide {
     bodCodigo: number;
     docTipo: string;
+    /** Access: docNumero. Sistema nuevo: id de la coordinación. */
     docNumero: number;
+    /** N° de coordinación que ve la oficina (sistema nuevo). */
+    numero?: number | null;
     docNumGuia: string;  // The AWB/guide number users see
     marCodigo: number;
+    /** Access: fecha de asignación. Usar `docFechaVuelo` para mostrar y para el FITO. */
     docFecha: string;
+    /** Fecha de vuelo: la que va como fecha de embarque. */
+    docFechaVuelo?: string;
     docDestino?: string;
     docFITODestino?: string;
     consignatarioNombre?: string;
@@ -18,6 +30,8 @@ export interface FitoGuiaHija {
     plaCodigo: number;
     proCodigo: string;
     detNumStems: number;
+    /** La línea no tenía tallos: se calcularon con fulls × tallos por full (sistema nuevo). */
+    stemsSugeridos?: boolean;
     detCajas: number;
     detFecha?: string;
     marNombre?: string;
@@ -113,6 +127,7 @@ export interface GuiaHijaAgregada {
 }
 
 export interface GenerateFitoDto {
+    fuente: FuenteFito;
     guias: number[];
     config: FitoXmlConfig;
     productMappings: ProductMapping[];
