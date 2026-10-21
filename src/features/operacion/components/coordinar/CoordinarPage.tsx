@@ -29,6 +29,8 @@ import type { Opcion, ParametrosCoordinacion, ValoresLiquidacion } from '../../t
 import { CONCEPTOS_AEROLINEA } from '../../types/coordinacion';
 import { formatoAwb, num, plural, usd } from '../../utils/formato';
 import { AvisosCoordinacion } from './AvisosCoordinacion';
+import { AvisoEbfPendiente } from '../ebf/AvisoEbfPendiente';
+import { vaConEbf } from '../ebf/estadoEbf';
 import { CabeceraCoordinacion } from './CabeceraCoordinacion';
 import {
   aDto,
@@ -522,6 +524,7 @@ export function CoordinarPage({ id }: { id?: number }) {
             la web del sistema viejo, que solo ve las guías del sistema viejo).
           </Alert>
         )}
+        {id && coordinacion && vaConEbf(coordinacion.agencia) && <AvisoEbfPendiente id={id} />}
         <CabeceraCoordinacion
           valor={form.cabecera}
           onChange={cambiarCabecera}
