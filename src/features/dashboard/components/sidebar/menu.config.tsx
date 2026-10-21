@@ -19,6 +19,7 @@ import {
   QueryStatsOutlined as VentasIcon,
   SupervisedUserCircleOutlined as UsuariosClientesIcon,
   PowerSettingsNewOutlined as CorteIcon,
+  CloudSyncOutlined as PendientesEbfIcon,
 } from '@mui/icons-material';
 import type { MenuSection } from './types';
 
@@ -46,6 +47,8 @@ export const MENU_SECTIONS: MenuSection[] = [
         roles: ['ADMIN', 'USER'],
       },
       { label: 'Coordinaciones', icon: <CoordinacionesIcon />, href: '/operacion/coordinaciones', roles: ['ADMIN', 'USER'] },
+      // Lo que falta para que EBF tenga lo mismo que las coordinaciones (ADR 0004)
+      { label: 'Pendientes EBF', icon: <PendientesEbfIcon />, href: '/operacion/ebf', roles: ['ADMIN', 'USER'] },
       // Como "Administración de DAEs" / F4 del viejo (las fincas registran las suyas en su portal).
       { label: 'DAEs', icon: <DaesOficinaIcon />, href: '/operacion/daes', roles: ['ADMIN', 'USER'] },
       { label: 'Validación', icon: <ValidacionIcon />, href: '/operacion/validacion', roles: ['ADMIN'] },

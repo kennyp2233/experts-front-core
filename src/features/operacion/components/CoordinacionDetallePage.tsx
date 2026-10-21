@@ -32,6 +32,8 @@ import { GuiasHijasTabla } from './detalle/GuiasHijasTabla';
 import { LiquidacionPanel } from './detalle/LiquidacionPanel';
 import { NavegacionDia } from './detalle/NavegacionDia';
 import { ValidacionTab } from './detalle/ValidacionTab';
+import { EbfTab } from './ebf/EbfTab';
+import { vaConEbf } from './ebf/estadoEbf';
 
 const nums = { fontVariantNumeric: 'tabular-nums' } as const;
 
@@ -214,16 +216,18 @@ function MasDatosPanel({ c, admin }: { c: CoordinacionDetalle; admin: boolean })
   );
 }
 
-type Pestana = 'detalle' | 'valores' | 'ruta' | 'guias' | 'mas' | 'validacion';
+type Pestana = 'detalle' | 'valores' | 'ruta' | 'guias' | 'mas' | 'validacion' | 'ebf';
+
+const PESTANAS: Pestana[] = ['detalle', 'valores', 'ruta', 'guias', 'mas', 'validacion', 'ebf'];
 
 /**
  * Una coordinación, como el documento de la ventana vieja: la cabecera
  * (ficha) arriba y debajo las pestañas en el mismo orden (Detalle de
  * Coordinación · Valores · Ruta, Vuelos, Manifiesto), más las guías hijas.
  */
-export function CoordinacionDetallePage({ id }: { id: number }) {
+export function CoordinacionDetallePage({ id, tabInicial }: { id: number; tabInicial?: string }) {
   const { coordinacion: c, error, isLoading, mutate } = useCoordinacion(id);
-  const [tab, setTab] = useState<Pestana>('detalle');
+  const [tab, setTab] = useState<Pestana>(PESTANAS.includes(tabInicial as Pestana) ? (tabInicial as Pestana) : 'detalle');
   const { user } = useAuth();
   const admin = user?.role === 'ADMIN';
 
@@ -284,6 +288,7 @@ export function CoordinacionDetallePage({ id }: { id: number }) {
         <Tab value="guias" label={`Guías hijas (${c.guias.length})`} />
         <Tab value="mas" label="Más datos" />
         {admin && c.origen === 'ACCESS' && <Tab value="validacion" label="Validación" />}
+        {vaConEbf(c.agencia) && <Tab value="ebf" label="EBF" />}
       </Tabs>
 
       {tab === 'detalle' && <DetalleCoordinadoTabla guias={c.guias} />}
@@ -292,6 +297,7 @@ export function CoordinacionDetallePage({ id }: { id: number }) {
       {tab === 'guias' && <GuiasHijasTabla guias={c.guias} />}
       {tab === 'mas' && <MasDatosPanel c={c} admin={admin} />}
       {tab === 'validacion' && admin && <ValidacionTab id={c.id} />}
+      {tab === 'ebf' && vaConEbf(c.agencia) && <EbfTab id={c.id} />}
     </AppPage>
   );
 }
